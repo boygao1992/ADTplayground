@@ -1,0 +1,12 @@
+{
+  "name": "crock_Folding_Sum_Types",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "crocks": "^0.9.4"
+  },
+  "devDependencies": {
+    "eyes": "^0.1.8"
+  }
+}
