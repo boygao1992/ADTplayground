@@ -1,0 +1,13 @@
+{
+  "name": "crocks_monoid_first_match",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "crocks": "^0.9.4",
+    "ramda": "^0.25.0"
+  },
+  "devDependencies": {
+    "eyes": "^0.1.8"
+  }
+}

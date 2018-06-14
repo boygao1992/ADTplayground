@@ -11,14 +11,15 @@ const {
   safe, // (a -> Boolean) -> a -> Maybe b
   // Natural Transformation
   maybeToAsync, // e -> Maybe a -> Async e a
-  // Helper
-  binary, // (a -> b -> c) -> (a,b) -> c
+  // Combinators
   compose, // ((y -> z), ..., (a -> b)) -> a -> z
   composeK, // Monad m => ((y -> m z), ..., (a -> mb)) -> a -> mz
-  constant,
+  constant, // a -> () -> a
+  flip, // (a -> b -> c) -> b -> a -> c
+  // Helper
+  binary, // (a -> b -> c) -> (a,b) -> c
   curry, // ((a,b,...) -> z) -> a -> b -> ... -> z
   fanout, // (a -> b) -> (a -> c) -> (a -> Pair b c)
-  flip, // (a -> b -> c) -> b -> a -> c
   identity, // a -> a
   // Pointfree
   bimap, // Bifunctor m => (a -> c) -> (b -> d) -> m a b -> m c d
