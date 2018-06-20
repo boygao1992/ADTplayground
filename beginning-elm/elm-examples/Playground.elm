@@ -25,12 +25,16 @@ time startTime endTime =
 
 
 {- pipe -}
+
+
 main : Html.Html msg
 main =
     time 2 3
         |> speed 7.67
         |> escapeEarth 11
         |> Html.text
+
+
 
 {- compose
    main =
@@ -39,3 +43,31 @@ main =
            <| speed 7.67
            <| time 2 3
 -}
+
+
+weekday : Int -> String
+weekday dayInNumber =
+    case dayInNumber of
+        0 ->
+            "Sunday"
+
+        1 ->
+            "Monday"
+
+        2 ->
+            "Tuesday"
+
+        3 ->
+            "Wednsday"
+
+        4 ->
+            "Thursday"
+
+        5 ->
+            "Friday"
+
+        6 ->
+            "Saturday"
+
+        _ ->
+            "Unknown day"
