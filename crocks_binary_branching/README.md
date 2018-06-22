@@ -5,3 +5,15 @@
 5. fully point-free: Ramda converge, "infinite" numbers of branching by providing a list of functions on the same type
 
 ![sketch](./pic/sketch.png "sketch")
+
+# idea
+
+Ramda `converge` = `traverse` a `List` of `Arrow`s ?
+
+```haskell
+[ Arrow a b ] -> Arrow a [ b ]
+```
+
+crocks `Arrow` is not `Applicative`, so a customized extension is need.
+
+Or maybe a different ADT.
