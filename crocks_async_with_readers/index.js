@@ -13,11 +13,12 @@ const {
   // Reader
   Reader: { ask },
   // Combinators
-  composeK,
+  compose,
   // Helpers
   constant,
   liftA2, // Applicative m => (a -> b -> c) -> m a -> m b -> m c
   // Point-free
+  ap,
   map,
   runWith,
 } = require( 'crocks' )
@@ -36,9 +37,11 @@ const happy =
 const sad =
   ask( prop( 'sad' ) )
 
-const flow = composeK(
-  h => sad.map( pairUp( h ) ),
-  constant( happy )
+const flow = compose(
+  ap( sad ),
+  ap( happy ),
+  Reader.of,
+  constant( pairUp )
 )
 
 log(
