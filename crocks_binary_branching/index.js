@@ -2,18 +2,28 @@ const log = require( './lib/log' )
 
 const {
   // ADT
+  List,
   Pair,
+  Reader,
+  // Reader
+  Reader: { ask },
   // Pair
   branch,
   fanout,
   merge,
+  // Natural Transformation
+  listToArray,
   // Helper
+  constant,
   curry,
   flip,
   // Combinator
   compose,
   // Point-free
+  map,
   reduce,
+  runWith,
+  sequence,
 } = require( 'crocks' )
 
 const {
@@ -79,10 +89,35 @@ const average_5 = converge(
   divide, [ sum, length ]
 )
 
+/* solution 6: traverse a List of Readers */
+const operations = List( [
+  sum,
+  length
+] )
+
+// average_6 :: Reader [ Number ] Number
+const average_6 = compose(
+  map( ( [ x, y ] ) => divide( x, y ) ),
+  map( listToArray ),
+  sequence( Reader.of ),
+  map( ask ),
+  constant( operations )
+)
+
+// log(
+//   operations // List Func
+//   .map( ask ) // List (Reader Number Number)
+//   .sequence( Reader.of ) // Reader Number (List Number)
+//   .map( listToArray ) // Reader Number [ Number ]
+//   .map( ( [ x, y ] ) => divide( x, y ) ) // Reader Number Number
+//   .runWith( data ) // Number
+// )
+
 log( [
   average_1( data ),
   average_2( data ),
   average_3( data ),
   average_4( data ),
   average_5( data ),
+  runWith( data )( average_6() )
 ] )
