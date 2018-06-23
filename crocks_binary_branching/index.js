@@ -104,6 +104,15 @@ const average_6 = compose(
   constant( operations )
 )
 
+// converge :: ((x1, x2, …) → z) → [((a, b, …) → x1), ((a, b, …) → x2), …] → (a → b → … → z)
+// myConverge :: ((x1, x2, …) → b) → [(a → x1), (a → x2), …] → Reader a b
+const myConverge = reducer => compose(
+  map( reducer ),
+  map( listToArray ),
+  sequence( Reader.of ),
+  map( ask ),
+)
+
 // log(
 //   operations // List Func
 //   .map( ask ) // List (Reader Number Number)
