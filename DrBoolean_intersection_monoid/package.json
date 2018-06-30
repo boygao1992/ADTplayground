@@ -1,0 +1,12 @@
+{
+  "name": "DrBoolean_intersection_monoid",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "eyes": "^0.1.8"
+  },
+  "dependencies": {
+    "crocks": "^0.9.4"
+  }
+}

@@ -1,16 +1,24 @@
 module Playground exposing (..)
 
 import Html
+import String
 
 
 escapeEarth : Float -> Float -> String
 escapeEarth velocity speed =
-    if velocity > 11.186 then
-        "Godspeed"
-    else if speed == 7.67 then
-        "Stay in orbit"
-    else
-        "Come back"
+    let
+        escapeVelocityInKmPerSec =
+            11.186
+
+        orbitalSpeedInKmPerSec =
+            7.67
+    in
+        if velocity > escapeVelocityInKmPerSec then
+            "Godspeed"
+        else if speed == orbitalSpeedInKmPerSec then
+            "Stay in orbit"
+        else
+            "Come back"
 
 
 speed : Float -> Float -> Float
@@ -25,17 +33,14 @@ time startTime endTime =
 
 
 {- pipe -}
-
-
-main : Html.Html msg
-main =
-    time 2 3
-        |> speed 7.67
-        |> escapeEarth 11
-        |> Html.text
-
-
-
+{-
+   main : Html.Html msg
+   main =
+       time 2 3
+           |> speed 7.67
+           |> escapeEarth 11
+           |> Html.text
+-}
 {- compose
    main =
        Html.text
@@ -71,3 +76,39 @@ weekday dayInNumber =
 
         _ ->
             "Unknown day"
+
+
+escapeSingleQuote =
+    '\''
+
+
+backslash =
+    '\\'
+
+
+escapeDoubleQuote =
+    " left \" quote \" right "
+
+
+stringLength =
+    String.length "7 words"
+
+
+stringInfixConcat =
+    "Hello" ++ " " ++ "World"
+
+
+stringAppend =
+    "3"
+        |> String.append "2"
+        |> String.append "1"
+
+
+stringFromChar =
+    String.fromChar 'a'
+
+
+main : Html.Html msg
+main =
+    Html.text <|
+        stringAppend
