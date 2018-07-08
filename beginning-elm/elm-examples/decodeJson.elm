@@ -1,5 +1,6 @@
 module Main exposing (..)
 
+import Date exposing (Date)
 import Html exposing (text)
 import Json.Decode
     exposing
@@ -12,7 +13,10 @@ import Json.Decode
         ( -- map3 :: (a -> b -> c -> value) -> Decoder a -> Decoder b -> Decoder c -> Decoder value
           map3
         , map
+        , map2
         , map4
+        , map5
+        , map6
           -- decodeString :: Decoder a -> String(Json) -> Result String a
         , decodeString
           -- field :: String -> Decoder a -> Decoder a
@@ -24,10 +28,31 @@ import Json.Decode
         , string
           -- bool :: Decoder Bool
         , bool
+          -- parse `null` and return the given value if Result.Ok
+          -- null : a -> Decoder a
+        , null
+          -- ignore the Json string and return the given value in Result.Ok
+          -- succeed : a -> Decoder a
         , succeed
+          -- ignore the Json string and return the given error string in Result.Err
+          -- fail : String -> Decoder a
         , fail
           -- andThen : (a -> Decoder b) -> Decoder a -> Decoder b
         , andThen
+          -- handle nullable field
+          -- nullable : Decoder a -> Decoder (Maybe a)
+        , nullable
+          -- handle optional field
+          -- maybe : Decoder a -> Decoder (Maybe a)
+        , maybe
+          -- handle a list of possible structures encoded in Decoder
+          -- oneOf : List (Decoder a) -> Decoder a
+        , oneOf
+          -- list : Decoder a -> Decoder (List a)
+        , list
+          -- drill down nested field
+          -- at : List String -> Decoder a -> Decoder a
+        , at
         )
 import Json.Decode.Extra
     exposing
@@ -35,6 +60,11 @@ import Json.Decode.Extra
           -- fromResult :: Result String a -> Decoder a
           fromResult
         , parseInt
+          -- date : Decoder Date
+        , date
+          -- Apply f => f (a -> b) -> f a -> f b, left-associative
+          -- (|:) : Decoder (a -> b) -> Decoder a -> Decoder b
+        , (|:)
         )
 
 
@@ -302,23 +332,629 @@ import Json.Decode.Extra
            |> text
 
 -}
-{- 7. Decode a JSON string and convert it to an Elm `Int` -}
--- elm-community/json-extra
-{-
-   type Result error value
-       = Ok value
-       | Err error
+{- 7. Decode a JSON string and convert it to an Elm `Int`
+   -- elm-community/json-extra
+   {-
+      type Result error value
+          = Ok value
+          | Err error
 
-   -- a simple implementation based on pattern matching on Result
-   fromResult : Result String a -> Decoder a
-   fromResult result =
-       case result of
-           Ok successValue ->
-               succeed successValue
+      -- a simple implementation based on pattern matching on Result
+      fromResult : Result String a -> Decoder a
+      fromResult result =
+          case result of
+              Ok successValue ->
+                  succeed successValue
 
-           Err errorMessage ->
-               fail errorMessage
+              Err errorMessage ->
+                  fail errorMessage
+   -}
+
+
+   data : String
+   data =
+       """
+   {
+       "id": "123",
+       "email": "joe@domain.net",
+       "isPremium": true,
+       "gender": "male"
+   }
+   """
+
+
+   type Membership
+       = Standard
+       | Premium
+
+
+   type Gender
+       = Male
+       | Female
+
+
+
+   {- Json schema of original data
+      {
+        id: String, -- from legacy api
+        email: String,
+        isPremium: Bool,
+        gender: String
+      }
+   -}
+
+
+   type alias User =
+       { id : Int
+       , email : String
+       , membership : Membership
+       , gender : Gender
+       }
+
+
+   membership : Decoder Membership
+   membership =
+       let
+           toMembership : Bool -> Membership
+           toMembership b =
+               case b of
+                   True ->
+                       Premium
+
+                   False ->
+                       Standard
+       in
+           bool |> map toMembership
+
+
+   gender : Decoder Gender
+   gender =
+       let
+           -- rebuilt using Result and `fromResult`
+           toGender : String -> Result String Gender
+           toGender s =
+               case s of
+                   "male" ->
+                       Result.Ok Male
+
+                   "female" ->
+                       Result.Ok Female
+
+                   _ ->
+                       Result.Err (s ++ " is not a valid gender")
+       in
+           string |> andThen (toGender >> fromResult)
+
+
+   userDecoder : Decoder User
+   userDecoder =
+       map4 User
+           -- Decoder String -> Decoder Int
+           -- (field "id" string |> andThen (String.toInt >> fromResult))
+           (field "id" parseInt)
+           -- Decoder String
+           (field "email" string)
+           -- Decoder Membership
+           (field "isPremium" membership)
+           -- Decoder Gender
+           (field "gender" gender)
+
+
+   main : Html.Html msg
+   main =
+       data
+           |> decodeString userDecoder
+           |> toString
+           |> text
+
 -}
+{- 8. Decode JSON Objects into Elm Records Using `field` and `mapX` -}
+{- 9. Handle nullable and optional Fields when Decoding Json into Elm
+
+
+   data : String
+   data =
+       """
+   {
+       "id": "123",
+       "email": "joe@domain.net",
+       "isPremium": true,
+       "gender": null
+   }
+   """
+
+
+   type Membership
+       = Standard
+       | Premium
+
+
+   type Gender
+       = Male
+       | Female
+
+
+
+   {- Json schema of original data
+      {
+        id: String, -- from legacy api
+        email: String,
+        isPremium: Bool,
+        gender: null
+      }
+   -}
+
+
+   type alias User =
+       { id : Int
+       , email : String
+       , membership : Membership
+
+       -- both nullable and optional field have the same type signature: Maybe a
+       , gender : Maybe Gender
+       }
+
+
+   membership : Decoder Membership
+   membership =
+       let
+           toMembership : Bool -> Membership
+           toMembership b =
+               case b of
+                   True ->
+                       Premium
+
+                   False ->
+                       Standard
+       in
+           bool |> map toMembership
+
+
+   gender : Decoder Gender
+   gender =
+       let
+           -- rebuilt using Result and `fromResult`
+           toGender : String -> Result String Gender
+           toGender s =
+               case s of
+                   "male" ->
+                       Result.Ok Male
+
+                   "female" ->
+                       Result.Ok Female
+
+                   _ ->
+                       Result.Err (s ++ " is not a valid gender")
+       in
+           string |> andThen (toGender >> fromResult)
+
+
+   userDecoder : Decoder User
+   userDecoder =
+       map4 User
+           -- Decoder String -> Decoder Int
+           -- (field "id" string |> andThen (String.toInt >> fromResult))
+           (field "id" parseInt)
+           -- Decoder String
+           (field "email" string)
+           -- Decoder Membership
+           (field "isPremium" membership)
+           -- Decoder Gender -> Decoder Maybe(Gender)
+           -- for optional field
+           -- (maybe <| field "gender" gender)
+           -- for nullable field
+           (field "gender" <| nullable gender)
+
+
+   main : Html.Html msg
+   main =
+       data
+           |> decodeString userDecoder
+           |> toString
+           |> text
+
+-}
+{- 10. Decode Json into Elm Lists and Arrays
+
+
+   data : String
+   data =
+       """
+   {
+       "id": "123",
+       "email": "joe@domain.net",
+       "isPremium": true,
+       "gender": null,
+       "notifications": [
+         { "title" : "Welcome back!", "message": "we've been missing you"},
+         { "title" : "Weather alert", "message": "expect stormy weather"}
+       ]
+   }
+   """
+
+
+   type Membership
+       = Standard
+       | Premium
+
+
+   type Gender
+       = Male
+       | Female
+
+
+   type alias Notification =
+       { title : String
+       , message : String
+       }
+
+
+
+   {- Json schema of original data
+      {
+         properties: {
+           id: String,
+           email: String,
+           isPremium: Bool,
+           gender: String,
+           notifications: {
+             type: array,
+             items: { type: string }
+           },
+         }
+         required: [id, email, isPremium, notifications]
+         // optional: [gender]
+      }
+   -}
+
+
+   type alias User =
+       { id : Int
+       , email : String
+       , membership : Membership
+       , gender : Maybe Gender
+       , notifications : List Notification
+       }
+
+
+   membership : Decoder Membership
+   membership =
+       let
+           toMembership : Bool -> Membership
+           toMembership b =
+               case b of
+                   True ->
+                       Premium
+
+                   False ->
+                       Standard
+       in
+           bool |> map toMembership
+
+
+   gender : Decoder Gender
+   gender =
+       let
+           toGender : String -> Result String Gender
+           toGender s =
+               case s of
+                   "male" ->
+                       Result.Ok Male
+
+                   "female" ->
+                       Result.Ok Female
+
+                   _ ->
+                       Result.Err (s ++ " is not a valid gender")
+       in
+           string |> andThen (toGender >> fromResult)
+
+
+   notification : Decoder Notification
+   notification =
+       map2 Notification
+           (field "title" string)
+           (field "message" string)
+
+
+   userDecoder : Decoder User
+   userDecoder =
+       map5 User
+           -- Decoder String -> Decoder Int
+           -- (field "id" string |> andThen (String.toInt >> fromResult))
+           (field "id" parseInt)
+           -- Decoder String
+           (field "email" string)
+           -- Decoder Membership
+           (field "isPremium" membership)
+           -- Decoder Maybe(Gender)
+           (field "gender" <| nullable gender)
+           -- Decoder List Notification
+           (field "notifications" <| list notification)
+
+
+   main : Html.Html msg
+   main =
+       data
+           |> decodeString userDecoder
+           |> toString
+           |> text
+
+
+-}
+{- 11. Decode JSON dates into Elm
+
+
+   data : String
+   data =
+       """
+   {
+       "id": "123",
+       "email": "joe@domain.net",
+       "isPremium": true,
+       "gender": null,
+       "dateOfBirth": "Sun Jan 07 2018 00:18:17 GMT+0100 (CET)",
+       "notifications": [
+         { "title" : "Welcome back!", "message": "we've been missing you"},
+         { "title" : "Weather alert", "message": "expect stormy weather"}
+       ]
+   }
+   """
+
+
+   type Membership
+       = Standard
+       | Premium
+
+
+   type Gender
+       = Male
+       | Female
+
+
+   type alias Notification =
+       { title : String
+       , message : String
+       }
+
+
+
+   {- Json schema of original data
+      {
+         properties: {
+           id: String,
+           email: String,
+           isPremium: Bool,
+           gender: String,
+           notifications: {
+             type: array,
+             items: { type: string }
+           },
+         }
+         required: [id, email, isPremium, notifications]
+         // optional: [gender]
+      }
+   -}
+
+
+   type alias User =
+       { id : Int
+       , email : String
+       , membership : Membership
+       , gender : Maybe Gender
+       , dateOfBirth : Date
+       , notifications : List Notification
+       }
+
+
+   membership : Decoder Membership
+   membership =
+       let
+           toMembership : Bool -> Membership
+           toMembership b =
+               case b of
+                   True ->
+                       Premium
+
+                   False ->
+                       Standard
+       in
+           bool |> map toMembership
+
+
+   gender : Decoder Gender
+   gender =
+       let
+           toGender : String -> Result String Gender
+           toGender s =
+               case s of
+                   "male" ->
+                       Result.Ok Male
+
+                   "female" ->
+                       Result.Ok Female
+
+                   _ ->
+                       Result.Err (s ++ " is not a valid gender")
+       in
+           string |> andThen (toGender >> fromResult)
+
+
+   notification : Decoder Notification
+   notification =
+       map2 Notification
+           (field "title" string)
+           (field "message" string)
+
+
+   userDecoder : Decoder User
+   userDecoder =
+       map6 User
+           -- Decoder String -> Decoder Int
+           -- (field "id" string |> andThen (String.toInt >> fromResult))
+           (field "id" parseInt)
+           -- Decoder String
+           (field "email" string)
+           -- Decoder Membership
+           (field "isPremium" membership)
+           -- Decoder Maybe(Gender)
+           (field "gender" <| nullable gender)
+           (field "dateOfBirth" date)
+           -- Decoder List Notification
+           (field "notifications" <| list notification)
+
+
+   main : Html.Html msg
+   main =
+       data
+           |> decodeString userDecoder
+           |> toString
+           |> text
+
+
+-}
+{- 12. Decode nested JSON Objects into flat Elm Records
+
+
+   data : String
+   data =
+       """
+   {
+       "id": "123",
+       "email": "joe@domain.net",
+       "isPremium": true,
+       "profile": {
+         "gender": null,
+         "dateOfBirth": "Sun Jan 07 2018 00:18:17 GMT+0100 (CET)"
+       },
+       "notifications": [
+         { "title" : "Welcome back!", "message": "we've been missing you"},
+         { "title" : "Weather alert", "message": "expect stormy weather"}
+       ]
+   }
+   """
+
+
+   type Membership
+       = Standard
+       | Premium
+
+
+   type Gender
+       = Male
+       | Female
+
+
+   type alias Notification =
+       { title : String
+       , message : String
+       }
+
+
+
+   {- Json schema of original data
+      {
+         properties: {
+           id: String,
+           email: String,
+           isPremium: Bool,
+           profile: {
+             type: object,
+             properties: {
+               gender: String,
+               dateOfBirth: String
+             },
+             required: [dateOfBirth]
+             // optional: [gender]
+           }
+           notifications: {
+             type: array,
+             items: { type: string }
+           },
+         }
+         required: [id, email, isPremium, profile, notifications]
+      }
+   -}
+
+
+   type alias User =
+       { id : Int
+       , email : String
+       , membership : Membership
+       , gender : Maybe Gender
+       , dateOfBirth : Date
+       , notifications : List Notification
+       }
+
+
+   membership : Decoder Membership
+   membership =
+       let
+           toMembership : Bool -> Membership
+           toMembership b =
+               case b of
+                   True ->
+                       Premium
+
+                   False ->
+                       Standard
+       in
+           bool |> map toMembership
+
+
+   gender : Decoder Gender
+   gender =
+       let
+           toGender : String -> Result String Gender
+           toGender s =
+               case s of
+                   "male" ->
+                       Result.Ok Male
+
+                   "female" ->
+                       Result.Ok Female
+
+                   _ ->
+                       Result.Err (s ++ " is not a valid gender")
+       in
+           string |> andThen (toGender >> fromResult)
+
+
+   notification : Decoder Notification
+   notification =
+       map2 Notification
+           (field "title" string)
+           (field "message" string)
+
+
+   userDecoder : Decoder User
+   userDecoder =
+       map6 User
+           -- Decoder String -> Decoder Int
+           -- (field "id" string |> andThen (String.toInt >> fromResult))
+           (field "id" parseInt)
+           -- Decoder String
+           (field "email" string)
+           -- Decoder Membership
+           (field "isPremium" membership)
+           -- Decoder Maybe(Gender)
+           (at [ "profile", "gender" ] <| nullable gender)
+           -- Decoder Date
+           (at [ "profile", "dateOfBirth" ] date)
+           -- Decoder List Notification
+           (field "notifications" <| list notification)
+
+
+   main : Html.Html msg
+   main =
+       data
+           |> decodeString userDecoder
+           |> toString
+           |> text
+
+
+-}
+{- 13. Decode large JSON objects into Elm with `json-extra` -}
 
 
 data : String
@@ -328,7 +964,14 @@ data =
     "id": "123",
     "email": "joe@domain.net",
     "isPremium": true,
-    "gender": "male"
+    "profile": {
+      "gender": null,
+      "dateOfBirth": "Sun Jan 07 2018 00:18:17 GMT+0100 (CET)"
+    },
+    "notifications": [
+      { "title" : "Welcome back!", "message": "we've been missing you"},
+      { "title" : "Weather alert", "message": "expect stormy weather"}
+    ]
 }
 """
 
@@ -343,13 +986,34 @@ type Gender
     | Female
 
 
+type alias Notification =
+    { title : String
+    , message : String
+    }
+
+
 
 {- Json schema of original data
    {
-     id: String, -- from legacy api
-     email: String,
-     isPremium: Bool,
-     gender: String
+      properties: {
+        id: String,
+        email: String,
+        isPremium: Bool,
+        profile: {
+          type: object,
+          properties: {
+            gender: String,
+            dateOfBirth: String
+          },
+          required: [dateOfBirth]
+          // optional: [gender]
+        }
+        notifications: {
+          type: array,
+          items: { type: string }
+        },
+      }
+      required: [id, email, isPremium, profile, notifications]
    }
 -}
 
@@ -358,7 +1022,9 @@ type alias User =
     { id : Int
     , email : String
     , membership : Membership
-    , gender : Gender
+    , gender : Maybe Gender
+    , dateOfBirth : Date
+    , notifications : List Notification
     }
 
 
@@ -380,7 +1046,6 @@ membership =
 gender : Decoder Gender
 gender =
     let
-        -- rebuilt using Result and `fromResult`
         toGender : String -> Result String Gender
         toGender s =
             case s of
@@ -396,18 +1061,25 @@ gender =
         string |> andThen (toGender >> fromResult)
 
 
+notification : Decoder Notification
+notification =
+    map2 Notification
+        (field "title" string)
+        (field "message" string)
+
+
 userDecoder : Decoder User
 userDecoder =
-    map4 User
-        -- Decoder String -> Decoder Int
-        -- (field "id" string |> andThen (String.toInt >> fromResult))
-        (field "id" parseInt)
-        -- Decoder String
-        (field "email" string)
-        -- Decoder Membership
-        (field "isPremium" membership)
-        -- Decoder Gender
-        (field "gender" gender)
+    -- Decoder is an Applicative
+    -- success = pure, lift a function into Applicative
+    succeed User
+        -- (|:) = (<*>), apply
+        |: (field "id" parseInt)
+        |: (field "email" string)
+        |: (field "isPremium" membership)
+        |: (at [ "profile", "gender" ] <| nullable gender)
+        |: (at [ "profile", "dateOfBirth" ] date)
+        |: (field "notifications" <| list notification)
 
 
 main : Html.Html msg
@@ -419,5 +1091,4 @@ main =
 
 
 
-{- 8. Decode JSON Objects into Elm Records Using `field` and `mapX` -}
-{- 9. Handle nullable and optional Fields when Decoding Json into Elm -}
+{- 14. Decode large JSON objects into Elm with `elm-decode-pipeline` -}
