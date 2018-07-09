@@ -66,6 +66,14 @@ import Json.Decode.Extra
           -- (|:) : Decoder (a -> b) -> Decoder a -> Decoder b
         , (|:)
         )
+import Json.Decode.Pipeline
+    exposing
+        ( decode
+        , optional
+        , optionalAt
+        , required
+        , requiredAt
+        )
 
 
 {- 1. course overview
@@ -954,7 +962,144 @@ import Json.Decode.Extra
 
 
 -}
-{- 13. Decode large JSON objects into Elm with `json-extra` -}
+{- 13. Decode large JSON objects into Elm with `json-extra`
+
+
+   data : String
+   data =
+       """
+   {
+       "id": "123",
+       "email": "joe@domain.net",
+       "isPremium": true,
+       "profile": {
+         "gender": null,
+         "dateOfBirth": "Sun Jan 07 2018 00:18:17 GMT+0100 (CET)"
+       },
+       "notifications": [
+         { "title" : "Welcome back!", "message": "we've been missing you"},
+         { "title" : "Weather alert", "message": "expect stormy weather"}
+       ]
+   }
+   """
+
+
+   type Membership
+       = Standard
+       | Premium
+
+
+   type Gender
+       = Male
+       | Female
+
+
+   type alias Notification =
+       { title : String
+       , message : String
+       }
+
+
+
+   {- Json schema of original data
+      {
+         properties: {
+           id: String,
+           email: String,
+           isPremium: Bool,
+           profile: {
+             type: object,
+             properties: {
+               gender: String,
+               dateOfBirth: String
+             },
+             required: [dateOfBirth]
+             // optional: [gender]
+           }
+           notifications: {
+             type: array,
+             items: { type: string }
+           },
+         }
+         required: [id, email, isPremium, profile, notifications]
+      }
+   -}
+
+
+   type alias User =
+       { id : Int
+       , email : String
+       , membership : Membership
+       , gender : Maybe Gender
+       , dateOfBirth : Date
+       , notifications : List Notification
+       }
+
+
+   membership : Decoder Membership
+   membership =
+       let
+           toMembership : Bool -> Membership
+           toMembership b =
+               case b of
+                   True ->
+                       Premium
+
+                   False ->
+                       Standard
+       in
+           bool |> map toMembership
+
+
+   gender : Decoder Gender
+   gender =
+       let
+           toGender : String -> Result String Gender
+           toGender s =
+               case s of
+                   "male" ->
+                       Result.Ok Male
+
+                   "female" ->
+                       Result.Ok Female
+
+                   _ ->
+                       Result.Err (s ++ " is not a valid gender")
+       in
+           string |> andThen (toGender >> fromResult)
+
+
+   notification : Decoder Notification
+   notification =
+       map2 Notification
+           (field "title" string)
+           (field "message" string)
+
+
+   userDecoder : Decoder User
+   userDecoder =
+       -- Decoder is an Applicative
+       -- success = pure, lift a function into Applicative
+       succeed User
+           -- (|:) = (<*>), apply
+           |: (field "id" parseInt)
+           |: (field "email" string)
+           |: (field "isPremium" membership)
+           |: (at [ "profile", "gender" ] <| nullable gender)
+           |: (at [ "profile", "dateOfBirth" ] date)
+           |: (field "notifications" <| list notification)
+
+
+   main : Html.Html msg
+   main =
+       data
+           |> decodeString userDecoder
+           |> toString
+           |> text
+
+
+-}
+{- 14. Decode large JSON objects into Elm with `elm-decode-pipeline` -}
 
 
 data : String
@@ -1070,16 +1215,126 @@ notification =
 
 userDecoder : Decoder User
 userDecoder =
-    -- Decoder is an Applicative
-    -- success = pure, lift a function into Applicative
-    succeed User
-        -- (|:) = (<*>), apply
-        |: (field "id" parseInt)
-        |: (field "email" string)
-        |: (field "isPremium" membership)
-        |: (at [ "profile", "gender" ] <| nullable gender)
-        |: (at [ "profile", "dateOfBirth" ] date)
-        |: (field "notifications" <| list notification)
+    decode User
+        |> required "id" parseInt
+        |> required "email" string
+        |> required "isPremium" membership
+        |> optionalAt [ "profile", "gender" ] (gender |> map Just) Nothing
+        |> requiredAt [ "profile", "dateOfBirth" ] date
+        |> optional "notifications" (list notification) []
+
+
+
+{- the upper is equivalent to -}
+
+
+userDecoder2 : Decoder User
+userDecoder2 =
+    -- Decoder User
+    optional "notifications"
+        (list notification)
+        []
+        (-- Decoder (f -> User)
+         requiredAt [ "profile", "dateOfBirth" ]
+            date
+            (-- Decoder (e -> (f -> User))
+             optionalAt [ "profile", "gender" ]
+                (gender |> map Just)
+                Nothing
+                (-- Decoder (d -> (e -> f -> User))
+                 required "isPremium"
+                    membership
+                    (-- Decoder (c -> (d -> e -> f -> User))
+                     required "email"
+                        string
+                        (-- Decoder (b -> (c -> d -> e -> f -> User))
+                         required "id"
+                            parseInt
+                            (-- Decoder (a -> (b -> c -> d -> e -> f -> User))
+                             decode User
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+
+
+{- Explanation
+
+   (|>) :: a -> (a -> b) -> b
+   x |> f = f x
+
+   in Ramda, it's called
+   applyTo :: a -> (a -> b) -> b
+   _curry2(
+    function applyTo(x, f) {
+      return f(x)
+    }
+   )
+
+   basically, inverse the control of a function call.
+   Or in a different perspective, a unary function and a value are dual operators.
+   You can apply a function to a value, and you can apply a value to a function.
+   e.g. Row vector, Column vector
+
+   in Json.Decode.Extra,
+   andMap : Decoder a -> Decoder (a -> b) -> Decoder b
+   andMap =
+       map2 (|>)
+
+   its infix version,
+   (|:) : Decoder (a -> b) -> Decoder a -> Decoder b
+   (|:) =
+       flip andMap
+
+   in Json.Decode.Pipeline, the same function is called `custom`
+   custom : Decoder a -> Decoder (a -> b) -> Decoder b
+   custom =
+       Decode.map2 (|>)
+
+   map2 : (a -> b -> value) -> Decoder a -> Decoder b -> Decoder value
+   map2 = lift2 in Apply
+   lift2 :: Apply m => (a -> b -> c) -> m a -> m b -> m c
+
+   in map2 (|>),
+   map2 :: (a -> (a -> b) -> b) -> Decoder a -> Decoder (a -> b) -> Decoder b
+
+   instead of a unary function (a -> b),
+   a n-ary function (x1 -> x2 -> ... -> y)
+   can be treated as (x1 -> (x2 -> ... -> y)), a higher order function
+   where x1 = a, (x2 -> ... -> y) = b
+
+-}
+{- Understanding of Decoder
+
+   Decoder is a Reader and Result. (latter is obvious, by definition)
+   (Reader implements Functor, Apply, Applicative, Monad)
+   The environment which all these chained Decoders take in is the JSON string to be parsed.
+   These Decoders are chained sequentially (as Applicative into a "bigger" Decoder) but function independently. (a typical scenario to have parallel computing and use an Applicative to coordinate the end result)
+
+   It can be modeled this way because parsing of the JSON string is not part of the computation of each Decoder.
+   It's parsed only once using native JSON.parse() into native JS Object which is a dictionary in its C++ runtime.
+   (./elm-stuff/packages/elm-lang/core/5.1.1/src/Json/Decode.elm
+    decodeString : Decoder a -> String -> Result String a
+    decodeString =
+      Native.Json.runOnString
+   )
+   (./elm-stuff/packages/elm-lang/core/5.1.1/src/Native/Json.js
+    function runOnString
+   )
+   And then each decoder is just a lense/query on this dictionary to grab the required field, which is efficient (O(1)).
+
+   decodeString :: Decoder a -> String -> Result String a
+   decodeString = flip(runReader)
+   runReader    :: e -> Reader e a  -> a
+   in this case, e is String
+   Since Decoder encapsulates Result, so the type signature slightly different from generic Reader
+
+   the Result is to handle potential errors during the parsing.
+   One of the Decoders fails, then the entire parsing fails with an Err message.
+-}
 
 
 main : Html.Html msg
@@ -1088,7 +1343,3 @@ main =
         |> decodeString userDecoder
         |> toString
         |> text
-
-
-
-{- 14. Decode large JSON objects into Elm with `elm-decode-pipeline` -}
