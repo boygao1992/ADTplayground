@@ -1,7 +1,8 @@
 module Main exposing (..)
 
 import Date exposing (Date)
-import Html exposing (text)
+import Dict exposing (Dict)
+import Html exposing (text, ul, li)
 import Json.Decode
     exposing
         ( -- JS primitives: string, bool, int, float
@@ -53,6 +54,7 @@ import Json.Decode
           -- drill down nested field
           -- at : List String -> Decoder a -> Decoder a
         , at
+        , lazy
         )
 import Json.Decode.Extra
     exposing
@@ -1335,11 +1337,252 @@ userDecoder2 =
    the Result is to handle potential errors during the parsing.
    One of the Decoders fails, then the entire parsing fails with an Err message.
 -}
+-- main : Html.Html msg
+-- main =
+--     data
+--         |> decodeString userDecoder
+--         |> toString
+--         |> text
+{- 15. Automatically generating JSON Decoders in Elm
+
+   [Json to Elm](http://eeue56.github.io/json-to-elm/)
+
+   generate code for original JSON schema as a starting point
+
+   then customize data transformations and specify required fields
+-}
+{- 16. Decode JSON Error/Success data into Elm union types -}
+
+
+successResponse : String
+successResponse =
+    """
+{
+  "data": {
+    "id": "123",
+    "email": "joe@domain.net",
+    "isPremium": true,
+    "profile": {
+      "gender": null,
+      "dateOfBirth": "Sun Jan 07 2018 00:18:17 GMT+0100 (CET)"
+    },
+    "notifications": [
+      { "title" : "Welcome back!", "message": "we've been missing you"},
+      { "title" : "Weather alert", "message": "expect stormy weather"}
+    ]
+  }
+}
+"""
+
+
+failureResponse : String
+failureResponse =
+    """
+{
+  "error": {
+    "message": "wrong password"
+  }
+}
+"""
+
+
+responseDecoder : Decoder (Result String User)
+responseDecoder =
+    oneOf
+        [ field "data" user |> map Result.Ok
+        , at [ "error", "message" ] string |> map Result.Err
+        ]
+
+
+user : Decoder User
+user =
+    decode User
+        |> required "id" parseInt
+        |> required "email" string
+        |> required "isPremium" membership
+        |> optionalAt [ "profile", "gender" ] (gender |> map Just) Nothing
+        |> requiredAt [ "profile", "dateOfBirth" ] date
+        |> optional "notifications" (list notification) []
+
+
+
+-- main : Html.Html msg
+-- main =
+--     failureResponse
+--         |> decodeString responseDecoder
+--         |> toString
+--         |> text
+{- 17. Decode a JSON Object into an Elm Dictionary -}
+
+
+jsonDict : String
+jsonDict =
+    """
+{
+  "about_us": "Sobre nosotros",
+  "location": "Ubicacion",
+  "terms_of_service": "Politicas"
+}
+"""
+
+
+
+-- main : Html.Html msg
+-- main =
+--     let
+--         navigationItems =
+--             [ "about_us", "terms_of_service" ]
+--         dict =
+--             jsonDict
+--                 -- only works for key-value pairs whose values are of the same type
+--                 -- dict :: Decoder a -> Decoder (Dict String a)
+--                 |> decodeString (Json.Decode.dict string)
+--                 |> Result.withDefault Dict.empty
+--         translate key =
+--             Dict.get key dict |> Maybe.withDefault key
+--     in
+--         ul []
+--             (navigationItems
+--                 |> List.map translate
+--                 |> List.map (\item -> li [] [ text item ])
+--             )
+{- 18. Decode a JSON Category Tree or Navigation Tree into Elm -}
+
+
+categoryTreeJson : String
+categoryTreeJson =
+    """
+{
+  "value" : "root",
+  "children" : [{
+    "value" : "Bikes",
+    "children" : [
+      { "value" : "Cruiser bikes" },
+      { "value" : "Road bikes" },
+      { "value" : "MTB bikes" }
+    ]
+  }, {
+    "value" : "Components",
+    "children" : [
+      { "value": "Saddles" },
+      {
+        "value": "Brakes",
+        "children": [
+          { "value": "Brake levers" },
+          { "value": "Brake cables" },
+          { "value": "Brake pads" }
+        ]
+      },
+      { "value": "Cassettes" },
+      { "value": "Chains" },
+      { "value": "Pedals" },
+      { "value": "Stems" }
+    ]
+  }, {
+    "value" : "Wheels & tyres",
+    "children" : [
+      { "value" : "Hubs" },
+      { "value" : "Spokes" },
+      { "value" : "Rims" },
+      {
+        "value" : "Tyres",
+        "children" : [
+          { "value" : "Cruiser tyres" },
+          { "value" : "Road tyres" },
+          { "value" : "MTB tyres" }
+        ]
+      }
+    ]
+  }]
+}
+"""
+
+
+type Node
+    = Node String (List Node)
+
+
+
+-- node : Decoder Node
+-- node =
+--     map2 Node
+--         (field "value" string)
+--         (field "children" (list <| lazy <| \_ -> node)
+--             |> maybe
+--             |> map (Maybe.withDefault [])
+--         )
+-- render : List Node -> Html.Html msg
+-- render nodes =
+--     let
+--         renderNode (Node value children) =
+--             li [] [ text value, render children ]
+--     in
+--         case nodes of
+--             [] ->
+--                 text ""
+--             _ ->
+--                 ul [] (nodes |> List.map renderNode)
+-- main : Html.Html msg
+-- main =
+--     categoryTreeJson
+--         |> decodeString node
+--         |> \result ->
+--             case result of
+--                 Result.Ok (Node _ children) ->
+--                     render children
+--                 Result.Err err ->
+--                     text err
+{- my implementation -}
+
+
+type Tree a
+    = Leaf a
+    | Branch a (List (Tree a))
+
+
+type alias CategoryTree =
+    Tree String
+
+
+fromNode : Node -> CategoryTree
+fromNode (Node value children) =
+    case children of
+        [] ->
+            Leaf value
+
+        _ ->
+            Branch value <| List.map fromNode children
+
+
+node : Decoder Node
+node =
+    decode Node
+        |> required "value" string
+        |> optional "children" (list <| lazy <| \_ -> node) []
+
+
+render : CategoryTree -> Html.Html msg
+render ct =
+    case ct of
+        Leaf value ->
+            li [] [ text value ]
+
+        Branch value children ->
+            li []
+                [ text value
+                , ul [] (List.map render children)
+                ]
 
 
 main : Html.Html msg
 main =
-    data
-        |> decodeString userDecoder
-        |> toString
-        |> text
+    categoryTreeJson
+        |> decodeString node
+        |> Result.map fromNode
+        |> \result ->
+            case result of
+                Result.Ok tree ->
+                    render tree
+
+                Result.Err err ->
+                    text err
