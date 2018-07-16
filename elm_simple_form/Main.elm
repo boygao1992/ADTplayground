@@ -6,6 +6,7 @@ import Html
         , div
         , h1
         , input
+        , label
         , text
         , textarea
         , Html
@@ -20,6 +21,7 @@ import Html.Attributes
         , rows
         , type_
         , value
+        , novalidate
         )
 import Html.Events
     exposing
@@ -61,11 +63,36 @@ import Http
         )
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Validation
+    exposing
+        ( displayValue
+        , extractError
+        , isNotEmpty
+        , isEmail
+        , isInt
+        , Field
+            ( NotValidated
+            , Valid
+            , Invalid
+            )
+        )
+
+
+type alias Email =
+    String
+
+
+type alias Message =
+    String
+
+
+type alias ErrMsg =
+    String
 
 
 type alias Model =
-    { email : String
-    , message : String
+    { email : Field Email
+    , message : Field Message
     , status : SubmissionStatus
     }
 
@@ -79,8 +106,8 @@ type SubmissionStatus
 
 initialModel : Model
 initialModel =
-    { email = ""
-    , message = ""
+    { email = NotValidated ""
+    , message = NotValidated ""
     , status = NotSubmitted
     }
 
@@ -96,13 +123,13 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         InputEmail email_ ->
-            ( { model | email = String.toLower email_ }, Cmd.none )
+            ( { model | email = NotValidated <| String.toLower email_ }, Cmd.none )
 
         InputMessage message_ ->
-            ( { model | message = message_ }, Cmd.none )
+            ( { model | message = NotValidated message_ }, Cmd.none )
 
         Submit ->
-            ( { model | status = InProcess }, submit model )
+            submitIfValid model
 
         SubmitResponse res ->
             case res of
@@ -119,16 +146,35 @@ update msg model =
                     ( { model | status = Failed }, Cmd.none )
 
 
-submit : Model -> Cmd Msg
-submit model =
+submitIfValid : Model -> ( Model, Cmd Msg )
+submitIfValid model =
+    let
+        submissionResult : Result String (Cmd Msg)
+        submissionResult =
+            Validation.map2 submit
+                -- Field Email
+                model.email
+                -- Field Message
+                model.message
+    in
+        case submissionResult of
+            Result.Ok cmd ->
+                ( { model | status = InProcess }, cmd )
+
+            Result.Err _ ->
+                ( model, Cmd.none )
+
+
+submit : Email -> Message -> Cmd Msg
+submit email message =
     let
         url =
             "http://localhost:3000/api/contact"
 
         json =
             Encode.object
-                [ ( "email", Encode.string model.email )
-                , ( "message", Encode.string model.message )
+                [ ( "email", Encode.string email )
+                , ( "message", Encode.string message )
                 ]
 
         -- 1. lazy solution: expecting JSON and transform it into ().
@@ -181,6 +227,16 @@ view model =
                 Failed ->
                     div [] [ text "Request failed. Please try again." ]
 
+        errorLabel : Field a -> Html msg
+        errorLabel field =
+            label
+                [ class "label label-error" ]
+                [ field
+                    |> extractError
+                    |> Maybe.withDefault ""
+                    |> text
+                ]
+
         body =
             div []
                 [ div []
@@ -191,20 +247,22 @@ view model =
                         -- by specifying the type to `email`
                         , type_ "email"
                         , onInput InputEmail
-                        , value model.email
+                        , value <| displayValue model.email
                         , required True
                         ]
                         []
+                    , errorLabel model.email
                     ]
                 , div []
                     [ textarea
                         [ placeholder "your message"
                         , rows 7
                         , onInput InputMessage
-                        , value model.message
+                        , value <| displayValue model.message
                         , required True
                         ]
                         []
+                    , errorLabel model.message
                     ]
                 ]
 
@@ -228,6 +286,9 @@ view model =
             [ -- default button type in form is `submit`
               -- rewrite the default behavior of `submit` button which is to refresh the page
               onSubmit Submit
+
+            -- Prevent browser's built-in field validation functionality
+            , Html.Attributes.novalidate True
             ]
             [ header model
             , body
