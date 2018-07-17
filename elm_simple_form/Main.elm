@@ -61,7 +61,6 @@ import Http
           -}
         , Error
         )
-import Json.Decode as Decode
 import Json.Encode as Encode
 import Validation
     exposing
@@ -70,6 +69,11 @@ import Validation
         , isNotEmpty
         , isEmail
         , isInt
+        , isNatural
+        , validate
+        , (>=>)
+        , (<*>)
+        , pure
         , Field
             ( NotValidated
             , Valid
@@ -86,6 +90,10 @@ type alias Message =
     String
 
 
+type alias Age =
+    Int
+
+
 type alias ErrMsg =
     String
 
@@ -93,6 +101,7 @@ type alias ErrMsg =
 type alias Model =
     { email : Field Email
     , message : Field Message
+    , age : Field Int
     , status : SubmissionStatus
     }
 
@@ -108,13 +117,15 @@ initialModel : Model
 initialModel =
     { email = NotValidated ""
     , message = NotValidated ""
+    , age = NotValidated ""
     , status = NotSubmitted
     }
 
 
 type Msg
-    = InputEmail String
-    | InputMessage String
+    = InputEmail Email
+    | InputMessage Message
+    | InputAge String
     | Submit
     | SubmitResponse (Result Http.Error ())
 
@@ -128,16 +139,19 @@ update msg model =
         InputMessage message_ ->
             ( { model | message = NotValidated message_ }, Cmd.none )
 
+        InputAge age_ ->
+            ( { model | age = NotValidated age_ }, Cmd.none )
+
         Submit ->
-            submitIfValid model
+            model |> validateModel |> submitIfValid
 
         SubmitResponse res ->
             case res of
                 Result.Ok () ->
                     ( { model
                         | status = Succeeded
-                        , email = ""
-                        , message = ""
+                        , email = NotValidated ""
+                        , message = NotValidated ""
                       }
                     , Cmd.none
                     )
@@ -146,27 +160,39 @@ update msg model =
                     ( { model | status = Failed }, Cmd.none )
 
 
+validateModel : Model -> Model
+validateModel model =
+    { model
+        | email = model.email |> validate (isNotEmpty >=> isEmail)
+        , message = model.message |> validate isNotEmpty
+        , age = model.age |> validate (isNotEmpty >=> isNatural)
+    }
+
+
 submitIfValid : Model -> ( Model, Cmd Msg )
 submitIfValid model =
     let
-        submissionResult : Result String (Cmd Msg)
+        submissionResult : Field (Cmd Msg)
         submissionResult =
-            Validation.map2 submit
-                -- Field Email
-                model.email
-                -- Field Message
-                model.message
+            -- Validation.pure submit
+            --     |> Validation.apply model.email
+            --     |> Validation.apply model.message
+            --     |> Validation.apply model.age
+            (Validation.pure submit)
+                <*> model.email
+                <*> model.message
+                <*> model.age
     in
         case submissionResult of
-            Result.Ok cmd ->
+            Valid cmd ->
                 ( { model | status = InProcess }, cmd )
 
-            Result.Err _ ->
+            _ ->
                 ( model, Cmd.none )
 
 
-submit : Email -> Message -> Cmd Msg
-submit email message =
+submit : Email -> Message -> Age -> Cmd Msg
+submit email message age =
     let
         url =
             "http://localhost:3000/api/contact"
@@ -175,6 +201,7 @@ submit email message =
             Encode.object
                 [ ( "email", Encode.string email )
                 , ( "message", Encode.string message )
+                , ( "age", Encode.int age )
                 ]
 
         -- 1. lazy solution: expecting JSON and transform it into ().
@@ -247,7 +274,7 @@ view model =
                         -- by specifying the type to `email`
                         , type_ "email"
                         , onInput InputEmail
-                        , value <| displayValue model.email
+                        , value <| displayValue identity model.email
                         , required True
                         ]
                         []
@@ -258,11 +285,21 @@ view model =
                         [ placeholder "your message"
                         , rows 7
                         , onInput InputMessage
-                        , value <| displayValue model.message
+                        , value <| displayValue identity model.message
                         , required True
                         ]
                         []
                     , errorLabel model.message
+                    ]
+                , div []
+                    [ textarea
+                        [ placeholder "your age"
+                        , onInput InputAge
+                        , value <| displayValue toString model.age
+                        , required True
+                        ]
+                        []
+                    , errorLabel model.age
                     ]
                 ]
 
