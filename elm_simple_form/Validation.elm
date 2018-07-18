@@ -18,6 +18,10 @@ type Field a
     | Invalid ErrMsg String
 
 
+type alias OptionalField a =
+    Field (Maybe a)
+
+
 type alias Validator a b =
     a -> Result ErrMsg b
 
@@ -49,6 +53,15 @@ validate validator field =
 
         _ ->
             field
+
+
+optional : Validator String a -> Validator String (Maybe a)
+optional validator =
+    \s ->
+        if s == "" then
+            Result.Ok Maybe.Nothing
+        else
+            validator s |> Result.map Just
 
 
 map : (a -> b) -> Field a -> Field b
@@ -85,7 +98,7 @@ apply fa ff =
 
 (<*>) : Field (a -> b) -> Field a -> Field b
 (<*>) =
-    flip (apply)
+    flip apply
 
 
 pure : a -> Field a
@@ -190,7 +203,7 @@ isInt =
 
 isPositive : Validator Int Int
 isPositive i =
-    if i >= 0 then
+    if i > 0 then
         Result.Ok i
     else
         Result.Err "A positive integer is expected."

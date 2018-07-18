@@ -79,6 +79,7 @@ import Validation
             , Valid
             , Invalid
             )
+        , OptionalField
         )
 
 
@@ -101,7 +102,7 @@ type alias ErrMsg =
 type alias Model =
     { email : Field Email
     , message : Field Message
-    , age : Field Int
+    , age : OptionalField Age
     , status : SubmissionStatus
     }
 
@@ -152,6 +153,7 @@ update msg model =
                         | status = Succeeded
                         , email = NotValidated ""
                         , message = NotValidated ""
+                        , age = NotValidated ""
                       }
                     , Cmd.none
                     )
@@ -165,7 +167,7 @@ validateModel model =
     { model
         | email = model.email |> validate (isNotEmpty >=> isEmail)
         , message = model.message |> validate isNotEmpty
-        , age = model.age |> validate (isNotEmpty >=> isNatural)
+        , age = model.age |> validate (Validation.optional isNatural)
     }
 
 
@@ -191,7 +193,7 @@ submitIfValid model =
                 ( model, Cmd.none )
 
 
-submit : Email -> Message -> Age -> Cmd Msg
+submit : Email -> Message -> Maybe Age -> Cmd Msg
 submit email message age =
     let
         url =
@@ -201,7 +203,11 @@ submit email message age =
             Encode.object
                 [ ( "email", Encode.string email )
                 , ( "message", Encode.string message )
-                , ( "age", Encode.int age )
+                , ( "age"
+                  , age
+                        |> Maybe.map Encode.int
+                        |> Maybe.withDefault Encode.null
+                  )
                 ]
 
         -- 1. lazy solution: expecting JSON and transform it into ().
@@ -268,7 +274,7 @@ view model =
             div []
                 [ div []
                     [ input
-                        [ placeholder "your email"
+                        [ placeholder "your email *"
 
                         -- utilize browser's built-in validation,
                         -- by specifying the type to `email`
@@ -282,7 +288,7 @@ view model =
                     ]
                 , div []
                     [ textarea
-                        [ placeholder "your message"
+                        [ placeholder "your message *"
                         , rows 7
                         , onInput InputMessage
                         , value <| displayValue identity model.message
@@ -295,8 +301,11 @@ view model =
                     [ textarea
                         [ placeholder "your age"
                         , onInput InputAge
-                        , value <| displayValue toString model.age
-                        , required True
+                        , value <|
+                            displayValue
+                                (Maybe.withDefault "" << Maybe.map toString)
+                            <|
+                                model.age
                         ]
                         []
                     , errorLabel model.age
