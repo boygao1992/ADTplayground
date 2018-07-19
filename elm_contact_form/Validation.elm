@@ -1,5 +1,7 @@
 module Validation exposing (..)
 
+import Regex
+
 
 type alias ErrMsg =
     String
@@ -190,10 +192,15 @@ isNotEmpty value =
 
 isEmail : Validator String String
 isEmail value =
-    if String.contains "@" value then
-        Result.Ok value
-    else
-        Result.Err "Please enter a valid email address"
+    let
+        regex =
+            Regex.regex "^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+                |> Regex.caseInsensitive
+    in
+        if Regex.contains regex value then
+            Result.Ok value
+        else
+            Result.Err "Please enter a valid email address"
 
 
 isInt : Validator String Int
@@ -212,3 +219,13 @@ isPositive i =
 isNatural : Validator String Int
 isNatural =
     isInt >=> isPositive
+
+
+
+-- decorate Validator by composition
+-- TODO: mapError for Validator
+
+
+customizeErr : String -> Validator String a -> Validator String a
+customizeErr err validator =
+    validator >> Result.mapError (always err)

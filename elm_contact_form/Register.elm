@@ -1,4 +1,4 @@
-module Main exposing (..)
+module Contact exposing (..)
 
 import Html
     exposing
@@ -64,7 +64,8 @@ import Http
 import Json.Encode as Encode
 import Validation
     exposing
-        ( displayValue
+        ( customizeErr
+        , displayValue
         , extractError
         , isNotEmpty
         , isEmail
@@ -87,12 +88,8 @@ type alias Email =
     String
 
 
-type alias Message =
+type alias Password =
     String
-
-
-type alias Age =
-    Int
 
 
 type alias ErrMsg =
@@ -101,8 +98,9 @@ type alias ErrMsg =
 
 type alias Model =
     { email : Field Email
-    , message : Field Message
-    , age : OptionalField Age
+    , password : Field Password
+    , confirmPassword : Field Password
+    , acceptPolicy : Field Bool
     , status : SubmissionStatus
     }
 
@@ -117,16 +115,18 @@ type SubmissionStatus
 initialModel : Model
 initialModel =
     { email = NotValidated ""
-    , message = NotValidated ""
-    , age = NotValidated ""
+    , password = NotValidated ""
+    , confirmPassword = NotValidated ""
+    , acceptPolicy = NotValidated False
     , status = NotSubmitted
     }
 
 
 type Msg
     = InputEmail Email
-    | InputMessage Message
-    | InputAge String
+    | InputPassword Password
+    | InputConfirmPassword Password
+    | CheckAcceptPolicy Bool
     | Submit
     | SubmitResponse (Result Http.Error ())
 
@@ -137,11 +137,11 @@ update msg model =
         InputEmail email_ ->
             ( { model | email = NotValidated <| String.toLower email_ }, Cmd.none )
 
-        InputMessage message_ ->
-            ( { model | message = NotValidated message_ }, Cmd.none )
+        InputPassword password_ ->
+            ( { model | password = NotValidated password_ }, Cmd.none )
 
-        InputAge age_ ->
-            ( { model | age = NotValidated age_ }, Cmd.none )
+        InputConfirmPassword confirmPassword_ ->
+            ( { model | confirmPassword = NotValidated confirmPassword_ }, Cmd.none )
 
         Submit ->
             model |> validateModel |> submitIfValid
@@ -149,11 +149,8 @@ update msg model =
         SubmitResponse res ->
             case res of
                 Result.Ok () ->
-                    ( { model
+                    ( { initialModel
                         | status = Succeeded
-                        , email = NotValidated ""
-                        , message = NotValidated ""
-                        , age = NotValidated ""
                       }
                     , Cmd.none
                     )
@@ -164,11 +161,25 @@ update msg model =
 
 validateModel : Model -> Model
 validateModel model =
-    { model
-        | email = model.email |> validate (isNotEmpty >=> isEmail)
-        , message = model.message |> validate isNotEmpty
-        , age = model.age |> validate (Validation.optional isNatural)
-    }
+    let
+        -- customize error messages
+        emailValidation =
+            customizeErr "An email is required" isNotEmpty
+                >=> customizeErr "Please ensure this is a valid email" isEmail
+
+        passwordValidation =
+            customizeErr "A password is required" isNotEmpty
+
+        confirmPasswordValidation =
+            customizeErr "A password is required" isNotEmpty
+    in
+        { model
+            | email = model.email |> validate emailValidation
+            , password = model.password |> validate passwordValidation
+            , confirmPassword = model.confirmPassword |> validate confirmPasswordValidation
+
+            -- , acceptPolicy = model.acceptPolicy |>
+        }
 
 
 submitIfValid : Model -> ( Model, Cmd Msg )
@@ -176,14 +187,11 @@ submitIfValid model =
     let
         submissionResult : Field (Cmd Msg)
         submissionResult =
-            -- Validation.pure submit
-            --     |> Validation.apply model.email
-            --     |> Validation.apply model.message
-            --     |> Validation.apply model.age
             (Validation.pure submit)
                 <*> model.email
-                <*> model.message
-                <*> model.age
+                <*> model.password
+                <*> model.confirmPassword
+                <*> model.acceptPolicy
     in
         case submissionResult of
             Valid cmd ->
@@ -193,8 +201,8 @@ submitIfValid model =
                 ( model, Cmd.none )
 
 
-submit : Email -> Message -> Maybe Age -> Cmd Msg
-submit email message age =
+submit : Email -> Password -> Password -> Bool -> Cmd Msg
+submit email password _ _ =
     let
         url =
             "http://localhost:3000/api/contact"
@@ -202,12 +210,7 @@ submit email message age =
         json =
             Encode.object
                 [ ( "email", Encode.string email )
-                , ( "message", Encode.string message )
-                , ( "age"
-                  , age
-                        |> Maybe.map Encode.int
-                        |> Maybe.withDefault Encode.null
-                  )
+                , ( "password", Encode.string password )
                 ]
 
         -- 1. lazy solution: expecting JSON and transform it into ().
@@ -242,7 +245,7 @@ view model =
     let
         header model =
             div []
-                [ h1 [] [ text "Contact us" ]
+                [ h1 [] [ text "Register" ]
                 , renderStatus model.status
                 ]
 
@@ -288,10 +291,10 @@ view model =
                     ]
                 , div []
                     [ textarea
-                        [ placeholder "your message *"
-                        , rows 7
-                        , onInput InputMessage
-                        , value <| displayValue identity model.message
+                        [ placeholder "your password *"
+                        , type_ "password"
+                        , onInput InputPassword
+                        , value (model.password |> rawValue)
                         , required True
                         ]
                         []
@@ -300,7 +303,7 @@ view model =
                 , div []
                     [ textarea
                         [ placeholder "your age"
-                        , onInput InputAge
+                        , onInput Input
                         , value <|
                             displayValue
                                 (Maybe.withDefault "" << Maybe.map toString)
