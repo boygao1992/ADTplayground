@@ -32,14 +32,49 @@ field raw =
     Field raw NotValidated
 
 
+reset : Field raw a -> Field raw a
+reset (Field raw _) =
+    Field raw NotValidated
+
+
 getRaw : Field raw a -> raw
 getRaw (Field raw _) =
     raw
 
 
 getValidity : Field raw a -> Validity a
-getValidity (Field _ a) =
-    a
+getValidity (Field _ validity) =
+    validity
+
+
+isNotValidated : Field raw a -> Bool
+isNotValidated (Field _ validity) =
+    case validity of
+        NotValidated ->
+            True
+
+        _ ->
+            False
+
+
+isValid : Field raw a -> Bool
+isValid (Field _ validity) =
+    case validity of
+        Valid _ ->
+            True
+
+        _ ->
+            False
+
+
+isInvalid : Field raw a -> Bool
+isInvalid (Field _ validity) =
+    case validity of
+        Invalid _ ->
+            True
+
+        _ ->
+            False
 
 
 extractError : Field raw a -> Maybe ErrMsg
@@ -57,20 +92,18 @@ type alias Validator a b =
 
 
 validate : Validator raw a -> Field raw a -> Field raw a
-validate validator field =
-    let
-        raw =
-            getRaw field
+validate validator (Field raw validity) =
+    case validity of
+        NotValidated ->
+            Field raw (raw |> validator |> toValidity)
 
-        validity =
-            getValidity field
-    in
-        case validity of
-            NotValidated ->
-                Field raw (raw |> validator |> toValidity)
+        _ ->
+            Field raw validity
 
-            _ ->
-                field
+
+validateAlways : Validator raw a -> Field raw a -> Field raw a
+validateAlways validator (Field raw validity) =
+    Field raw (raw |> validator |> toValidity)
 
 
 toValidity : Result ErrMsg a -> Validity a

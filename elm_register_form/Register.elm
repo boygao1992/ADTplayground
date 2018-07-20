@@ -74,6 +74,7 @@ import Validation
         , isTrue
         , isEqualTo
         , validate
+        , validateAlways
         , (>=>)
         , (<*>)
         , pure
@@ -83,7 +84,11 @@ import Validation
         , Field
         , OptionalField
         , Validity(NotValidated, Valid, Invalid)
+        , Validator
         )
+
+
+{--- Model ---}
 
 
 type alias Email =
@@ -98,7 +103,7 @@ type alias Age =
     Int
 
 
-type alias PolicyAccepted =
+type alias PolicyAcceptance =
     Bool
 
 
@@ -118,21 +123,22 @@ type alias Checkbox a =
     Field Bool a
 
 
-type alias Model =
-    { email : InputField Email
-    , password : InputField Password
-    , confirmPassword : InputField Password
-    , age : OptionalInputField Age
-    , acceptPolicy : Checkbox PolicyAccepted
-    , status : SubmissionStatus
-    }
-
-
 type SubmissionStatus
     = NotSubmitted
     | InProcess
     | Succeeded
     | Failed
+
+
+type alias Model =
+    { email : InputField Email
+    , password : InputField Password
+    , confirmPassword : InputField Password
+    , age : OptionalInputField Age
+    , acceptPolicy : Checkbox PolicyAcceptance
+    , status : SubmissionStatus
+    , attemptedOnce : Bool
+    }
 
 
 initialModel : Model
@@ -143,7 +149,48 @@ initialModel =
     , age = field ""
     , acceptPolicy = field False
     , status = NotSubmitted
+    , attemptedOnce = False
     }
+
+
+isStrongPassword : Validator String Password
+isStrongPassword password =
+    if String.length password >= 6 then
+        Result.Ok password
+    else
+        Result.Err "Your password is not strong enough"
+
+
+emailValidator : Validator String Email
+emailValidator =
+    customizeErr "An email is required" isNotEmpty
+        >=> customizeErr "Please ensure this is a valid email" isEmail
+
+
+passwordValidator : Validator String Password
+passwordValidator =
+    customizeErr "Please enter a password" isNotEmpty
+        >=> isStrongPassword
+
+
+confirmPasswordValidator : InputField Password -> Validator String Password
+confirmPasswordValidator validatedPassword =
+    customizeErr "Please retype your password" isNotEmpty
+        >=> customizeErr "The passwords don't match" (isEqualTo validatedPassword)
+
+
+ageValidator : Validator String (Maybe Age)
+ageValidator =
+    Validation.optional isNatural
+
+
+acceptPolicyValidator : Validator Bool PolicyAcceptance
+acceptPolicyValidator =
+    customizeErr "You must accept the policy" isTrue
+
+
+
+{--- Msg ---}
 
 
 type Msg
@@ -156,32 +203,97 @@ type Msg
     | SubmitResponse (Result Http.Error ())
 
 
+
+{--- Update ---}
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         InputEmail email_ ->
-            ( { model | email = email_ |> String.toLower |> field }, Cmd.none )
+            let
+                e =
+                    email_
+                        |> String.toLower
+                        |> field
+                        |> if model.attemptedOnce then
+                            validateAlways emailValidator
+                           else
+                            identity
+            in
+                ( { model
+                    | email = e
+                  }
+                , Cmd.none
+                )
 
         InputPassword password_ ->
-            ( { model
-                | password = field password_
+            let
+                p =
+                    password_
+                        |> field
+                        |> if model.attemptedOnce then
+                            validateAlways passwordValidator
+                           else
+                            identity
 
-                -- Important:
-                -- validation of confirmPassword depends on password
-                -- reset the validity of confirmPassword, if password changes
-                , confirmPassword = field <| getRaw model.confirmPassword
-              }
-            , Cmd.none
-            )
+                cp =
+                    model.confirmPassword
+                        |> if model.attemptedOnce && Validation.isValid p then
+                            validateAlways (confirmPasswordValidator p)
+                           else
+                            Validation.reset
+            in
+                ( { model
+                    | password = p
+                    , confirmPassword = cp
+
+                    -- Important:
+                    -- validation of confirmPassword depends on password
+                    -- reset the validity of confirmPassword, if password changes
+                    -- , confirmPassword = Validation.reset model.confirmPassword
+                  }
+                , Cmd.none
+                )
 
         InputConfirmPassword confirmPassword_ ->
-            ( { model | confirmPassword = field confirmPassword_ }, Cmd.none )
+            let
+                p =
+                    model.password
+
+                cp =
+                    confirmPassword_
+                        |> field
+                        |> if model.attemptedOnce && Validation.isValid p then
+                            validateAlways (confirmPasswordValidator p)
+                           else
+                            identity
+            in
+                ( { model | confirmPassword = cp }, Cmd.none )
 
         InputAge age_ ->
-            ( { model | age = field age_ }, Cmd.none )
+            let
+                a =
+                    age_
+                        |> field
+                        |> if model.attemptedOnce then
+                            validateAlways ageValidator
+                           else
+                            identity
+            in
+                ( { model | age = a }, Cmd.none )
 
         CheckAcceptPolicy acceptPolicy_ ->
-            ( { model | acceptPolicy = field acceptPolicy_ }, Cmd.none )
+            let
+                ap =
+                    acceptPolicy_
+                        |> field
+                        |> if model.attemptedOnce then
+                            validateAlways acceptPolicyValidator
+                           else
+                            identity
+            in
+                ( { model | acceptPolicy = ap }, Cmd.none )
 
         Submit ->
             model |> validateModel |> submitIfValid
@@ -199,58 +311,26 @@ update msg model =
                     ( { model | status = Failed }, Cmd.none )
 
 
-isStrongPassword : Validation.Validator String Password
-isStrongPassword password =
-    if String.length password >= 6 then
-        Result.Ok password
-    else
-        Result.Err "Your password is not strong enough"
-
-
 validateModel : Model -> Model
 validateModel model =
     let
         -- email
-        emailValidator =
-            customizeErr "An email is required" isNotEmpty
-                >=> customizeErr "Please ensure this is a valid email" isEmail
-
         validatedEmail =
             model.email |> validate emailValidator
 
         -- password
-        passwordValidator =
-            customizeErr "Please enter a password" isNotEmpty
-                >=> isStrongPassword
-
         validatedPassword =
             model.password |> validate passwordValidator
 
         -- confirmPassword
-        confirmPasswordValidator =
-            customizeErr "Please retype your password" isNotEmpty
-                >=> customizeErr "The passwords don't match" (isEqualTo validatedPassword)
-
-        -- >=> (\cp ->
-        --         if cp == getRaw validatedPassword then
-        --             Result.Ok cp
-        --         else
-        --             Result.Err "The passwords don't match"
-        --     )
         validatedConfirmPassword =
-            model.confirmPassword |> validate confirmPasswordValidator
+            model.confirmPassword |> validate (confirmPasswordValidator validatedPassword)
 
         -- age
-        ageValidator =
-            Validation.optional isNatural
-
         validatedAge =
             model.age |> validate ageValidator
 
         -- acceptPolicy
-        acceptPolicyValidator =
-            customizeErr "You must accept the policy" isTrue
-
         validatedAcceptPolicy =
             model.acceptPolicy |> validate acceptPolicyValidator
     in
@@ -280,14 +360,14 @@ submitIfValid model =
                 ( { model | status = InProcess }, cmd )
 
             _ ->
-                ( model, Cmd.none )
+                ( { model | attemptedOnce = True }, Cmd.none )
 
 
 
 -- TODO: not supposed to manually coordinate optional fields here, Maybe Age
 
 
-submit : Email -> Password -> Password -> Maybe Age -> PolicyAccepted -> Cmd Msg
+submit : Email -> Password -> Password -> Maybe Age -> PolicyAcceptance -> Cmd Msg
 submit email password _ age _ =
     let
         url =
@@ -329,6 +409,10 @@ submit email password _ age _ =
                 }
     in
         Http.send SubmitResponse request
+
+
+
+{--- View ---}
 
 
 view : Model -> Html Msg
@@ -453,6 +537,10 @@ view model =
             , footer model
             , div [] [ text <| toString <| model ]
             ]
+
+
+
+{--- Main ---}
 
 
 main : Program Never Model Msg
