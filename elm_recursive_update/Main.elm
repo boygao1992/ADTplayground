@@ -31,7 +31,7 @@ getValue { value } =
 
 withId : Id -> a -> WithId a
 withId id a =
-    { id = id, value = a }
+    WithId id a
 
 
 
@@ -92,6 +92,8 @@ inputFieldView default model =
 
 
 -- Constraint 1: Only one Button is active at anytime
+-- TODO: for a small number of variables, the buffer is not necessary.
+-- But lense is always required.
 
 
 type alias Constraint1Model =
@@ -177,11 +179,11 @@ type Msg
 
 initialModel : Model
 initialModel =
-    [ Widget <| ChildModelButton <| withId "1" <| { active = True }
-    , Widget <| ChildModelButton <| withId "2" <| { active = False }
-    , Widget <| ChildModelButton <| withId "3" <| { active = False }
-    , Widget <| ChildModelInputField <| withId "4" <| { input = "" }
-    , Widget <| ChildModelInputField <| withId "5" <| { input = "" }
+    [ Widget <| ChildModelButton <| withId "1" <| ButtonModel True
+    , Widget <| ChildModelButton <| withId "2" <| ButtonModel False
+    , Widget <| ChildModelButton <| withId "3" <| ButtonModel False
+    , Widget <| ChildModelInputField <| withId "4" <| InputFieldModel ""
+    , Widget <| ChildModelInputField <| withId "5" <| InputFieldModel ""
     ]
 
 
