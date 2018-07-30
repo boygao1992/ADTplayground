@@ -3,13 +3,14 @@ module Main where
 import Effect
 
 import Effect.Class.Console (log)
-import Prelude (
-  Unit,
-  class Show,
-  show,
-  ($), (+), (-), (*), (>), otherwise
-)
+import Prelude (class Show, Unit, otherwise, pure, show, ($), (*), (+), (-), (==), (>))
 
+import Data.Eq (class Eq)
+import Data.Semiring (class Semiring)
+import Data.Functor (class Functor)
+import Control.Semigroupoid ((<<<))
+import Control.Plus (class Plus, empty)
+import Control.Applicative (class Applicative)
 import Data.Generic.Rep as G
 import Data.Generic.Rep.Show as GShow
 
@@ -58,6 +59,16 @@ factorial' = fix(\f n ->
                0 -> 1
                _ -> n * f(n -1)
            )
+
+func :: forall a b. Eq a => Semiring a => Applicative b => Plus b => a -> a -> a -> b (Array a)
+func n x y = if x + y == n
+              then pure [x,y]
+              else empty
+
+newtype Event a = Event ((a -> Effect Unit) -> Effect (Effect Unit))
+
+instance functorEvent :: Functor Event where
+  map f (Event e) = Event \k -> e (k <<< f)
 
 main :: Effect Unit
 main = do
