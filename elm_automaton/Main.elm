@@ -51,4 +51,4 @@ main : H.Html msg
 main =
     -- view <| toString <| Tuple.second <| step 0 robot1
     -- view <| toString <| Tuple.second <| step Inc (robot2 0)
-    view <| toString <| Tuple.second <| step Dec robot3
+    view <| toString <| Tuple.second <| step Dec <| Tuple.first <| step Dec <| robot3
