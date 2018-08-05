@@ -11,13 +11,10 @@ type alias ComponentId =
     String
 
 
-type Event eventSchema
-    = Event eventSchema
-
-
 type EventType
-    = Synchronization
+    = Input
     | Dependency
+    | Output
 
 
 type alias EventSchema eventType payloadSchema =
@@ -35,10 +32,10 @@ type alias EventSchema eventType payloadSchema =
     }
 
 
-type alias State eventSchema componentType =
+type alias StateSchema eventSchema componentType =
     { -- dynamically registered events are kept in state
       -- Con: no feedback from compiler, require manual coordination
-      events : Dict.Dict EventId (Event eventSchema)
+      events : Dict.Dict EventId eventSchema
     , components : Dict.Dict ComponentId componentType
     }
 
@@ -46,6 +43,17 @@ type alias State eventSchema componentType =
 type
     ComponentType
     -- the number of component types are finite and static
-    = Component1
-    | Component2
-    | Component3
+    = Component1 -- Component1.model
+    | Component2 -- Component2.model
+    | Component3 -- Component3.model
+
+
+type alias Event payloadSchema =
+    EventSchema EventType payloadSchema
+
+
+type alias State payloadSchema =
+    StateSchema (Event payloadSchema) ComponentType
+
+
+stateTransition : Event payloadSchema -> State payloadSchema -> ( State payloadSchema, Event payloadSchema )
