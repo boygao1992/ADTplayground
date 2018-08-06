@@ -1,9 +1,20 @@
 module WindowSlide1 exposing (..)
 
+import Html as H
+import Html.Attributes as A
+import Html.Events as E
+
 
 type alias Config =
     { windowSize : Int
     , listSize : Int
+    }
+
+
+defaultConfig : Config
+defaultConfig =
+    { windowSize = 3
+    , listSize = 10
     }
 
 
@@ -26,6 +37,14 @@ type alias State =
     { keycursor : Maybe WindowIndex
     , mousecursor : Maybe WindowIndex
     , head : ListIndex
+    }
+
+
+initialState : State
+initialState =
+    { keycursor = Maybe.Just 0
+    , mousecursor = Maybe.Nothing
+    , head = 0
     }
 
 
@@ -124,3 +143,39 @@ keycursorUpdate config msg state =
 
             _ ->
                 ( state, NoOp )
+
+
+view : State -> H.Html InMsg
+view state =
+    H.div []
+        [ H.div [] [ H.text << toString <| state ]
+        , H.div []
+            [ H.button
+                [ E.onClick KeyUp ]
+                [ H.text "KeyUp" ]
+            , H.button
+                [ E.onClick KeyDown ]
+                [ H.text "KeyDown" ]
+            ]
+        , H.div []
+            [ H.button
+                [ E.onClick WindowSlideUp ]
+                [ H.text "WindowSlideUp" ]
+            , H.button
+                [ E.onClick WindowSlideDown ]
+                [ H.text "WindowSlideDown" ]
+            ]
+        ]
+
+
+main : Program Never State InMsg
+main =
+    H.program
+        { init = ( initialState, Cmd.none )
+        , update =
+            \inMsg state ->
+                update defaultConfig inMsg state
+                    |> \( newState, _ ) -> ( newState, Cmd.none )
+        , subscriptions = \model -> Sub.none
+        , view = view
+        }
