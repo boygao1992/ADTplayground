@@ -25,6 +25,22 @@ type alias State =
     }
 
 
+setKeycursor :
+    Maybe Int
+    -> { a | keycursor : Maybe Int }
+    -> { a | keycursor : Maybe Int }
+setKeycursor k s =
+    { s | keycursor = k }
+
+
+setHead :
+    Int
+    -> { a | head : Int }
+    -> { a | head : Int }
+setHead h s =
+    { s | head = h }
+
+
 initialState : State
 initialState =
     { keycursor = Maybe.Just 0
@@ -53,15 +69,6 @@ type MouseMsg
     = MouseChange Int
 
 
-
--- type InMsg
---     = KeyUp
---     | KeyDown
---     | MouseChange WindowIndex
---     | WindowSlideUp
---     | WindowSlideDown
-
-
 type OutMsg
     = WindowPushUpperBoundary
     | WindowPushLowerBoundary
@@ -72,90 +79,128 @@ stateTransition : Config -> InMsg -> State -> ( State, OutMsg )
 stateTransition config msg state =
     case msg of
         Keyboard keyboardMsg ->
-            let
-                { keycursor, head } =
-                    state
-
-                ( new_keycursor, new_head, outmsg ) =
-                    keyboardTransition config keyboardMsg keycursor head
-            in
-                ( { state | keycursor = new_keycursor, head = new_head }, outmsg )
+            keyboardTransition config keyboardMsg state
 
         Scroll scrollMsg ->
-            let
-                { keycursor, head } =
-                    state
-
-                ( new_keycursor, new_head, outmsg ) =
-                    scrollTransition config scrollMsg keycursor head
-            in
-                ( { state | keycursor = new_keycursor, head = new_head }, outmsg )
+            scrollTransition config scrollMsg state
 
         _ ->
             ( state, NoOp )
 
 
-keyboardTransition : Config -> KeyboardMsg -> Maybe Int -> Int -> ( Maybe Int, Int, OutMsg )
-keyboardTransition config msg keycursor head =
-    case msg of
-        KeyUp ->
-            case keycursor of
-                Maybe.Nothing ->
-                    ( Maybe.Just (head + config.windowSize - 1), head, NoOp )
-
-                Maybe.Just key ->
-                    let
-                        aboveWindow k h =
-                            k - h < 0
-
-                        windowAtUpperBoundary h =
-                            h == 0
-                    in
-                        case ( windowAtUpperBoundary head, aboveWindow (key - 1) head ) of
-                            ( True, True ) ->
-                                ( Maybe.Just key, head, WindowPushUpperBoundary )
-
-                            ( True, False ) ->
-                                ( Maybe.Just (key - 1), head, NoOp )
-
-                            ( False, True ) ->
-                                ( Maybe.Just (key - 1), head - 1, NoOp )
-
-                            ( False, False ) ->
-                                ( Maybe.Just (key - 1), head, NoOp )
-
-        KeyDown ->
-            case keycursor of
-                Maybe.Nothing ->
-                    ( Maybe.Just head, head, NoOp )
-
-                Maybe.Just key ->
-                    let
-                        belowWindow k h =
-                            k - h >= config.windowSize
-
-                        windowAtLowerBoundary h =
-                            h == config.listSize - config.windowSize
-                    in
-                        case ( windowAtLowerBoundary head, belowWindow (key + 1) head ) of
-                            ( True, True ) ->
-                                ( Maybe.Just key, head, WindowPushLowerBoundary )
-
-                            ( True, False ) ->
-                                ( Maybe.Just (key + 1), head, NoOp )
-
-                            ( False, True ) ->
-                                ( Maybe.Just (key + 1), head + 1, NoOp )
-
-                            ( False, False ) ->
-                                ( Maybe.Just (key + 1), head, NoOp )
-
-
-scrollTransition : Config -> ScrollMsg -> Maybe Int -> Int -> ( Maybe Int, Int, OutMsg )
-scrollTransition config msg keycursor head =
+keyboardTransition :
+    Config
+    -> KeyboardMsg
+    -> { a | keycursor : Maybe Int, head : Int }
+    -> ( { a | keycursor : Maybe Int, head : Int }, OutMsg )
+keyboardTransition config msg state =
     let
+        { keycursor, head } =
+            state
+    in
+        case msg of
+            KeyUp ->
+                case keycursor of
+                    Maybe.Nothing ->
+                        ( state
+                            |> setKeycursor (Maybe.Just (head + config.windowSize - 1))
+                        , NoOp
+                        )
+
+                    Maybe.Just key ->
+                        let
+                            aboveWindow k h =
+                                k - h < 0
+
+                            windowAtUpperBoundary h =
+                                h == 0
+                        in
+                            case ( windowAtUpperBoundary head, aboveWindow (key - 1) head ) of
+                                ( True, True ) ->
+                                    ( state, WindowPushUpperBoundary )
+
+                                ( True, False ) ->
+                                    ( state
+                                        |> setKeycursor (Maybe.Just (key - 1))
+                                    , NoOp
+                                    )
+
+                                ( False, True ) ->
+                                    ( state
+                                        |> setKeycursor (Maybe.Just (key - 1))
+                                        >> setHead (head - 1)
+                                    , NoOp
+                                    )
+
+                                ( False, False ) ->
+                                    ( state
+                                        |> setKeycursor (Maybe.Just (key - 1))
+                                    , NoOp
+                                    )
+
+            KeyDown ->
+                case keycursor of
+                    Maybe.Nothing ->
+                        ( state
+                            |> setKeycursor (Maybe.Just head)
+                        , NoOp
+                        )
+
+                    Maybe.Just key ->
+                        let
+                            belowWindow k h =
+                                k - h >= config.windowSize
+
+                            windowAtLowerBoundary h =
+                                h == config.listSize - config.windowSize
+                        in
+                            case ( windowAtLowerBoundary head, belowWindow (key + 1) head ) of
+                                ( True, True ) ->
+                                    ( state, WindowPushLowerBoundary )
+
+                                ( True, False ) ->
+                                    ( state
+                                        |> setKeycursor (Maybe.Just (key + 1))
+                                    , NoOp
+                                    )
+
+                                ( False, True ) ->
+                                    ( state
+                                        |> setKeycursor (Maybe.Just (key + 1))
+                                        >> setHead (head + 1)
+                                    , NoOp
+                                    )
+
+                                ( False, False ) ->
+                                    ( state
+                                        |> setKeycursor (Maybe.Just (key + 1))
+                                    , NoOp
+                                    )
+
+
+scrollTransition :
+    Config
+    -> ScrollMsg
+    -> { a | keycursor : Maybe Int, head : Int }
+    -> ( { a | keycursor : Maybe Int, head : Int }, OutMsg )
+scrollTransition config msg state =
+    let
+        { keycursor, head } =
+            state
+
         keycursorOutOfWindow k h =
             k < h || k >= h + config.windowSize
+
+        keycursorUpdate k h =
+            case k of
+                Maybe.Nothing ->
+                    Maybe.Nothing
+
+                Maybe.Just key ->
+                    if keycursorOutOfWindow key h then
+                        Maybe.Nothing
+                    else
+                        Maybe.Just key
     in
         case msg of
             ScrollUp ->
@@ -170,17 +215,13 @@ scrollTransition config msg keycursor head =
                             ( head - 1, NoOp )
 
                     new_keycursor =
-                        case keycursor of
-                            Maybe.Nothing ->
-                                Maybe.Nothing
-
-                            Maybe.Just key ->
-                                if keycursorOutOfWindow key new_head then
-                                    Maybe.Nothing
-                                else
-                                    Maybe.Just key
+                        keycursorUpdate keycursor new_head
                 in
-                    ( new_keycursor, new_head, outmsg )
+                    ( state
+                        |> setKeycursor new_keycursor
+                        >> setHead new_head
+                    , outmsg
+                    )
 
             ScrollDown ->
                 let
@@ -194,17 +235,13 @@ scrollTransition config msg keycursor head =
                             ( head + 1, NoOp )
 
                     new_keycursor =
-                        case keycursor of
-                            Maybe.Nothing ->
-                                Maybe.Nothing
-
-                            Maybe.Just key ->
-                                if keycursorOutOfWindow key new_head then
-                                    Maybe.Nothing
-                                else
-                                    Maybe.Just key
+                        keycursorUpdate keycursor new_head
                 in
-                    ( new_keycursor, new_head, outmsg )
+                    ( state
+                        |> setKeycursor new_keycursor
+                        >> setHead new_head
+                    , outmsg
+                    )
 
 
 update : InMsg -> State -> ( State, Cmd msg )
