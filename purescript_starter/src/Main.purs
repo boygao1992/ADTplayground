@@ -1,22 +1,20 @@
 module Main where
 
 import Effect
-
 import Effect.Class.Console (log)
-import Prelude (class Show, Unit, otherwise, pure, show, ($), (*), (+), (-), (==), (>))
 
-import Data.Eq (class Eq)
-import Data.Semiring (class Semiring)
-import Data.Functor (class Functor)
-import Control.Semigroupoid ((<<<))
-import Control.Plus (class Plus, empty)
 import Control.Applicative (class Applicative)
+import Control.Lazy (fix)
+import Control.Plus (class Plus, empty)
+import Control.Semigroupoid ((<<<))
+import Data.Eq (class Eq)
+import Data.Functor (class Functor)
 import Data.Generic.Rep as G
 import Data.Generic.Rep.Show as GShow
-
-import Control.Lazy (
-  fix -- forall l. Lazy l => (l -> l) -> l
-)
+import Data.Semiring (class Semiring)
+-- import Partial (crashWith)
+import Partial.Unsafe (unsafePartial)
+import Prelude (class Show, show, Unit, otherwise, pure, (*), (+), (-), (==), (>), ($))
 
 data Msg
   = Inc
@@ -70,6 +68,15 @@ newtype Event a = Event ((a -> Effect Unit) -> Effect (Effect Unit))
 instance functorEvent :: Functor Event where
   map f (Event e) = Event \k -> e (k <<< f)
 
+partialPred :: Partial => Boolean -> Boolean
+partialPred true = true
+
 main :: Effect Unit
-main = do
-  log $ show $ Person { name : "1", age : 1 }
+main =
+  log $ show $ unsafePartial $ partialPred false
+-- main =
+--   log $ show $ unsafePartial $ partialPred true
+-- main =
+--   unsafePartial $ crashWith "crashWith error"
+-- main = do
+--   log $ show $ Person { name : "1", age : 1 }
