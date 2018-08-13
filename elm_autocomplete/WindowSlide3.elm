@@ -1,8 +1,10 @@
 module WindowSlide3 exposing (..)
 
 import Html as H
-import Html.Attributes as A
 import Html.Events as E
+
+
+-- import Html.Attributes as A
 
 
 type alias Config =
@@ -66,7 +68,9 @@ type ScrollMsg
 
 
 type MouseMsg
-    = MouseChange Int
+    = MouseEnter Int
+    | MouseLeave
+    | MouseClick
 
 
 type OutMsg
@@ -250,28 +254,72 @@ update inMsg state =
         |> \( newState, _ ) -> ( newState, Cmd.none )
 
 
+
+-- viewWithCustomizedMsg :
+--     { keyUp : msg
+--     , keyDown : msg
+--     , scrollUp : msg
+--     , scrollDown : msg
+--     }
+--     -> State
+--     -> H.Html msg
+-- viewWithCustomizedMsg { keyUp, keyDown, scrollUp, scrollDown } state =
+--     H.div []
+--         [ H.div [] [ H.text << toString <| state ]
+--         , H.div
+--             []
+--             [ H.button
+--                 [ E.onClick keyUp ]
+--                 [ H.text "KeyUp" ]
+--             , H.button
+--                 [ E.onClick keyDown ]
+--                 [ H.text "KeyDown" ]
+--             ]
+--         , H.div
+--             []
+--             [ H.button
+--                 [ E.onClick scrollUp ]
+--                 [ H.text "WindowSlideUp" ]
+--             , H.button
+--                 [ E.onClick scrollDown ]
+--                 [ H.text "WindowSlideDown" ]
+--             ]
+--         ]
+-- view : State -> H.Html InMsg
+-- view state =
+--     let
+--         config =
+--             { keyUp = Keyboard KeyUp
+--             , keyDown = Keyboard KeyDown
+--             , scrollUp = Scroll ScrollUp
+--             , scrollDown = Scroll ScrollDown
+--             }
+--     in
+--         viewWithCustomizedMsg config state
+
+
 view : State -> H.Html InMsg
 view state =
     H.div []
         [ H.div [] [ H.text << toString <| state ]
-        , H.map Keyboard <|
-            H.div []
-                [ H.button
-                    [ E.onClick KeyUp ]
-                    [ H.text "KeyUp" ]
-                , H.button
-                    [ E.onClick KeyDown ]
-                    [ H.text "KeyDown" ]
-                ]
-        , H.map Scroll <|
-            H.div []
-                [ H.button
-                    [ E.onClick ScrollUp ]
-                    [ H.text "WindowSlideUp" ]
-                , H.button
-                    [ E.onClick ScrollDown ]
-                    [ H.text "WindowSlideDown" ]
-                ]
+        , H.div
+            []
+            [ H.button
+                [ E.onClick <| Keyboard KeyUp ]
+                [ H.text "KeyUp" ]
+            , H.button
+                [ E.onClick <| Keyboard KeyDown ]
+                [ H.text "KeyDown" ]
+            ]
+        , H.div
+            []
+            [ H.button
+                [ E.onClick <| Scroll ScrollUp ]
+                [ H.text "WindowSlideUp" ]
+            , H.button
+                [ E.onClick <| Scroll ScrollDown ]
+                [ H.text "WindowSlideDown" ]
+            ]
         ]
 
 
