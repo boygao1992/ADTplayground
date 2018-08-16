@@ -28,7 +28,6 @@ program = do
   speak "What is your name ?"
   name <- listen
   speak ("Nice to meet you, " <> name)
-  done
 
 run :: forall a. String -> Talker a -> Effect Unit
 run name =interpret
