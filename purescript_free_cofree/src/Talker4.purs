@@ -21,7 +21,7 @@ listen = liftF $ Listen identity
 run :: String -> Talker ~> Effect
 run name = foldFree interpret where
   interpret :: TalkerF ~> Effect
-  interpret (Speak s a) = do
+  interpret (Speak s a) = do -- const a <$> log s
     log s
     pure a
   interpret (Listen k) = pure (k name)
