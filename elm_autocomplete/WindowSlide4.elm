@@ -49,6 +49,11 @@ empty =
     }
 
 
+
+-- modifier to regulate internal state update
+-- TODO: remove setters for keycursor and head
+
+
 setKeycursor :
     Maybe Int
     -> { a | keycursor : Maybe Int }
@@ -57,20 +62,24 @@ setKeycursor k s =
     { s | keycursor = k }
 
 
-setMousecursor :
-    Maybe Int
-    -> { a | mousecursor : Maybe Int }
-    -> { a | mousecursor : Maybe Int }
-setMousecursor m s =
-    { s | mousecursor = m }
-
-
 setHead :
     Int
     -> { a | head : Int }
     -> { a | head : Int }
 setHead h s =
     { s | head = h }
+
+
+
+-- setter for synchronization
+
+
+setMousecursor :
+    Maybe Int
+    -> { a | mousecursor : Maybe Int }
+    -> { a | mousecursor : Maybe Int }
+setMousecursor m s =
+    { s | mousecursor = m }
 
 
 initialState : State
