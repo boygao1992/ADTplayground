@@ -41,12 +41,28 @@ type alias State =
     }
 
 
+empty : State
+empty =
+    { keycursor = Nothing
+    , mousecursor = Nothing
+    , head = 0
+    }
+
+
 setKeycursor :
     Maybe Int
     -> { a | keycursor : Maybe Int }
     -> { a | keycursor : Maybe Int }
 setKeycursor k s =
     { s | keycursor = k }
+
+
+setMousecursor :
+    Maybe Int
+    -> { a | mousecursor : Maybe Int }
+    -> { a | mousecursor : Maybe Int }
+setMousecursor m s =
+    { s | mousecursor = m }
 
 
 setHead :
@@ -69,27 +85,13 @@ type InMsg
     = Keyboard KeyboardMsg
     | Scroll ScrollMsg
     | Mouse MouseMsg
-
-
-type KeyboardMsg
-    = KeyUp
-    | KeyDown
-
-
-type ScrollMsg
-    = ScrollUp
-    | ScrollDown
-
-
-type MouseMsg
-    = MouseEnter Int
-    | MouseLeave
-    | MouseClick
+    | Reset
 
 
 type OutMsg
     = WindowPushUpperBoundary
     | WindowPushLowerBoundary
+    | Select Int
     | NoOp
 
 
@@ -102,8 +104,52 @@ stateTransition config msg state =
         Scroll scrollMsg ->
             scrollTransition config scrollMsg state
 
-        _ ->
-            ( state, NoOp )
+        Mouse mouseMsg ->
+            mouseTransition config mouseMsg state
+
+        Reset ->
+            ( empty, NoOp )
+
+
+type MouseMsg
+    = MouseEnter Int
+    | MouseLeave
+    | MouseClick Int
+
+
+mouseTransition :
+    Config
+    -> MouseMsg
+    -> { a | mousecursor : Maybe Int }
+    -> ( { a | mousecursor : Maybe Int }, OutMsg )
+mouseTransition config msg state =
+    let
+        { mousecursor } =
+            state
+    in
+        case msg of
+            MouseEnter pos ->
+                ( state
+                    |> setMousecursor (Just pos)
+                , NoOp
+                )
+
+            MouseLeave ->
+                ( state
+                    |> setMousecursor Nothing
+                , NoOp
+                )
+
+            MouseClick pos ->
+                ( state
+                    |> setMousecursor (Just pos)
+                , Select pos
+                )
+
+
+type KeyboardMsg
+    = KeyUp
+    | KeyDown
 
 
 keyboardTransition :
@@ -194,6 +240,11 @@ keyboardTransition config msg state =
                                         |> setKeycursor (Maybe.Just (key + 1))
                                     , NoOp
                                     )
+
+
+type ScrollMsg
+    = ScrollUp
+    | ScrollDown
 
 
 scrollTransition :
