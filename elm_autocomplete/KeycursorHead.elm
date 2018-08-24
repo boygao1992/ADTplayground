@@ -1,5 +1,7 @@
 module KeycursorHead exposing (..)
 
+import WindowSlide4 as P
+
 
 type alias Config a =
     { a
@@ -25,6 +27,37 @@ type alias State =
     { keycursor : Keycursor
     , head : Head
     }
+
+
+translateIn : Config a -> P.State -> State
+translateIn config { keycursor, head } =
+    let
+        keycursorTranslator : Maybe Int -> Keycursor
+        keycursorTranslator keycursor =
+            case keycursor of
+                Just x ->
+                    if x == 0 then
+                        KeyCeiling
+                    else if x == config.windowSize - 1 then
+                        KeyBottom
+                    else
+                        KeyMiddle x
+
+                Nothing ->
+                    KeyNothing
+
+        headTranslator : Int -> Head
+        headTranslator x =
+            if x == 0 then
+                HeadCeiling
+            else if x == config.listSize - config.windowSize - 1 then
+                HeadBottom
+            else
+                HeadMiddle x
+    in
+        { keycursor = keycursorTranslator keycursor
+        , head = headTranslator head
+        }
 
 
 type OutMsg
