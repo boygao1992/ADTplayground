@@ -1,9 +1,8 @@
-module Main where
+module Examples.Basic.Main where
 
 import Prelude
 
 import Effect (Effect)
--- import Effect.Console (log)
 
 import Data.Const (Const)
 import Data.Maybe (Maybe(..))
@@ -46,7 +45,10 @@ myButton =
           ]
           [ HH.text label ]
 
-    eval :: Query ~> H.HalogenM State Query (Const Void) Void Message m
+                                         -- (slots)     (output message from child)
+    -- type ComponentDSL s f = HalogenM s f (Const Void) Void
+    -- ComponentHTML for components without children
+    eval :: Query ~> H.ComponentDSL State Query Message m
     eval (Toggle next) = do
       state <- H.get
       let nextState = not state
