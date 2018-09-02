@@ -12,6 +12,7 @@ import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Halogen.VDom.Driver (runUI)
 
 withCmds :: forall model cmd. model -> cmd -> Tuple model cmd
 withCmds model cmd =
@@ -52,6 +53,8 @@ data Event
   | Scroll ScrollEvent
   | Mouse MouseEvent
   | Reset
+
+type InMsg = Unit
 
 data OutMsg
   = WindowPushUpperBoundary
@@ -187,7 +190,46 @@ mouseTransition _ event state@{ mouse } =
     MouseClick mousePos ->
       state { mouse = Just mousePos } ! Just (Select mousePos)
 
+render :: State -> H.ComponentHTML Query
+render state =
+  HH.div_
+    [ HH.div_ [ HH.text $ show state]
+    , HH.div_
+        [ HH.button
+            [ HE.onClick $ HE.input_ $ Query $ Keyboard KeyUp ]
+            [ HH.text "KeyUp"]
+        , HH.button
+            [ HE.onClick $ HE.input_ $ Query $ Keyboard KeyDown ]
+            [ HH.text "KeyDown"]
+        , HH.button
+            [ HE.onClick $ HE.input_ $ Query $ Scroll ScrollUp ]
+            [ HH.text "ScrollUp"]
+        , HH.button
+            [ HE.onClick $ HE.input_ $ Query $ Scroll ScrollDown ]
+            [ HH.text "ScrollDown"]
+        ]
+    ]
 
--- main :: Effect Unit
--- main = do
---   log "Hello sailor!"
+eval :: forall m. Query ~> H.ComponentDSL State Query OutMsg m
+eval (Query event next) = do
+  state <- H.get
+  let Tuple newState outMsg = stateTransition defaultConfig event state
+  H.put newState
+  case outMsg of
+    Just msg -> H.raise msg
+    Nothing -> pure unit
+  pure next
+
+ui :: forall m. H.Component HH.HTML Query InMsg OutMsg m
+ui =
+  H.component
+    { initialState : const empty
+    , render
+    , eval
+    , receiver : const Nothing
+    }
+
+main :: Effect Unit
+main = HA.runHalogenAff do
+  body <- HA.awaitBody
+  runUI ui unit body
