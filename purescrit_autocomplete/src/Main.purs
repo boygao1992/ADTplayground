@@ -4,6 +4,7 @@ import Prelude
 
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
+import Data.Foldable (class Foldable, foldl)
 import Effect (Effect)
 import Halogen as H
 import Halogen.Aff as HA
@@ -30,13 +31,18 @@ defaultConfig =
   , listSize : 10
   }
 
-type State =
+type InternalState =
   { key :: Maybe Int
   , mouse :: Maybe Int
   , head :: Int
   }
 
-empty :: State
+type State f a =
+  { internal :: InternalState
+  , external :: Maybe (f a)
+  }
+
+empty :: InternalState
 empty =
   { key : Nothing
   , mouse : Nothing
@@ -59,7 +65,7 @@ data OutMsg
   | WindowPushLowerBoundary
   | Select Int
 
-stateTransition :: Config -> Event -> State -> Tuple (State -> State) (Maybe OutMsg)
+stateTransition :: Config -> Event -> InternalState -> Tuple (InternalState -> InternalState) (Maybe OutMsg)
 stateTransition config event state = case event of
   Keyboard subEvent ->
     keyboardTransition config subEvent state
@@ -200,10 +206,11 @@ mouseTransition _ event state@{ mouse } =
     MouseClick mousePos ->
       (_ { mouse = Just mousePos }) ! Just (Select mousePos)
 
-render :: State -> H.ComponentHTML Query
-render state =
+buildRender :: forall f a. Foldable f => (a -> String) -> State f a -> H.ComponentHTML Query
+buildRender li { internal , external } =
   HH.div_
-    [ HH.div_ [ HH.text $ show state]
+    [ HH.div_ [ HH.text $ show internal ]
+    , toUl external
     , HH.div_
         [ HH.button
             [ HE.onClick $ HE.input_ $ Query $ Keyboard KeyUp ]
@@ -219,12 +226,19 @@ render state =
             [ HH.text "ScrollDown"]
         ]
     ]
+  where
+    toUl :: Maybe (f a) -> H.ComponentHTML Query
+    toUl e
+      | Just x <- e = HH.div_
+        [ HH.ul_ $
+            foldl (\acc a -> acc <> [ HH.li_ [ HH.text $ li a ] ]) [] x ]
+      | otherwise = HH.div_ []
 
-eval :: forall m. Query ~> H.ComponentDSL State Query OutMsg m
+eval :: forall f a m. Query ~> H.ComponentDSL (State f a) Query OutMsg m
 eval (Query event next) = do
-  state <- H.get
-  let Tuple reducer outMsg = _stateTransition event state
-  H.modify_ reducer
+  internalState <- H.gets _.internal
+  let Tuple reducer outMsg = _stateTransition event internalState
+  H.modify_ (\st -> st { internal = reducer st.internal })
   case outMsg of
     Just msg -> H.raise msg
     Nothing -> pure unit
@@ -233,16 +247,20 @@ eval (Query event next) = do
   where
     _stateTransition = stateTransition defaultConfig
 
-ui :: forall m. H.Component HH.HTML Query InMsg OutMsg m
-ui =
-  H.component
-    { initialState : const empty
-    , render
-    , eval
-    , receiver : const Nothing
-    }
+
+buildComponent :: forall f a m. Foldable f => (a -> String) -> State f a -> H.Component HH.HTML Query InMsg OutMsg m
+buildComponent li initialState = H.component spec
+  where
+    spec :: H.ComponentSpec HH.HTML (State f a) Query InMsg OutMsg m
+    spec =
+      { initialState : const initialState
+      , render: buildRender li
+      , eval
+      , receiver : const Nothing
+      }
+
 
 main :: Effect Unit
 main = HA.runHalogenAff do
   body <- HA.awaitBody
-  runUI ui unit body
+  runUI (buildComponent show {internal : empty, external : Just [ 1, 2, 3 ] }) unit body
