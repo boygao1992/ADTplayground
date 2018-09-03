@@ -61,7 +61,7 @@ data OutMsg
   | WindowPushLowerBoundary
   | Select Int
 
-stateTransition :: Config -> Event -> State -> Tuple State (Maybe OutMsg)
+stateTransition :: Config -> Event -> State -> Tuple (State -> State) (Maybe OutMsg)
 stateTransition config event state = case event of
   Keyboard subEvent ->
     keyboardTransition config subEvent state
@@ -70,7 +70,7 @@ stateTransition config event state = case event of
   Mouse subEvent ->
     mouseTransition  config subEvent state
   Reset ->
-    Tuple empty Nothing
+    Tuple (const empty) Nothing
 
 data KeyboardEvent
   = KeyUp
@@ -81,13 +81,17 @@ keyboardTransition
    . Config ->
      KeyboardEvent ->
      { key :: Maybe Int, head :: Int | r } ->
-     Tuple { key :: Maybe Int, head :: Int | r } (Maybe OutMsg)
-keyboardTransition { windowSize, listSize } event state@{ key, head } =
+     Tuple
+       ({ key :: Maybe Int, head :: Int | r } ->
+        { key :: Maybe Int, head :: Int | r }
+       )
+       (Maybe OutMsg)
+keyboardTransition { windowSize, listSize } event { key, head } =
   case event of
   KeyUp ->
     case key of
     Nothing ->
-      state { key = Just (head + windowSize - 1) } ! Nothing
+      (_ { key = Just (head + windowSize - 1) }) ! Nothing
     Just keyPos ->
       let
         windowAtUpperBoundary h =
@@ -97,18 +101,18 @@ keyboardTransition { windowSize, listSize } event state@{ key, head } =
       in
         case Tuple (windowAtUpperBoundary head) (aboveWindow (keyPos - 1) head) of
         Tuple true true  ->
-          state ! Just WindowPushUpperBoundary
+          identity ! Just WindowPushUpperBoundary
         Tuple true false ->
-          state { key = Just $ keyPos - 1 } ! Nothing
+          (_ { key = Just $ keyPos - 1 }) ! Nothing
         Tuple false true ->
-          state { key = Just $ keyPos - 1, head = head - 1 } ! Nothing
+          (_ { key = Just $ keyPos - 1, head = head - 1 }) ! Nothing
         Tuple false false ->
-          state { key = Just $ keyPos - 1 } ! Nothing
+          (_ { key = Just $ keyPos - 1 }) ! Nothing
 
   KeyDown ->
     case key of
     Nothing ->
-      state { key = Just head } ! Nothing
+      (_ { key = Just head }) ! Nothing
     Just keyPos ->
       let
         windowAtLowerBoundary h =
@@ -118,13 +122,13 @@ keyboardTransition { windowSize, listSize } event state@{ key, head } =
       in
         case Tuple (windowAtLowerBoundary head) (belowWindow (keyPos + 1) head) of
         Tuple true true ->
-          state ! Just WindowPushLowerBoundary
+          identity ! Just WindowPushLowerBoundary
         Tuple true false ->
-          state { key = Just $ keyPos + 1 } ! Nothing
+          (_ { key = Just $ keyPos + 1 }) ! Nothing
         Tuple false true ->
-          state { key = Just $ keyPos + 1, head = head + 1 } ! Nothing
+          (_ { key = Just $ keyPos + 1, head = head + 1 }) ! Nothing
         Tuple false false ->
-          state { key = Just $ keyPos + 1 } ! Nothing
+          (_ { key = Just $ keyPos + 1 }) ! Nothing
 
 data ScrollEvent
   = ScrollUp
@@ -135,8 +139,12 @@ scrollTransition
    . Config ->
      ScrollEvent ->
      { key :: Maybe Int, head :: Int | r } ->
-     Tuple { key :: Maybe Int, head :: Int | r } (Maybe OutMsg)
-scrollTransition { windowSize, listSize } event state@{ key, head } =
+     Tuple
+       ({ key :: Maybe Int, head :: Int | r } ->
+        { key :: Maybe Int, head :: Int | r }
+       )
+       (Maybe OutMsg)
+scrollTransition { windowSize, listSize } event { key, head } =
   let
     keyOutOfWindow k h =
       k < h || k >= h + windowSize
@@ -157,7 +165,7 @@ scrollTransition { windowSize, listSize } event state@{ key, head } =
           else
             Tuple (head - 1) Nothing
       in
-        state { key = updateKey key newHead, head = newHead } ! outMsg
+        (_ { key = updateKey key newHead, head = newHead }) ! outMsg
     ScrollDown ->
       let
         windowAtLowerBoundary h =
@@ -168,7 +176,7 @@ scrollTransition { windowSize, listSize } event state@{ key, head } =
           else
             Tuple (head + 1) Nothing
       in
-        state { key = updateKey key newHead, head = newHead } ! outMsg
+        (_ { key = updateKey key newHead, head = newHead }) ! outMsg
 
 data MouseEvent
   = MouseEnter Int
@@ -180,15 +188,19 @@ mouseTransition
    . Config ->
      MouseEvent ->
      { mouse :: Maybe Int | r } ->
-     Tuple { mouse :: Maybe Int | r } (Maybe OutMsg)
+     Tuple
+       ({ mouse :: Maybe Int | r } ->
+        { mouse :: Maybe Int | r }
+       )
+       (Maybe OutMsg)
 mouseTransition _ event state@{ mouse } =
   case event of
     MouseEnter mousePos ->
-      state { mouse = Just mousePos } ! Nothing
+      (_ { mouse = Just mousePos }) ! Nothing
     MouseLeave ->
-      state { mouse = Nothing } ! Nothing
+      (_ { mouse = Nothing }) ! Nothing
     MouseClick mousePos ->
-      state { mouse = Just mousePos } ! Just (Select mousePos)
+      (_ { mouse = Just mousePos }) ! Just (Select mousePos)
 
 render :: State -> H.ComponentHTML Query
 render state =
@@ -213,12 +225,16 @@ render state =
 eval :: forall m. Query ~> H.ComponentDSL State Query OutMsg m
 eval (Query event next) = do
   state <- H.get
-  let Tuple newState outMsg = stateTransition defaultConfig event state
-  H.put newState
+  let Tuple reducer outMsg = _stateTransition _config event state
+  H.modify_ reducer
   case outMsg of
     Just msg -> H.raise msg
     Nothing -> pure unit
   pure next
+
+  where
+    _stateTransition = stateTransition
+    _config = defaultConfig
 
 ui :: forall m. H.Component HH.HTML Query InMsg OutMsg m
 ui =
