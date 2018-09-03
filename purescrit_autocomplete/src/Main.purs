@@ -2,16 +2,14 @@ module Main where
 
 import Prelude
 
-import Data.Foldable (class Foldable, fold)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
-import Effect.Console (log)
 import Halogen as H
 import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
-import Halogen.HTML.Properties as HP
+-- import Halogen.HTML.Properties as HP
 import Halogen.VDom.Driver (runUI)
 
 withCmds :: forall model cmd. model -> cmd -> Tuple model cmd
@@ -225,7 +223,7 @@ render state =
 eval :: forall m. Query ~> H.ComponentDSL State Query OutMsg m
 eval (Query event next) = do
   state <- H.get
-  let Tuple reducer outMsg = _stateTransition _config event state
+  let Tuple reducer outMsg = _stateTransition event state
   H.modify_ reducer
   case outMsg of
     Just msg -> H.raise msg
@@ -233,8 +231,7 @@ eval (Query event next) = do
   pure next
 
   where
-    _stateTransition = stateTransition
-    _config = defaultConfig
+    _stateTransition = stateTransition defaultConfig
 
 ui :: forall m. H.Component HH.HTML Query InMsg OutMsg m
 ui =
