@@ -65,8 +65,9 @@ empty =
 data Query next
   = Query Event next
   | Configure Config next -- reconfigure at runtime
-  | Init next
-  | HandleKey KE.KeyboardEvent (H.SubscribeStatus -> next)
+  | PreventDefault WEE.Event (Query next)
+  -- | Init next
+  -- | HandleKey KE.KeyboardEvent (H.SubscribeStatus -> next)
 
 data Event
   = Keyboard KeyboardEvent
@@ -230,7 +231,7 @@ buildRender li { internal , external } =
     [ HH.div_
         [ HH.text $ show internal ]
     , HH.div [ HP.class_ $ H.ClassName "example-autocomplete"]
-        [ HH.input []
+        [ HH.input [HE.onKeyDown $ \ke -> Just $ PreventDefault (KE.toEvent ke) $ H.action $ Query $ Keyboard KeyDown]
         , HH.div [ HP.class_ $ H.ClassName "autocomplete-menu" ]
             [ toUl external ]
         ]
@@ -258,29 +259,31 @@ buildRender li { internal , external } =
       HH.li [ HP.class_ $ H.ClassName "autocomplete-item" ]
         [ HH.text $ li item ]
 
-onKeyUp :: HTMLDocument -> (KE.KeyboardEvent -> Effect Unit) -> Effect (Effect Unit)
-onKeyUp document fn = do
-  let target = HTMLDocument.toEventTarget document
-  listener <- WEET.eventListener (traverse_ fn <<< KE.fromEvent)
-  WEET.addEventListener KET.keyup listener false target
-  pure $ WEET.removeEventListener KET.keyup listener false target
+-- onKeyUp_ :: HTMLDocument -> (KE.KeyboardEvent -> Effect Unit) -> Effect (Effect Unit)
+-- onKeyUp_ document fn = do
+--   let target = HTMLDocument.toEventTarget document
+--   listener <- WEET.eventListener (traverse_ fn <<< KE.fromEvent)
+--   WEET.addEventListener KET.keyup listener false target
+--   pure $ WEET.removeEventListener KET.keyup listener false target
+
+-- onKeyDown_ :: HTMLDocument -> (KE.KeyboardEvent -> Effect Unit) -> Effect (Effect Unit)
+-- onKeyDown_ document fn = do
+--   let target = HTMLDocument.toEventTarget document
+--   listener <- WEET.eventListener (traverse_ fn <<< KE.fromEvent)
+--   WEET.addEventListener KET.keydown listener false target
+--   pure $ WEET.removeEventListener KET.keydown listener false target
 
 eval :: forall f item. Query ~> H.ComponentDSL (State f item) Query OutMsg IO
-eval (Init next) = do
-  document <- H.liftEffect $ DOM.document =<< DOM.window
-  H.subscribe $ HQES.eventSource' (onKeyUp document) (Just <<< H.request <<< HandleKey)
-  pure next
-eval (HandleKey ev reply)
-  = do
-    H.liftEffect $ WEE.preventDefault $ KE.toEvent ev
-    H.liftEffect $ log $ KE.key ev
-    pure (reply H.Listening)
-  -- | KE.key ev == "ArrowUp" = do
-  --     H.liftEffect $ WEE.preventDefault (KE.toEvent ev)
-  --     -- eval $ Query (Keyboard KeyUp)
-  --     pure (reply H.Listening)
-  -- | otherwise =
-  --     pure (reply H.Listening)
+-- eval (Init next) = do
+--   document <- H.liftEffect $ DOM.document =<< DOM.window
+--   H.subscribe $ HQES.eventSource' (onKeyUp_ document) (Just <<< H.request <<< HandleKey)
+--   H.subscribe $ HQES.eventSource' (onKeyDown_ document) (Just <<< H.request <<< HandleKey)
+--   pure next
+-- eval (HandleKey ev reply)
+--   = do
+--     H.liftEffect $ WEE.preventDefault $ KE.toEvent ev
+--     H.liftEffect $ log $ KE.key ev
+--     pure (reply H.Listening)
 eval (Configure config next) = do
   H.modify_ (\st -> st { config = config })
   pure next
@@ -297,19 +300,33 @@ eval (Query event next) = do
   where
     _stateTransition = stateTransition
 
+eval (PreventDefault ev next) = do
+  H.liftEffect $ WEE.preventDefault ev
+  eval next
+
 
 buildComponent :: forall f item. Foldable f => (item -> String) -> State f item -> H.Component HH.HTML Query InMsg OutMsg IO
-buildComponent li initialState = H.lifecycleComponent spec
+buildComponent li initialState = H.component spec
   where
-    spec :: H.LifecycleComponentSpec HH.HTML (State f item) Query InMsg OutMsg IO
+    spec :: H.ComponentSpec HH.HTML (State f item) Query InMsg OutMsg IO
     spec =
       { initialState : const initialState
       , render: buildRender li
       , eval
       , receiver : const Nothing
-      , initializer : Just (H.action Init)
-      , finalizer : Nothing
       }
+-- buildComponent :: forall f item. Foldable f => (item -> String) -> State f item -> H.Component HH.HTML Query InMsg OutMsg IO
+-- buildComponent li initialState = H.lifecycleComponent spec
+--   where
+--     spec :: H.LifecycleComponentSpec HH.HTML (State f item) Query InMsg OutMsg IO
+--     spec =
+--       { initialState : const initialState
+--       , render: buildRender li
+--       , eval
+--       , receiver : const Nothing
+--       , initializer : Just (H.action Init)
+--       , finalizer : Nothing
+--       }
 
 
 main :: Effect Unit
