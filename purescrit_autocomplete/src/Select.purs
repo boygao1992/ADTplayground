@@ -123,14 +123,14 @@ keyboardTransition { windowSize, listSize } event { key, head } =
         aboveWindow k h =
           k - h < 0
       in
-        case Tuple (windowAtUpperBoundary head) (aboveWindow (keyPos - 1) head) of
-        Tuple true true  ->
+        case windowAtUpperBoundary head, aboveWindow (keyPos - 1) head of
+        true, true  ->
           identity ! Just WindowPushUpperBoundary
-        Tuple true false ->
+        true, false ->
           (_ { key = Just $ keyPos - 1 }) ! Nothing
-        Tuple false true ->
+        false, true ->
           (_ { key = Just $ keyPos - 1, head = head - 1 }) ! Nothing
-        Tuple false false ->
+        false, false ->
           (_ { key = Just $ keyPos - 1 }) ! Nothing
 
   KeyDown ->
@@ -144,14 +144,14 @@ keyboardTransition { windowSize, listSize } event { key, head } =
         belowWindow k h =
           k - h >= windowSize
       in
-        case Tuple (windowAtLowerBoundary head) (belowWindow (keyPos + 1) head) of
-        Tuple true true ->
+        case windowAtLowerBoundary head, belowWindow (keyPos + 1) head of
+        true, true ->
           identity ! Just WindowPushLowerBoundary
-        Tuple true false ->
+        true, false ->
           (_ { key = Just $ keyPos + 1 }) ! Nothing
-        Tuple false true ->
+        false, true ->
           (_ { key = Just $ keyPos + 1, head = head + 1 }) ! Nothing
-        Tuple false false ->
+        false, false ->
           (_ { key = Just $ keyPos + 1 }) ! Nothing
 
 data ScrollMsg
