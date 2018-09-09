@@ -6,6 +6,7 @@ import Control.Applicative (class Applicative)
 import Control.Coroutine as CR
 import Control.Coroutine.Aff (emit)
 import Control.Coroutine.Aff as CRA
+import Control.Monad (class Monad)
 import Control.Monad.Except (runExcept)
 import Data.Either (either)
 import Data.Foldable (class Foldable, for_)
@@ -21,6 +22,8 @@ import Web.Event.Internal.Types (Event)
 import Web.Socket.Event.EventTypes as WSET
 import Web.Socket.Event.MessageEvent as ME
 import Web.Socket.WebSocket as WS
+
+import Log as Log
 
 wsProducer :: WS.WebSocket -> CR.Producer String Aff Unit
 wsProducer socket = CRA.produce emitter_
@@ -60,3 +63,18 @@ wsProducer socket = CRA.produce emitter_
         msgHandler :: String -> Effect Unit
         msgHandler msg =
           CRA.emit emitter msg
+
+wsConsumer :: (Log.Query ~> Aff) -> CR.Consumer String Aff Unit
+wsConsumer query = CR.consumer msgHandler
+  where
+    msgHandler :: String -> Aff (Maybe Unit)
+    msgHandler msg = do
+      query $ H.action $ Log.AddMessage msg
+      pure Nothing
+wsSender :: WS.WebSocket -> CR.Consumer Log.Output Aff Unit
+wsSender socket = CR.consumer msgHandler
+  where
+    msgHandler :: Log.Output -> Aff (Maybe Unit)
+    msgHandler (Log.OutMessage msgContents) = do
+      H.liftEffect $ WS.sendString socket msgContents
+      pure Nothing
