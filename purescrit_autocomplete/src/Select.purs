@@ -2,26 +2,25 @@ module Select where
 
 import Prelude
 
+import Data.Foldable (class Foldable, foldl, traverse_)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Data.Foldable (class Foldable, foldl, traverse_)
 import Effect (Effect)
-import Effect.Console (log)
 import Effect.Aff (Aff)
--- import Control.Coroutine as CR
+import Effect.Console (log)
 import Halogen as H
 import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
-import Halogen.Query.EventSource as HQES
 import Halogen.HTML.Properties as HP
+import Halogen.Query.EventSource as HQES
 import Halogen.VDom.Driver (runUI)
-import Web.HTML (window) as DOM
-import Web.HTML.Window (document) as DOM
-import Web.HTML.HTMLDocument (HTMLDocument)
-import Web.HTML.HTMLDocument as HTMLDocument
 import Web.Event.Event as WEE
 import Web.Event.EventTarget as WEET
+import Web.HTML (window) as DOM
+import Web.HTML.HTMLDocument (HTMLDocument)
+import Web.HTML.HTMLDocument as HTMLDocument
+import Web.HTML.Window (document) as DOM
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.KeyboardEvent.EventTypes as KET
 
@@ -62,11 +61,11 @@ type State item =
   , external :: Maybe (Array item)
   }
 
-data QueryF f item next
-  = Query Msg next
+data Query f item next
+  = StateTransition Msg next
   | Sync (f item) next
   | Configure Config next -- reconfigure at runtime
-  | PreventDefault WEE.Event (QueryF f item next)
+  | PreventDefault WEE.Event (Query f item next)
   -- | Init next
   -- | HandleKey KE.KeyboardEvent (H.SubscribeStatus -> next)
 
@@ -81,6 +80,8 @@ type Input f item = f item
 data Output
   = WindowPushUpperBoundary
   | WindowPushLowerBoundary
+  | WindowSlideUp
+  | WindowSlideDown
   | Select Int
 
 type IO = Aff
@@ -129,7 +130,7 @@ keyboardTransition { windowSize, listSize } event { key, head } =
         true, false ->
           (_ { key = Just $ keyPos - 1 }) ! Nothing
         false, true ->
-          (_ { key = Just $ keyPos - 1, head = head - 1 }) ! Nothing
+          (_ { key = Just $ keyPos - 1, head = head - 1 }) ! Just WindowSlideUp
         false, false ->
           (_ { key = Just $ keyPos - 1 }) ! Nothing
 
@@ -150,7 +151,7 @@ keyboardTransition { windowSize, listSize } event { key, head } =
         true, false ->
           (_ { key = Just $ keyPos + 1 }) ! Nothing
         false, true ->
-          (_ { key = Just $ keyPos + 1, head = head + 1 }) ! Nothing
+          (_ { key = Just $ keyPos + 1, head = head + 1 }) ! Just WindowSlideDown
         false, false ->
           (_ { key = Just $ keyPos + 1 }) ! Nothing
 
@@ -226,29 +227,32 @@ mouseTransition _ event state@{ mouse } =
     MouseClick mousePos ->
       (_ { mouse = Just mousePos }) ! Just (Select mousePos)
 
-buildRender :: forall f item. (item -> String) -> State item -> H.ComponentHTML (QueryF f item)
+buildRender :: forall f item. (item -> String) -> State item -> H.ComponentHTML (Query f item)
 buildRender li { internal , external } =
   HH.div_
     [ HH.div_
         [ HH.text $ show internal ]
     , HH.div [ HP.class_ $ H.ClassName "example-autocomplete"]
-        [ HH.input [HE.onKeyDown $ \ke -> Just $ PreventDefault (KE.toEvent ke) $ H.action $ Query $ Keyboard KeyDown]
+        [ HH.input
+          [ HE.onKeyDown $ \ke -> Just $ PreventDefault (KE.toEvent ke) $ H.action $ StateTransition $ Keyboard KeyDown
+          , HP.class_ $ H.ClassName "autocomplete-input"
+          ]
         , HH.div [ HP.class_ $ H.ClassName "autocomplete-menu" ]
             [ toUl external ]
         ]
     , HH.div_
-        [ HH.button [ HE.onClick $ HE.input_ $ Query $ Keyboard KeyUp ]
+        [ HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Keyboard KeyUp ]
             [ HH.text "KeyUp" ]
-        , HH.button [ HE.onClick $ HE.input_ $ Query $ Keyboard KeyDown ]
+        , HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Keyboard KeyDown ]
             [ HH.text "KeyDown" ]
-        , HH.button [ HE.onClick $ HE.input_ $ Query $ Scroll ScrollUp ]
+        , HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Scroll ScrollUp ]
             [ HH.text "ScrollUp" ]
-        , HH.button [ HE.onClick $ HE.input_ $ Query $ Scroll ScrollDown ]
+        , HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Scroll ScrollDown ]
             [ HH.text "ScrollDown" ]
         ]
     ]
   where
-    toUl :: Maybe (Array item) -> H.ComponentHTML (QueryF f item)
+    toUl :: Maybe (Array item) -> H.ComponentHTML (Query f item)
     toUl e
       | Just x <- e =
           HH.ul [ HP.class_ $ H.ClassName "autocomplete-list" ] $
@@ -274,7 +278,7 @@ buildRender li { internal , external } =
 --   WEET.addEventListener KET.keydown listener false target
 --   pure $ WEET.removeEventListener KET.keydown listener false target
 
-eval :: forall f item. Foldable f => QueryF f item ~> H.ComponentDSL (State item) (QueryF f item) Output IO
+eval :: forall f item. Foldable f => Query f item ~> H.ComponentDSL (State item) (Query f item) Output IO
 -- eval (Init next) = do
 --   document <- H.liftEffect $ DOM.document =<< DOM.window
 --   H.subscribe $ HQES.eventSource' (onKeyUp_ document) (Just <<< H.request <<< HandleKey)
@@ -291,7 +295,7 @@ eval (Sync xs next) = do
 eval (Configure config next) = do
   H.modify_ (\st -> st { config = config })
   pure next
-eval (Query event next) = do
+eval (StateTransition event next) = do
   config <- H.gets _.config
   internalState <- H.gets _.internal
   let Tuple reducer outMsg = _stateTransition config event internalState
@@ -309,10 +313,10 @@ eval (PreventDefault ev next) = do
   eval next
 
 
-buildComponent :: forall f item. Foldable f => (item -> String) -> State item -> H.Component HH.HTML (QueryF f item) (Input f item) Output IO
+buildComponent :: forall f item. Foldable f => (item -> String) -> State item -> H.Component HH.HTML (Query f item) (Input f item) Output IO
 buildComponent li initialState = H.component spec
   where
-    spec :: H.ComponentSpec HH.HTML (State item) (QueryF f item) (Input f item) Output IO
+    spec :: H.ComponentSpec HH.HTML (State item) (Query f item) (Input f item) Output IO
     spec =
       { initialState : const initialState
       , render: buildRender li

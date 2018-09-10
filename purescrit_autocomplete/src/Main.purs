@@ -2,30 +2,33 @@ module Main where
 
 import Prelude
 
-import Data.Maybe (Maybe(..))
-import Data.Tuple (Tuple(..))
+import Data.Time.Duration (Milliseconds(..))
 import Data.Foldable (class Foldable, foldl, traverse_)
+import Data.Maybe (Maybe(..), maybe)
+import Data.Tuple (Tuple(..))
 import Effect (Effect)
+import Effect.Aff (Aff, Fiber, delay, error, forkAff, killFiber)
+import Effect.Aff.AVar (AVar)
+import Effect.Aff.AVar as AVar
 import Effect.Console (log)
-import Effect.Aff (Aff)
--- import Control.Coroutine as CR
 import Halogen as H
 import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
-import Halogen.Query.EventSource as HQES
 import Halogen.HTML.Properties as HP
+import Halogen.Query.EventSource as HQES
 import Halogen.VDom.Driver (runUI)
-import Web.HTML (window) as DOM
-import Web.HTML.Window (document) as DOM
-import Web.HTML.HTMLDocument (HTMLDocument)
-import Web.HTML.HTMLDocument as HTMLDocument
+import Partial.Unsafe (unsafePartial)
+import Select (buildComponent, empty, defaultConfig, Query(..))
+import Web.DOM.ParentNode (QuerySelector(..))
 import Web.Event.Event as WEE
 import Web.Event.EventTarget as WEET
+import Web.HTML (window) as DOM
+import Web.HTML.HTMLDocument (HTMLDocument)
+import Web.HTML.HTMLDocument as HTMLDocument
+import Web.HTML.Window (document) as DOM
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.KeyboardEvent.EventTypes as KET
-
-import Select (buildComponent, empty, defaultConfig)
 
 -- data Query next
   -- | Init next
@@ -66,7 +69,8 @@ type IO = Aff
 main :: Effect Unit
 main = HA.runHalogenAff do
   body <- HA.awaitBody
-  runUI
+  app <- HA.selectElement (QuerySelector "#app")
+  io <- runUI
     ( buildComponent
         show
         { internal : empty
@@ -75,5 +79,14 @@ main = HA.runHalogenAff do
         }
     )
     []
-    body
+    (maybe body identity app)
+
+  _ <- H.liftAff $ forkAff do
+    delay (Milliseconds 2000.0)
+    H.liftEffect $ log "2 second"
+    io.query $ H.action $ Sync [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+
+  pure unit
+
+
 
