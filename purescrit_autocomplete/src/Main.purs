@@ -4,7 +4,7 @@ import Prelude
 
 import Data.Time.Duration (Milliseconds(..))
 import Data.Foldable (class Foldable, foldl, traverse_)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Aff (Aff, Fiber, delay, error, forkAff, killFiber)
@@ -79,7 +79,7 @@ main = HA.runHalogenAff do
         }
     )
     []
-    (maybe body identity app)
+    (fromMaybe body app)
 
   _ <- H.liftAff $ forkAff do
     delay (Milliseconds 2000.0)
