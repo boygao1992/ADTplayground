@@ -82,9 +82,9 @@ component =
     eval (NewTask next) = next <$ do
       H.modify_ $ \state -> state { nextId = state.nextId + 1, tasks = state.tasks `snoc` state.nextId }
     eval (AllDone next) = next <$ do
-      toggled <- H.queryAll (H.action (Task.ToggleCompleted true))
+      toggled <- H.queryAll (H.request (Task.ToggleCompletedFromParent true))
       H.liftEffect $ log $ show $ toggled
-      -- H.modify_ $ \state -> state { numCompleted = Map.size toggled }
+      H.modify_ $ \state -> state { numCompleted = Map.size <<< Map.filter identity$ toggled }
     eval (HandleTaskMessage id output next) = next <$ do
       case output of
         Task.Removed -> do

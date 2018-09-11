@@ -3,7 +3,6 @@ module Task where
 import Prelude
 
 import Data.Maybe (Maybe(..))
-
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -19,6 +18,7 @@ data Query next
   | ToggleCompleted Boolean next
   | Remove next
   | IsCompleted (Boolean -> next)
+  | ToggleCompletedFromParent Boolean (Boolean -> next)
 
 type Input = Unit
 
@@ -62,15 +62,14 @@ component =
         ]
 
     eval :: Query ~> H.ComponentDSL State Query Output m
-    eval (UpdateDescription desc next) = do
+    eval (UpdateDescription desc next) = next <$ do
       H.modify_ (_ { description = desc })
-      pure next
-    eval (ToggleCompleted b next) = do
+    eval (ToggleCompleted b next) = next <$ do
       H.modify_ (_ { completed = b })
       H.raise (Toggled b)
-      pure next
-    eval (Remove next) = do
+    eval (Remove next) = next <$ do
       H.raise Removed
-      pure next
     eval (IsCompleted reply) = do
       reply <$> H.gets (_.completed)
+    eval (ToggleCompletedFromParent b reply) = reply b <$ do
+      H.modify_ $ _ { completed = b }
