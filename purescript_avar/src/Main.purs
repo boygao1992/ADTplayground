@@ -3,8 +3,11 @@ module Main where
 import Prelude
 import Effect (Effect)
 import Effect.Console (log)
-import Effect.AVar as AVar
+import AVar as AVar
 
 main :: Effect Unit
 main = do
-  log "Hello sailor!"
+  var <- AVar.new "foo"
+  val1 <- AVar.tryRead var
+  val2 <- AVar.tryRead var
+  log $ show val1 <> show val2
