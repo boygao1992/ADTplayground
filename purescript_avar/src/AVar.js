@@ -3,7 +3,7 @@
 
 var AVar = function () {
 
-  // two-pointer queue
+  // double-linked list
   function MutableQueue() {
     this.head = null
     this.last = null
