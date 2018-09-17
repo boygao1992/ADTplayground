@@ -3,10 +3,9 @@ module Free.Trans where
 import Prelude
 
 import Control.Monad.Rec.Class (class MonadRec, tailRecM, Step(..))
-import Control.Monad.Trans.Class (class MonadTrans, lift)
+import Control.Monad.Trans.Class (class MonadTrans)
 import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
-import Data.Functor (class Functor)
 import Data.Exists (Exists, mkExists, runExists)
 
 {- | Types -}
@@ -106,12 +105,19 @@ resume = tailRecM go
           in
             pure (Loop (fj >>= kji >>= kia ))
 
-runFreeT :: forall f m a. Functor f => MonadRec m => (f (FreeT f m a) -> m (FreeT f m a)) -> FreeT f m a -> m a
+liftFreeT :: forall f m a. Functor f => Monad m => f a -> FreeT f m a
+liftFreeT fa = FreeT $ const $ pure $ Right $ pure <$> fa
+
+runFreeT
+  :: forall f m a
+   . Functor f
+  => MonadRec m
+  => (f (FreeT f m a) -> m (FreeT f m a))
+  -> FreeT f m a
+  -> m a
 runFreeT interp = tailRecM (go <=< resume)
   where
     go :: Either a (f (FreeT f m a)) -> m (Step (FreeT f m a) a)
     go (Left a) = pure (Done a)
     go (Right fc) = Loop <$> interp fc
 
-liftFreeT :: forall f m a. Functor f => Monad m => f a -> FreeT f m a
-liftFreeT fa = FreeT $ const $ pure $ Right $ pure <$> fa
