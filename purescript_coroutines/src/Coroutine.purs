@@ -2,14 +2,16 @@ module Coroutine where
 
 import Prelude
 
+import Control.Apply (lift2)
 import Control.Monad.Rec.Class (class MonadRec, Step(..), tailRecM)
 import Control.Monad.Trans.Class (lift)
+import Control.Parallel (class Parallel, parallel, sequential)
 import Data.Bifunctor (class Bifunctor, bimap)
-import Data.Maybe (Maybe(..), maybe)
 import Data.Either (Either(..))
+import Data.Maybe (Maybe(..))
 import Data.Profunctor (class Profunctor)
 import Data.Tuple (Tuple(..))
-import Free.Trans (FreeT, liftFreeT, runFreeT)
+import Free.Trans (FreeT, freeT, liftFreeT, resume, runFreeT)
 
 {- | Types -}
 
@@ -125,3 +127,59 @@ consumer send = loop do
 
 runProcess :: forall m a. MonadRec m => Process m a -> m a
 runProcess = runFreeT interpIdentity
+
+fuseWith
+  :: forall f g h m a par
+   . Functor f
+  => Functor g
+  => Functor h
+  => MonadRec m
+  => Parallel par m
+  => (forall b c d. (b -> c -> d) -> f b -> g c -> h d)
+  -> Co f m a
+  -> Co g m a
+  -> Co h m a
+fuseWith zap fs gs = freeT $ const $ go (Tuple fs gs)
+  where
+    go :: Tuple (Co f m a) (Co g m a) -> m (Either a (h (Co h m a)))
+    go (Tuple fs' gs') = do
+           -- sequential :: forall m f. Parallel f m => f ~> m
+      next <- sequential
+                (lift2 (zap Tuple)
+                    -- parallel :: forall m f. Parallel f m => m ~> f
+                   <$> parallel (resume fs')
+                   <*> parallel (resume gs')
+                )
+      case next of
+        Left a -> pure $ Left a
+        Right o -> pure $ Right $ (\t -> freeT $ const $ go t) <$> o
+
+connect
+  :: forall o f m a
+   . MonadRec m
+  => Parallel f m
+  => Producer o m a
+  -> Consumer o m a
+  -> Process m a
+connect = fuseWith zap
+  where
+    zap :: forall b c d. (b -> c -> d) -> Emit o b -> Await o c -> Identity d
+    zap f (Emit e a) (Await c) = Identity (f a (c e))
+
+connect'
+  :: forall o f m a
+   . MonadRec m
+  => Parallel f m
+  => Producer o m a
+  -> Consumer o m a
+  -> Process m a
+connect' p c = tailRecM go (Tuple p c)
+  where
+    go
+      :: Tuple (Producer o m a) (Consumer o m a)
+      -> Co Identity m (Step (Tuple (Producer o m a) (Consumer o m a)) a)
+    go (Tuple p' c') = do
+      -- TODO
+
+    zap :: forall b c d. (b -> c -> d) -> Emit o b -> Await o c -> Identity d
+    zap f (Emit e a) (Await c) = Identity (f a (c e))
