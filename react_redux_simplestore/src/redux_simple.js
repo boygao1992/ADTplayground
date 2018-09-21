@@ -1,9 +1,11 @@
 // a dummy reducer
+const COUNTER_INCREMENT = "increment"
+const COUNTER_DECREMENT = "decrement"
 const counter = ( state = 0, action ) => {
   switch ( action.type ) {
-    case "INCREMENT":
+    case COUNTER_INCREMENT:
       return state + 1
-    case "DECREMENT":
+    case COUNTER_DECREMENT:
       return state - 1
     default:
       return state // need to log "unrecognized action"
@@ -32,5 +34,17 @@ const createStore = ( reducer ) => {
   return { getState, dispatch, subscribe }
 }
 
+const createAction = ( type ) => ( { type } )
+
 // test
-const store = createStore( counter );
+// const store = createStore( counter );
+
+// store.subscribe( () => { console.log( store.getState() ) } )
+
+// store.dispatch( { type: "INCREMENT" } )
+// store.dispatch( { type: "INCREMENT" } )
+// store.dispatch( { type: "INCREMENT" } )
+// store.dispatch( { type: "DECREMENT" } )
+// store.dispatch( { type: "invalid action" } )
+
+module.exports = { createStore, createAction, counter, COUNTER_INCREMENT, COUNTER_DECREMENT }
