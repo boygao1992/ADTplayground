@@ -166,20 +166,24 @@ connect = fuseWith zap
     zap :: forall b c d. (b -> c -> d) -> Emit o b -> Await o c -> Identity d
     zap f (Emit e a) (Await c) = Identity (f a (c e))
 
-connect'
-  :: forall o f m a
-   . MonadRec m
-  => Parallel f m
-  => Producer o m a
-  -> Consumer o m a
-  -> Process m a
-connect' p c = tailRecM go (Tuple p c)
-  where
-    go
-      :: Tuple (Producer o m a) (Consumer o m a)
-      -> Co Identity m (Step (Tuple (Producer o m a) (Consumer o m a)) a)
-    go (Tuple p' c') = do
-      -- TODO
+-- go'
+--   :: forall o f m a
+--    . MonadRec m
+--   => Parallel f m
+--   => Tuple (Producer o m a) (Consumer o m a)
+--   -> m (Step (Identity (Tuple (Producer o m a) (Consumer o m a))) a)
+-- go' (Tuple fs' gs') = do
+--         -- sequential :: forall m f. Parallel f m => f ~> m
+--   next <- sequential
+--             (lift2 (zap Tuple)
+--                 -- parallel :: forall m f. Parallel f m => m ~> f
+--                 <$> parallel (resume fs')
+--                 <*> parallel (resume gs')
+--             )
+--   case next of
+--     Left a -> pure $ Done a
+--     Right o -> pure $ Loop $ o
 
-    zap :: forall b c d. (b -> c -> d) -> Emit o b -> Await o c -> Identity d
-    zap f (Emit e a) (Await c) = Identity (f a (c e))
+--   where
+--     zap :: forall b c d. (b -> c -> d) -> Emit o b -> Await o c -> Identity d
+--     zap f (Emit e a) (Await c) = Identity (f a (c e))
