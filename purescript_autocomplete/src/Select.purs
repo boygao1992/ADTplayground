@@ -2,25 +2,26 @@ module Select where
 
 import Prelude
 
+import CSS.Geometry as CG
+import CSS.Size as CS
 import Control.MonadPlus (guard)
-import Data.Int (toNumber)
 import Data.Foldable (class Foldable, foldl)
 import Data.FoldableWithIndex (foldlWithIndex)
+import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
+import Effect.Console (log, logShow)
 import Effect.Aff (Aff)
--- import Effect.Console (log, logShow)
 import Halogen as H
 import Halogen.HTML as HH
+import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Utils (classList)
+import Web.DOM.Element as WDE
 import Web.Event.Event as WEE
--- import Web.HTML.HTMLElement as WHHE
+import Web.HTML.HTMLElement as WHHE
 import Web.UIEvent.KeyboardEvent as KE
-import CSS.Geometry as CG
-import CSS.Size as CS
-import Halogen.HTML.CSS as HC
 
 withCmds :: forall model cmd. model -> cmd -> Tuple model cmd
 withCmds model cmd =
@@ -227,8 +228,8 @@ mouseTransition _ event state@{ mouse } =
     MouseClick mousePos ->
       (_ { mouse = Just mousePos }) ! Just (Select mousePos)
 
--- ulRef :: H.RefLabel
--- ulRef = H.RefLabel "autocomplete-ul"
+ulRef :: H.RefLabel
+ulRef = H.RefLabel "autocomplete-ul"
 
 keySelectedRef :: H.RefLabel
 keySelectedRef = H.RefLabel "keySelected"
@@ -265,6 +266,7 @@ buildRender li { config, internal , external } =
                   HP.class_ $ H.ClassName "autocomplete-list"
                 , HC.style $ CG.maxHeight $ CS.px $ toNumber
                     $ 30 * config.windowSize -- HACK: hard-coded offsetHeight
+                , HP.ref ulRef
                 ]
             $ foldlWithIndex (\index acc item -> acc <> [ toLi index item ]) [] x
       | otherwise = HH.div_ []
@@ -334,6 +336,19 @@ eval (OnKeyDown ev next) = do
       let Tuple reducer outMsg = _stateTransition config (Keyboard KeyUp) internalState
       H.modify_ (\st -> st { internal = reducer st.internal })
       case outMsg of
+        Just WindowSlideUp -> do
+          mul <- H.getHTMLElementRef ulRef
+          mli <- H.getHTMLElementRef keySelectedRef
+          case mul, mli of
+            Just ul, Just li -> do
+              liTop <- H.liftEffect $ WHHE.offsetTop li
+              liHeight <- H.liftEffect $ WHHE.offsetHeight li
+              H.liftEffect
+                $ WDE.setScrollTop (liTop) (WHHE.toElement ul)
+            _, _ -> pure unit
+        _ -> do
+          pure unit
+      case outMsg of
         Just msg -> H.raise msg
         Nothing -> pure unit
       pure next
@@ -343,6 +358,22 @@ eval (OnKeyDown ev next) = do
       internalState <- H.gets _.internal
       let Tuple reducer outMsg = _stateTransition config (Keyboard KeyDown) internalState
       H.modify_ (\st -> st { internal = reducer st.internal })
+      case outMsg of
+        Just WindowSlideDown -> do
+          mul <- H.getHTMLElementRef ulRef
+          mli <- H.getHTMLElementRef keySelectedRef
+          case mul, mli of
+            Just ul, Just li -> do
+              liTop <- H.liftEffect $ WHHE.offsetTop li
+              liHeight <- H.liftEffect $ WHHE.offsetHeight li
+              ulHeight <- H.liftEffect $ WDE.clientHeight (WHHE.toElement ul)
+              H.liftEffect
+                $ WDE.setScrollTop
+                    (liTop + liHeight - ulHeight)
+                    (WHHE.toElement ul)
+            _, _ -> pure unit
+        _ -> do
+          pure unit
       case outMsg of
         Just msg -> H.raise msg
         Nothing -> pure unit
