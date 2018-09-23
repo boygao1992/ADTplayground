@@ -82,9 +82,9 @@ main = HA.runHalogenAff do
     (fromMaybe body app)
 
   _ <- H.liftAff $ forkAff do
-    delay (Milliseconds 2000.0)
-    H.liftEffect $ log "2 second"
-    io.query $ H.action $ Sync [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+    delay (Milliseconds 5000.0)
+    H.liftEffect $ log "5 second"
+    io.query $ H.action $ Sync [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
 
   pure unit
 

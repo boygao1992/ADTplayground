@@ -5,7 +5,8 @@ import Prelude
 import CSS.Geometry as CG
 import CSS.Size as CS
 import Control.MonadPlus (guard)
-import Data.Foldable (class Foldable, foldl)
+-- import Data.Foldable (class Foldable, foldl)
+import Data.Array (take)
 import Data.FoldableWithIndex (foldlWithIndex)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
@@ -60,9 +61,9 @@ type State item =
   , external :: Maybe (Array item)
   }
 
-data Query f item next
+data Query item next
   = StateTransition Msg next
-  | Sync (f item) next
+  | Sync (Array item) next
   | Configure Config next -- reconfigure at runtime
   -- | PreventDefault WEE.Event (Query f item next)
   | OnKeyDown KE.KeyboardEvent next
@@ -76,7 +77,7 @@ data Msg
   | Mouse MouseMsg
   | Reset
 
-type Input f item = f item
+type Input item = Array item
 
 data Output
   = WindowPushUpperBoundary
@@ -234,7 +235,7 @@ ulRef = H.RefLabel "autocomplete-ul"
 keySelectedRef :: H.RefLabel
 keySelectedRef = H.RefLabel "keySelected"
 
-buildRender :: forall f item. (item -> String) -> State item -> H.ComponentHTML (Query f item)
+buildRender :: forall item. (item -> String) -> State item -> H.ComponentHTML (Query item)
 buildRender li { config, internal , external } =
   HH.div_
     [ HH.div_
@@ -259,17 +260,18 @@ buildRender li { config, internal , external } =
         ]
     ]
   where
-    toUl :: Maybe (Array item) -> H.ComponentHTML (Query f item)
-    toUl e
-      | Just x <- e =
-          HH.ul [ -- HE.onScroll $ HE.input_ OnScroll,
-                  HP.class_ $ H.ClassName "autocomplete-list"
-                , HC.style $ CG.maxHeight $ CS.px $ toNumber
-                    $ 30 * config.windowSize -- HACK: hard-coded offsetHeight
-                , HP.ref ulRef
-                ]
-            $ foldlWithIndex (\index acc item -> acc <> [ toLi index item ]) [] x
-      | otherwise = HH.div_ []
+    toUl :: Maybe (Array item) -> H.ComponentHTML (Query item)
+    toUl = case _ of
+      Just xs  ->
+        HH.ul [ -- HE.onScroll $ HE.input_ OnScroll,
+                HP.class_ $ H.ClassName "autocomplete-list"
+              , HC.style $ CG.maxHeight $ CS.px $ toNumber
+                  $ 30 * config.windowSize -- HACK: hard-coded offsetHeight
+              , HP.ref ulRef
+              ]
+          $ foldlWithIndex (\index acc item -> acc <> [ toLi index item ]) [] xs
+      _ ->
+        HH.div_ []
 
     toLi :: Int -> item -> forall f. H.ComponentHTML f
     toLi index item =
@@ -297,7 +299,7 @@ buildRender li { config, internal , external } =
 --   WEET.addEventListener KET.keydown listener false target
 --   pure $ WEET.removeEventListener KET.keydown listener false target
 
-eval :: forall f item. Foldable f => Query f item ~> H.ComponentDSL (State item) (Query f item) Output IO
+eval :: forall item. Query item ~> H.ComponentDSL (State item) (Query item) Output IO
 -- eval (Init next) = do
 --   document <- H.liftEffect $ DOM.document =<< DOM.window
 --   H.subscribe $ HQES.eventSource' (onKeyUp_ document) (Just <<< H.request <<< HandleKey)
@@ -309,7 +311,16 @@ eval :: forall f item. Foldable f => Query f item ~> H.ComponentDSL (State item)
 --     H.liftEffect $ log $ KE.key ev
 --     pure (reply H.Listening)
 eval (Sync xs next) = do
-  H.modify_ (\st -> st { external = Just $ foldl (\acc x -> acc <> [x]) [] xs })
+  listSize <- H.gets _.config.listSize
+  H.modify_ (\st -> st { internal = empty, external = Just $ take listSize xs })
+
+  mul <- H.getHTMLElementRef ulRef
+  case mul of
+    Just ul -> do
+      H.liftEffect
+        $ WDE.setScrollTop 0.0 (WHHE.toElement ul)
+    _ -> pure unit
+
   pure next
 eval (Configure config next) = do
   H.modify_ (\st -> st { config = config })
@@ -399,10 +410,10 @@ eval (OnKeyDown ev next) = do
 
 
 
-buildComponent :: forall f item. Foldable f => (item -> String) -> State item -> H.Component HH.HTML (Query f item) (Input f item) Output IO
+buildComponent :: forall item. (item -> String) -> State item -> H.Component HH.HTML (Query item) (Input item) Output IO
 buildComponent li initialState = H.component spec
   where
-    spec :: H.ComponentSpec HH.HTML (State item) (Query f item) (Input f item) Output IO
+    spec :: H.ComponentSpec HH.HTML (State item) (Query item) (Input item) Output IO
     spec =
       { initialState : const initialState
       , render: buildRender li
