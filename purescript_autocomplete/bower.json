@@ -1,5 +1,5 @@
 {
-  "name": "purescrit_autocomplete",
+  "name": "purescript_autocomplete",
   "ignore": [
     "**/.*",
     "node_modules",

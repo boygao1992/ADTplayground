@@ -12,6 +12,6 @@ import Halogen.HTML.Properties as HP
 
 classList
   :: forall r i
-   . Array (Tuple Boolean H.ClassName)
-  -> Array (H.IProp ("class" :: String | r) i)
-classList = map (HP.class_ <<< snd) <<< filter fst
+   . Array (Tuple String Boolean)
+  -> H.IProp ("class" :: String | r) i
+classList = HP.classes <<< map (H.ClassName <<< fst) <<< filter snd

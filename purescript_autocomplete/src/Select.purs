@@ -3,6 +3,7 @@ module Select where
 import Prelude
 
 import Data.Foldable (class Foldable, foldl, traverse_)
+import Data.FoldableWithIndex (foldlWithIndex)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
@@ -15,6 +16,7 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Query.EventSource as HQES
 import Halogen.VDom.Driver (runUI)
+import Utils (classList)
 import Web.Event.Event as WEE
 import Web.Event.EventTarget as WEET
 import Web.HTML (window) as DOM
@@ -23,6 +25,7 @@ import Web.HTML.HTMLDocument as HTMLDocument
 import Web.HTML.Window (document) as DOM
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.KeyboardEvent.EventTypes as KET
+import Control.MonadPlus (guard)
 
 withCmds :: forall model cmd. model -> cmd -> Tuple model cmd
 withCmds model cmd =
@@ -66,6 +69,7 @@ data Query f item next
   | Sync (f item) next
   | Configure Config next -- reconfigure at runtime
   | PreventDefault WEE.Event (Query f item next)
+  | KeyboardInput KE.KeyboardEvent next
   -- | Init next
   -- | HandleKey KE.KeyboardEvent (H.SubscribeStatus -> next)
 
@@ -234,7 +238,7 @@ buildRender li { internal , external } =
         [ HH.text $ show internal ]
     , HH.div [ HP.class_ $ H.ClassName "example-autocomplete"]
         [ HH.input
-          [ HE.onKeyDown $ \ke -> Just $ PreventDefault (KE.toEvent ke) $ H.action $ StateTransition $ Keyboard KeyDown
+          [ HE.onKeyDown $ HE.input KeyboardInput
           , HP.class_ $ H.ClassName "autocomplete-input"
           ]
         , HH.div [ HP.class_ $ H.ClassName "autocomplete-menu" ]
@@ -256,12 +260,16 @@ buildRender li { internal , external } =
     toUl e
       | Just x <- e =
           HH.ul [ HP.class_ $ H.ClassName "autocomplete-list" ] $
-            foldl (\acc item -> acc <> [ toLi item ]) [] x
+            foldlWithIndex (\index acc item -> acc <> [ toLi index item ]) [] x
       | otherwise = HH.div_ []
 
-    toLi :: item -> forall f. H.ComponentHTML f
-    toLi item =
-      HH.li [ HP.class_ $ H.ClassName "autocomplete-item" ]
+    toLi :: Int -> item -> forall f. H.ComponentHTML f
+    toLi index item =
+      HH.li [ classList
+                [ (Tuple "autocomplete-item" true)
+                , (Tuple "key-selected" (Just index == internal.key))
+                ]
+            ]
         [ HH.text $ li item ]
 
 -- onKeyUp_ :: HTMLDocument -> (KE.KeyboardEvent -> Effect Unit) -> Effect (Effect Unit)
@@ -308,9 +316,37 @@ eval (StateTransition event next) = do
   where
     _stateTransition = stateTransition
 
+eval (KeyboardInput ev next) = do
+  case KE.key ev of
+    "ArrowUp" -> do
+      H.liftEffect <<< WEE.preventDefault <<< KE.toEvent $ ev
+      config <- H.gets _.config
+      internalState <- H.gets _.internal
+      let Tuple reducer outMsg = _stateTransition config (Keyboard KeyUp) internalState
+      H.modify_ (\st -> st { internal = reducer st.internal })
+      case outMsg of
+        Just msg -> H.raise msg
+        Nothing -> pure unit
+      pure next
+    "ArrowDown" -> do
+      H.liftEffect <<< WEE.preventDefault <<< KE.toEvent $ ev
+      config <- H.gets _.config
+      internalState <- H.gets _.internal
+      let Tuple reducer outMsg = _stateTransition config (Keyboard KeyDown) internalState
+      H.modify_ (\st -> st { internal = reducer st.internal })
+      case outMsg of
+        Just msg -> H.raise msg
+        Nothing -> pure unit
+      pure next
+    _ -> pure next
+
+  where
+    _stateTransition = stateTransition
+
 eval (PreventDefault ev next) = do
   H.liftEffect $ WEE.preventDefault ev
   eval next
+
 
 
 buildComponent :: forall f item. Foldable f => (item -> String) -> State item -> H.Component HH.HTML (Query f item) (Input f item) Output IO
