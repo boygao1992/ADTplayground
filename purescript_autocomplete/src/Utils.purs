@@ -2,9 +2,8 @@ module Utils where
 
 import Prelude
 
-import Data.Tuple (Tuple(..), fst, snd)
+import Data.Tuple (Tuple, fst, snd)
 import Data.Array (filter)
-import Data.Foldable (fold)
 
 import Halogen as H
 import Halogen.HTML.Properties as HP
