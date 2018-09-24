@@ -5,14 +5,13 @@ import Prelude
 import CSS.Geometry as CG
 import CSS.Size as CS
 import Control.MonadPlus (guard)
--- import Data.Foldable (class Foldable, foldl)
 import Data.Array (take)
 import Data.FoldableWithIndex (foldlWithIndex)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Effect.Console (log, logShow)
 import Effect.Aff (Aff)
+import Effect.Console (log, logShow)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
@@ -273,15 +272,19 @@ buildRender li { config, internal , external } =
       _ ->
         HH.div_ []
 
-    toLi :: Int -> item -> forall f. H.ComponentHTML f
+    toLi :: Int -> item -> H.ComponentHTML (Query item)
     toLi index item =
       HH.li (join
                [ pure $ classList
                    [ (Tuple "autocomplete-item" true)
                    , (Tuple "key-selected" (Just index == internal.key))
+                   , (Tuple "mouse-selected" (Just index == internal.mouse))
                    ]
                , guard (Just index == internal.key)
                    $> HP.ref keySelectedRef
+               , pure $ HE.onMouseEnter $ HE.input_ $ StateTransition $ Mouse $ MouseEnter index
+               , pure $ HE.onMouseLeave $ HE.input_ $ StateTransition $ Mouse $ MouseLeave
+               , pure $ HE.onClick $ HE.input_ $ StateTransition $ Mouse $ MouseClick index
                ])
         [ HH.text $ li item ]
 
