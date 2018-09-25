@@ -1,0 +1,35 @@
+// @flow
+
+type State = Array<{
+  id : number,
+  text : string,
+  completed : boolean,
+}>
+
+type Action_ADD_TODO = { type : "ADD_TODO", id : number, text : string }
+const add_todo = ( id : number, text : string ) : Action_ADD_TODO => ({ type : "ADD_TODO", id , text })
+type Action_TOGGLE_TODO = { type : "TOGGLE_TODO", id : number }
+const toggle_todo = ( id : number ) : Action_TOGGLE_TODO => ({ type : "TOGGLE_TODO", id })
+
+type Action
+  = Action_ADD_TODO
+  | Action_TOGGLE_TODO
+
+const reducer = (state : State = [], action : Action) : State => {
+  switch (action.type) {
+    case "ADD_TODO":
+      return [ ...state ,
+               { id : action.id , text : action.text, completed: false }
+             ]
+    case "TOGGLE_TODO":
+      return state.map(item => {
+        if (item.id == action.id) {
+          return { ...item, completed : !item.completed }
+        } else {
+          return item
+        }
+      })
+    default:
+      return state
+  }
+}
