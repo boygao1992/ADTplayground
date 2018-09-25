@@ -7,7 +7,7 @@ import CSS.Size as CS
 import Control.MonadPlus (guard)
 import Data.Array (take)
 import Data.FoldableWithIndex (foldlWithIndex)
-import Data.Int (toNumber)
+import Data.Int (toNumber, floor, ceil)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
@@ -29,6 +29,8 @@ withCmds model cmd =
 
 infixl 5 withCmds as !
 
+heightPx :: Int
+heightPx = 30
 
 type Config =
   { windowSize :: Int
@@ -44,14 +46,14 @@ defaultConfig =
 type InternalState =
   { key :: Maybe Int
   , mouse :: Maybe Int
-  , head :: Int
+  , head :: Number
   }
 
 empty :: InternalState
 empty =
   { key : Nothing
   , mouse : Nothing
-  , head : 0
+  , head : 0.0
   }
 
 type State item =
@@ -66,13 +68,13 @@ data Query item next
   | Configure Config next -- reconfigure at runtime
   -- | PreventDefault WEE.Event (Query f item next)
   | OnKeyDown KE.KeyboardEvent next
-  -- | OnScroll next
+  | OnScroll next
   -- | Init next
   -- | HandleKey KE.KeyboardEvent (H.SubscribeStatus -> next)
 
 data Msg
   = Keyboard KeyboardMsg
-  -- | Scroll ScrollMsg
+  | Scroll ScrollMsg
   | Mouse MouseMsg
   | Reset
 
@@ -91,8 +93,8 @@ stateTransition :: Config -> Msg -> InternalState -> Tuple (InternalState -> Int
 stateTransition config event state = case event of
   Keyboard subEvent ->
     keyboardTransition config subEvent state
-  -- Scroll subEvent ->
-  --   scrollTransition config subEvent state
+  Scroll subEvent ->
+    scrollTransition config subEvent state
   Mouse subEvent ->
     mouseTransition  config subEvent state
   Reset ->
@@ -106,10 +108,10 @@ keyboardTransition
   :: forall r
    . Config ->
      KeyboardMsg ->
-     { key :: Maybe Int, head :: Int | r } ->
+     { key :: Maybe Int, head :: Number | r } ->
      Tuple
-       ({ key :: Maybe Int, head :: Int | r } ->
-        { key :: Maybe Int, head :: Int | r }
+       ({ key :: Maybe Int, head :: Number | r } ->
+        { key :: Maybe Int, head :: Number | r }
        )
        (Maybe Output)
 keyboardTransition { windowSize, listSize } event { key, head } =
@@ -117,44 +119,75 @@ keyboardTransition { windowSize, listSize } event { key, head } =
   KeyUp ->
     case key of
     Nothing ->
-      (_ { key = Just (head + windowSize - 1) }) ! Nothing
+      (_ { key = Just ((floor head) + windowSize - 1) }) ! Just WindowSlideDown
     Just keyPos ->
       let
         windowAtUpperBoundary h =
-          h == 0
+          h <= 0
         aboveWindow k h =
-          k - h < 0
+          k - (ceil h) < 0
+        belowWindow k h =
+          k - (floor h) >= windowSize
+        outsideWindow k h =
+          k - (floor h) < 0 || k - (ceil h) > windowSize
       in
-        case windowAtUpperBoundary head, aboveWindow (keyPos - 1) head of
-        true, true  ->
-          identity ! Just WindowPushUpperBoundary
-        true, false ->
-          (_ { key = Just $ keyPos - 1 }) ! Nothing
-        false, true ->
-          (_ { key = Just $ keyPos - 1, head = head - 1 }) ! Just WindowSlideUp
-        false, false ->
-          (_ { key = Just $ keyPos - 1 }) ! Nothing
+        if outsideWindow keyPos head
+        then
+          (_ { key = Just ((floor head) + windowSize - 1) }) ! Just WindowSlideDown
+        else
+          case windowAtUpperBoundary (floor head), aboveWindow (keyPos - 1) head of
+          true, true  ->
+            identity ! Just WindowPushUpperBoundary
+          false, true ->
+            (_ { key = Just $ keyPos - 1, head = toNumber $ keyPos - 1 }) ! Just WindowSlideUp
+          _, _ ->
+            (_ { key = Just $ keyPos - 1 }) ! Nothing
 
   KeyDown ->
     case key of
     Nothing ->
-      (_ { key = Just head }) ! Nothing
+      (_ { key = Just $ floor $ head }) ! Just WindowSlideUp
     Just keyPos ->
       let
         windowAtLowerBoundary h =
-          h == listSize - windowSize
+          h >= (listSize - windowSize)
+        aboveWindow k h =
+          k - (ceil h) < 0
         belowWindow k h =
-          k - h >= windowSize
+          k - (floor h) >= windowSize
+        outsideWindow k h =
+          k - (floor h) < 0 || k - (ceil h) > windowSize
       in
-        case windowAtLowerBoundary head, belowWindow (keyPos + 1) head of
-        true, true ->
-          identity ! Just WindowPushLowerBoundary
-        true, false ->
-          (_ { key = Just $ keyPos + 1 }) ! Nothing
-        false, true ->
-          (_ { key = Just $ keyPos + 1, head = head + 1 }) ! Just WindowSlideDown
-        false, false ->
-          (_ { key = Just $ keyPos + 1 }) ! Nothing
+        if outsideWindow keyPos head
+        then
+          (_ { key = Just $ floor $ head }) ! Just WindowSlideUp
+        else
+          case windowAtLowerBoundary (floor head), belowWindow (keyPos + 1) head of
+          true, true ->
+            identity ! Just WindowPushLowerBoundary
+          false, true ->
+            (_ { key = Just $ keyPos + 1, head = toNumber $ keyPos + 2 - windowSize }) ! Just WindowSlideDown
+          _, _ ->
+            (_ { key = Just $ keyPos + 1 }) ! Nothing
+
+data ScrollMsg
+  = UpdateScrollPosition Number
+
+scrollTransition
+  :: forall r
+   . Config ->
+     ScrollMsg ->
+     { head :: Number | r } ->
+     Tuple
+       ({ head :: Number | r } ->
+        { head :: Number | r }
+       )
+       (Maybe Output)
+scrollTransition { windowSize, listSize } event { head } =
+  case event of
+    UpdateScrollPosition h ->
+      (_ { head = h }) ! Nothing
+
 
 -- data ScrollMsg
 --   = ScrollUp
@@ -262,10 +295,10 @@ buildRender li { config, internal , external } =
     toUl :: Maybe (Array item) -> H.ComponentHTML (Query item)
     toUl = case _ of
       Just xs  ->
-        HH.ul [ -- HE.onScroll $ HE.input_ OnScroll,
-                HP.class_ $ H.ClassName "autocomplete-list"
+        HH.ul [ HE.onScroll $ HE.input_ OnScroll
+              , HP.class_ $ H.ClassName "autocomplete-list"
               , HC.style $ CG.maxHeight $ CS.px $ toNumber
-                  $ 30 * config.windowSize -- HACK: hard-coded offsetHeight
+                  $ heightPx * config.windowSize -- HACK: hard-coded offsetHeight
               , HP.ref ulRef
               ]
           $ foldlWithIndex (\index acc item -> acc <> [ toLi index item ]) [] xs
@@ -400,16 +433,13 @@ eval (OnKeyDown ev next) = do
 -- eval (PreventDefault ev next) = do
 --   H.liftEffect $ WEE.preventDefault ev
 --   eval next
--- eval (OnScroll next) = do
---   mhl<- H.getHTMLElementRef keySelectedRef
---   case mhl of
---     Just hl -> do
---       itemTop <- H.liftEffect $ WHHE.offsetTop hl
---       H.liftEffect $ logShow $ itemTop
---       itemHeight <- H.liftEffect $ WHHE.offsetHeight hl
---       H.liftEffect $ logShow $ itemHeight
---     Nothing -> pure unit
---   pure next
+eval (OnScroll next) = do
+  mul <- H.getHTMLElementRef ulRef
+  case mul of
+    Just ul-> do
+      ulHeight <- H.liftEffect $ WDE.scrollTop (WHHE.toElement ul)
+      eval (StateTransition (Scroll $ UpdateScrollPosition $ ulHeight / (toNumber heightPx)) next)
+    Nothing -> pure next
 
 
 
