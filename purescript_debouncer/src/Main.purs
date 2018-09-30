@@ -7,6 +7,7 @@ import Effect (Effect)
 import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI)
 import Search as Search
+import ABBABA as Secret
 import Web.DOM.ParentNode (QuerySelector(..))
 
 main :: Effect Unit
@@ -14,6 +15,7 @@ main = HA.runHalogenAff do
   body <- HA.awaitBody
   app <- HA.selectElement (QuerySelector "#app")
   runUI
-    Search.component
+    -- Search.component
+    Secret.component
     unit
     (fromMaybe body app)
