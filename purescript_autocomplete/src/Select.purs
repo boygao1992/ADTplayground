@@ -11,23 +11,16 @@ import Data.Int (toNumber, floor, ceil)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
-import Effect.Console (log, logShow)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Utils (classList)
+import Utils (classList, (!))
 import Web.DOM.Element as WDE
 import Web.Event.Event as WEE
 import Web.HTML.HTMLElement as WHHE
 import Web.UIEvent.KeyboardEvent as KE
-
-withCmds :: forall model cmd. model -> cmd -> Tuple model cmd
-withCmds model cmd =
-  Tuple model cmd
-
-infixl 5 withCmds as !
 
 heightPx :: Int
 heightPx = 30
@@ -308,17 +301,22 @@ buildRender li { config, internal , external } =
     toLi :: Int -> item -> H.ComponentHTML (Query item)
     toLi index item =
       HH.li (join
-               [ pure $ classList
-                   [ (Tuple "autocomplete-item" true)
-                   , (Tuple "key-selected" (Just index == internal.key))
-                   , (Tuple "mouse-selected" (Just index == internal.mouse))
-                   ]
-               , guard (Just index == internal.key)
-                   $> HP.ref keySelectedRef
-               , pure $ HE.onMouseEnter $ HE.input_ $ StateTransition $ Mouse $ MouseEnter index
-               , pure $ HE.onMouseLeave $ HE.input_ $ StateTransition $ Mouse $ MouseLeave
-               , pure $ HE.onClick $ HE.input_ $ StateTransition $ Mouse $ MouseClick index
-               ])
+              [ guard (Just index == internal.key)
+                  $> HP.ref keySelectedRef
+              ]
+            <>
+              [ classList
+                  [ (Tuple "autocomplete-item" true)
+                  , (Tuple "key-selected" (Just index == internal.key))
+                  , (Tuple "mouse-selected" (Just index == internal.mouse))
+                  ]
+              ]
+            <>
+              [ HE.onMouseEnter $ HE.input_ $ StateTransition $ Mouse $ MouseEnter index
+              , HE.onMouseLeave $ HE.input_ $ StateTransition $ Mouse $ MouseLeave
+              , HE.onClick $ HE.input_ $ StateTransition $ Mouse $ MouseClick index
+              ]
+            )
         [ HH.text $ li item ]
 
 -- onKeyUp_ :: HTMLDocument -> (KE.KeyboardEvent -> Effect Unit) -> Effect (Effect Unit)
