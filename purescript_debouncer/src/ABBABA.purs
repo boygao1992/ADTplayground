@@ -2,10 +2,9 @@ module ABBABA where
 
 import Prelude
 
-import Data.Ord (abs)
-import Data.Array as Array
 import Data.DateTime.Instant (unInstant)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Ord (abs)
 import Data.String.CodeUnits (toChar, toCharArray)
 import Data.String.Common (toUpper)
 import Data.Time.Duration (Milliseconds(..))
@@ -17,13 +16,14 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import SlidingBuffer (SlidingBuffer)
+import SlidingBuffer as SB
 import Web.Event.Event as WEE
 import Web.UIEvent.KeyboardEvent as KE
 
 type TimeStamp = Milliseconds
 type State =
-  { buffer :: Array (Tuple Char TimeStamp) -- internal state, sliding buffer
-  , size :: Int -- config
+  { buffer :: SlidingBuffer (Tuple Char TimeStamp) -- internal state, sliding buffer
   , secret :: Array Char -- config
   , maxDuration :: Milliseconds
   , success :: Boolean
@@ -31,8 +31,7 @@ type State =
 
 initialState :: State
 initialState =
-  { buffer : []
-  , size : 6
+  { buffer : SB.fromArray [] 6
   , secret : toCharArray "ABBABA"
   , maxDuration : Milliseconds 3000.0
   , success : false
@@ -61,15 +60,16 @@ eval (OnKeyDown ke next) = next <$ do
   case toChar(toUpper(KE.key ke)) of
     Just x | x == 'A' || x == 'B' -> do
       ms <- unInstant <$> H.liftEffect now
-      { buffer, size, secret, maxDuration : (Milliseconds t) } <- H.get
-      let newBuffer = fromMaybe buffer $ slide size buffer (Tuple x ms)
-          withinDuration =
-            fromMaybe false $
-            (\(Milliseconds t1) (Milliseconds t2) -> abs(t1 - t2) < t)
-            <$> (Tuple.snd <$> Array.head newBuffer)
-            <*> (Tuple.snd <$> Array.last newBuffer)
-      if (Tuple.fst <$> newBuffer) == secret && withinDuration
-        then H.modify_ _ { buffer = [], success = true }
+      { buffer, secret, maxDuration : (Milliseconds t) } <- H.get
+      let
+        newBuffer = SB.putRight (Tuple x ms) buffer
+        withinDuration =
+          fromMaybe false $
+          (\(Milliseconds t1) (Milliseconds t2) -> abs(t1 - t2) < t)
+          <$> (Tuple.snd <$> SB.head newBuffer)
+          <*> (Tuple.snd <$> SB.last newBuffer)
+      if (Tuple.fst <$> (SB.getBuffer newBuffer)) == secret && withinDuration
+        then H.modify_ _ { buffer = SB.empty newBuffer, success = true }
         else H.modify_ _ { buffer = newBuffer }
     _ -> do
       pure unit
@@ -82,13 +82,3 @@ component =
     , eval
     , receiver : const Nothing
     }
-
--- | Utils
-slide :: forall a. Int -> Array a -> a -> Maybe (Array a)
-slide size xs x
-  | size < 1 = Nothing
-  | Array.length xs + 1 <= size
-    = Just $ Array.snoc xs x
-  | Array.length xs == size
-    = map (flap(Array.snoc) x) <<< Array.tail $ xs
-  | otherwise = Nothing
