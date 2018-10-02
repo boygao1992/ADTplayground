@@ -34,7 +34,7 @@ const createStore = ( reducer ) => {
   return { getState, dispatch, subscribe }
 }
 
-const createAction = ( type ) => ( { type } )
+const createAction = ( type, payload ) => ( { type, ...payload } )
 
 // test
 // const store = createStore( counter );

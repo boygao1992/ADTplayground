@@ -1,8 +1,10 @@
-import React, { Component } from 'react';
+// @flow
+import React from 'react';
 import logo from './logo.svg';
 import './App.css';
+import * as Item from './component/item'
 
-class App extends Component {
+class App extends React.Component<{}> {
   render() {
     return (
       <div className="App">
@@ -13,6 +15,9 @@ class App extends Component {
         <p className="App-intro">
           To get started, edit <code>src/App.js</code> and save to reload.
         </p>
+        <div>
+          { Item.component({ text: "new todo" }) }
+        </div>
       </div>
     );
   }

@@ -1,34 +1,42 @@
 // @flow
+import React from 'react'
+import type { Item$State, Item$Input } from './item'
 
-type State = Array<{
-  id : number,
-  text : string,
-  completed : boolean,
-}>
+type List$State =
+  Array <
+    { id : number
+    , ...Item$State
+    }
+  >
 
-type Action_ADD_TODO = { type : "ADD_TODO", id : number, text : string }
-const add_todo = ( id : number, text : string ) : Action_ADD_TODO => ({ type : "ADD_TODO", id , text })
-type Action_TOGGLE_TODO = { type : "TOGGLE_TODO", id : number }
-const toggle_todo = ( id : number ) : Action_TOGGLE_TODO => ({ type : "TOGGLE_TODO", id })
+  // Input :: Unit
+  // Output :: Void
 
-type Action
-  = Action_ADD_TODO
-  | Action_TOGGLE_TODO
+  // Child Slot
+  // Child Query
 
-const reducer = (state : State = [], action : Action) : State => {
-  switch (action.type) {
+type List$Input$ADD_TODO = { type: "ADD_TODO", id: number, text: string }
+const add_todo = ( id: number, text: string ): List$Input$ADD_TODO =>
+  ( { type: "ADD_TODO", id, text } )
+
+type List$Input$TOGGLE_TODO = { type: "TOGGLE_TODO", id: number }
+const toggle_todo = ( id: number ): List$Input$TOGGLE_TODO =>
+  ( { type: "TOGGLE_TODO", id } )
+
+type List$Input
+  = List$Input$ADD_TODO
+  | List$Input$TOGGLE_TODO
+
+const reducer = ( state: List$State = [], action: List$Input ): List$State => {
+  switch ( action.type ) {
     case "ADD_TODO":
-      return [ ...state ,
-               { id : action.id , text : action.text, completed: false }
-             ]
+      return [ ...state,
+        { id: action.id, text: action.text, completed: false }
+      ]
     case "TOGGLE_TODO":
-      return state.map(item => {
-        if (item.id == action.id) {
-          return { ...item, completed : !item.completed }
-        } else {
-          return item
-        }
-      })
+      return state.map( item => (
+        item.id == action.id ? { ...item, completed: !item.completed } :
+        item ) )
     default:
       return state
   }

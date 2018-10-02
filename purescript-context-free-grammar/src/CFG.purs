@@ -5,24 +5,24 @@ import Effect (Effect)
 import Effect.Console as Console
 import Control.Monad.Free (Free)
 
--- data S np vp
---   = NP_VP np vp
+-- data S
+--   = NP_VP NP VP
 
--- data PP np
---   = P_NP P np
+-- data PP
+--   = P_NP P NP
 
--- data VP np pp vp
---   = V_NP V np
---   | VP_PP pp vp
+-- data VP
+--   = V_NP V NP
+--   | VP_PP PP VP
 
--- data NP pp np
+-- data NP
 --   = D_N D N
---   | NP_PP np pp
+--   | NP_PP NP PP
 
-type V = String
-type P = String
-type D = String
-type N = String
+-- type V = String
+-- type P = String
+-- type D = String
+-- type N = String
 
 data ExprF next
   = S next next
