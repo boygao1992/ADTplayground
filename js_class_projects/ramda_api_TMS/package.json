@@ -1,0 +1,16 @@
+{
+  "name": "TMS",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.17.1",
+    "cheerio": "^1.0.0-rc.2",
+    "fluture": "^7.2.2",
+    "fs-extra": "^5.0.0",
+    "moment": "^2.19.4",
+    "ramda": "^0.25.0",
+    "ramda-fantasy": "^0.8.0",
+    "request": "^2.83.0"
+  }
+}

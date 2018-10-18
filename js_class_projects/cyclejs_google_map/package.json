@@ -1,0 +1,24 @@
+{
+  "name": "COMS6998HW1",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@cycle/dom": "18.3.0",
+    "@cycle/http": "^14.5.0",
+    "@cycle/run": "3.3.0",
+    "@cycle/time": "^0.10.1",
+    "cycle-scripts": ">=2.0.0",
+    "xstream": "11.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "cycle-scripts start",
+    "test": "cycle-scripts test",
+    "build": "cycle-scripts build",
+    "eject": "cycle-scripts eject"
+  },
+  "cca": {
+    "language": "javascript",
+    "streamLib": "xstream"
+  }
+}

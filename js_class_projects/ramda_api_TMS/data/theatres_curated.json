@@ -1,0 +1,630 @@
+[
+  {
+    "id": "9111",
+    "name": "AMC 84th Street 6",
+    "location": {
+      "lat": "40.7866",
+      "lon": "-73.9776"
+    },
+    "address": "2310 Broadway, New York, NY 10024",
+    "zipcode": "10024"
+  },
+  {
+    "id": "9040",
+    "name": "AMC Magic Johnson Harlem 9",
+    "location": {
+      "lat": "40.8096",
+      "lon": "-73.9517"
+    },
+    "address": "2309 Frederick Douglass Blvd., New York, NY 10027",
+    "zipcode": "10027"
+  },
+  {
+    "id": "7174",
+    "name": "Edgewater Multiplex Cinemas",
+    "location": {
+      "lat": "40.8113",
+      "lon": "-73.9886"
+    },
+    "address": "339 River Road, Edgewater, NJ 07020",
+    "zipcode": "07020"
+  },
+  {
+    "id": "9039",
+    "name": "AMC Loews Orpheum 7",
+    "location": {
+      "lat": "40.7794",
+      "lon": "-73.9541"
+    },
+    "address": "1538 Third Ave., New York, NY 10028",
+    "zipcode": "10028"
+  },
+  {
+    "id": "9062",
+    "name": "AMC Loews Lincoln Square 13",
+    "location": {
+      "lat": "40.7752",
+      "lon": "-73.9817"
+    },
+    "address": "1998 Broadway, New York, NY 10023",
+    "zipcode": "10023"
+  },
+  {
+    "id": "9074",
+    "name": "Regal E-Walk Stadium 13 & RPX",
+    "location": {
+      "lat": "40.7574",
+      "lon": "-73.9893"
+    },
+    "address": "247 W. 42nd St., New York, NY 10036",
+    "zipcode": "10036"
+  },
+  {
+    "id": "7503",
+    "name": "AMC Empire 25",
+    "location": {
+      "lat": "40.7564",
+      "lon": "-73.988"
+    },
+    "address": "234 West 42nd St., New York, NY 10036",
+    "zipcode": "10036"
+  },
+  {
+    "id": "9013",
+    "name": "AMC Loews 34th Street 14",
+    "location": {
+      "lat": "40.7524",
+      "lon": "-73.9946"
+    },
+    "address": "312 W. 34th St., New York, NY 10001",
+    "zipcode": "10001"
+  },
+  {
+    "id": "11387",
+    "name": "iPic Theaters Hudson Lights",
+    "location": {
+      "lat": "40.8516",
+      "lon": "-73.9691"
+    },
+    "address": "2023 Hudson St., Fort Lee, NJ 07024",
+    "zipcode": "07024"
+  },
+  {
+    "id": "5712",
+    "name": "UA Kaufman Astoria Cinemas 14 & RPX",
+    "location": {
+      "lat": "40.7557",
+      "lon": "-73.924"
+    },
+    "address": "35-30 38th St., Astoria, NY 11101",
+    "zipcode": "11101"
+  },
+  {
+    "id": "7613",
+    "name": "Cinepolis Chelsea",
+    "location": {
+      "lat": "40.7446",
+      "lon": "-73.9979"
+    },
+    "address": "260 W. 23rd St, New York, NY 10011",
+    "zipcode": "10011"
+  },
+  {
+    "id": "10839",
+    "name": "AMC Starplex Ridgefield Park 12",
+    "location": {
+      "lat": "40.8506",
+      "lon": "-74.013"
+    },
+    "address": "75 Challenger Road, Ridgefield Park, NJ 07660",
+    "zipcode": "07660"
+  },
+  {
+    "id": "7572",
+    "name": "Regal Union Square Stadium 14",
+    "location": {
+      "lat": "40.7343",
+      "lon": "-73.9911"
+    },
+    "address": "850 Broadway, New York, NY 10003",
+    "zipcode": "10003"
+  },
+  {
+    "id": "7790",
+    "name": "AMC Newport Centre 11",
+    "location": {
+      "lat": "40.7263",
+      "lon": "-74.0386"
+    },
+    "address": "30-300 Mall Drive West, Jersey City, NJ 07303",
+    "zipcode": "07303"
+  },
+  {
+    "id": "5635",
+    "name": "Regal Battery Park Stadium 11",
+    "location": {
+      "lat": "40.7147",
+      "lon": "-74.015"
+    },
+    "address": "102 North End Ave., New York, NY 10281",
+    "zipcode": "10281"
+  },
+  {
+    "id": "11431",
+    "name": "iPic Theaters at Fulton Market",
+    "location": {
+      "lat": "40.7067",
+      "lon": "-74.0032"
+    },
+    "address": "11 Fulton Street, New York, NY 10038",
+    "zipcode": "10038"
+  },
+  {
+    "id": "5711",
+    "name": "UA Court Street 12 & RPX",
+    "location": {
+      "lat": "40.6904",
+      "lon": "-73.9925"
+    },
+    "address": "106 Court St., Brooklyn, NY 11201",
+    "zipcode": "11201"
+  },
+  {
+    "id": "6948",
+    "name": "Cobble Hill Cinema",
+    "location": {
+      "lat": "40.6849",
+      "lon": "-73.9948"
+    },
+    "address": "265 Court St., Brooklyn, NY 11231",
+    "zipcode": "11231"
+  },
+  {
+    "id": "4646",
+    "name": "Regal Atlas Park Stadium 8",
+    "location": {
+      "lat": "40.7091",
+      "lon": "-73.8701"
+    },
+    "address": "80-28 Cooper Avenue, Glendale, NY 11385",
+    "zipcode": "11385"
+  },
+  {
+    "id": "7948",
+    "name": "Cinemart Cinemas",
+    "location": {
+      "lat": "40.7098",
+      "lon": "-73.8477"
+    },
+    "address": "106-03 Metropolitan Ave., Forest Hills, NY 11379",
+    "zipcode": "11379"
+  },
+  {
+    "id": "7903",
+    "name": "UA Midway Stadium 9",
+    "location": {
+      "lat": "40.7207",
+      "lon": "-73.844"
+    },
+    "address": "108-22 Queens Blvd., Forest Hills, NY 11375",
+    "zipcode": "11375"
+  },
+  {
+    "id": "4135",
+    "name": "Main Street Cinemas",
+    "location": {
+      "lat": "40.7243",
+      "lon": "-73.8211"
+    },
+    "address": "72-66 Main St., Kew Garden Hills, NY 11367",
+    "zipcode": "11367"
+  },
+  {
+    "id": "5324",
+    "name": "AMC Clifton Commons 16",
+    "location": {
+      "lat": "40.8277",
+      "lon": "-74.1388"
+    },
+    "address": "405 Route 3 East, Clifton, NJ 07014",
+    "zipcode": "07014"
+  },
+  {
+    "id": "5152",
+    "name": "Jamaica Multiplex Cinemas",
+    "location": {
+      "lat": "40.6924",
+      "lon": "-73.771"
+    },
+    "address": "159-02 Jamaica Ave., Jamaica, NY 11432",
+    "zipcode": "11432"
+  },
+  {
+    "id": "9312",
+    "name": "AMC Garden State 16",
+    "location": {
+      "lat": "40.9155",
+      "lon": "-74.077"
+    },
+    "address": "4000 Garden State Plaza Blvd, Paramus, NJ 07652",
+    "zipcode": "07652"
+  },
+  {
+    "id": "7481",
+    "name": "Kent Theatre",
+    "location": {
+      "lat": "40.6289",
+      "lon": "-73.9666"
+    },
+    "address": "1170 Coney Island Ave., Brooklyn, NY 11230",
+    "zipcode": "11230"
+  },
+  {
+    "id": "10198",
+    "name": "Fabian 8 Cinema",
+    "location": {
+      "lat": "40.9149",
+      "lon": "-74.1733"
+    },
+    "address": "301 Main St., Paterson, NJ 07505",
+    "zipcode": "07505"
+  },
+  {
+    "id": "2934",
+    "name": "Hawthorne 5",
+    "location": {
+      "lat": "40.9483",
+      "lon": "-74.1558"
+    },
+    "address": "300 Lafayette Ave., Hawthorne, NJ 07506",
+    "zipcode": "07506"
+  },
+  {
+    "id": "7954",
+    "name": "AMC Loews Wayne 14",
+    "location": {
+      "lat": "40.8885",
+      "lon": "-74.2509"
+    },
+    "address": "67 Willowbrook Blvd., Wayne, NJ 07470",
+    "zipcode": "07470"
+  },
+  {
+    "id": "7633",
+    "name": "AMC Fantasy 5",
+    "location": {
+      "lat": "40.6567",
+      "lon": "-73.6454"
+    },
+    "address": "18 N. Park Ave., Rockville Centre, NY 11570",
+    "zipcode": "11570"
+  },
+  {
+    "id": "2916",
+    "name": "Long Beach Cinema",
+    "location": {
+      "lat": "40.5887",
+      "lon": "-73.6589"
+    },
+    "address": "179 East Park Ave, Long Beach, NY 11561",
+    "zipcode": "11561"
+  },
+  {
+    "id": "11445",
+    "name": "Kinnelon Cinemas",
+    "location": {
+      "lat": "41.0028",
+      "lon": "-74.3609"
+    },
+    "address": "25 Kinnelon Rd, Kinnelon, NJ 07405",
+    "zipcode": "07405"
+  },
+  {
+    "id": "11598",
+    "name": "The Landmark at 57 West",
+    "location": {
+      "lat": "40.7715",
+      "lon": "-73.9941"
+    },
+    "address": "657 West 57th Street at 12th Avenue, New York, NY 10019",
+    "zipcode": "10019"
+  },
+  {
+    "id": "2912",
+    "name": "Teaneck Cinemas",
+    "location": {
+      "lat": "40.8896",
+      "lon": "-74.0239"
+    },
+    "address": "503 Cedar Lane, Teaneck, NJ 07666",
+    "zipcode": "07666"
+  },
+  {
+    "id": "2813",
+    "name": "Center Cinemas",
+    "lat": "40.8275",
+    "lon": "-74.1031",
+    "address": "1 Williams Plaza, Rutherford, NJ 07070",
+    "zipcode": "07070"
+  },
+  {
+    "id": "10795",
+    "name": "Allwood Cinemas 6",
+    "location": {
+      "lat": "40.8457",
+      "lon": "-74.1621"
+    },
+    "address": "96 Market St., Clifton, NJ 07011",
+    "zipcode": "07011"
+  },
+  {
+    "id": "2499",
+    "name": "Ramsey Theatre",
+    "location": {
+      "lat": "41.0575",
+      "lon": "-74.1386"
+    },
+    "address": "125 E. Main Street, Ramsey, NJ 07068",
+    "zipcode": "07068"
+  },
+  {
+    "id": "2581",
+    "name": "Callicoon Theater",
+    "location": {
+      "lat": "41.7671",
+      "lon": "-75.0581"
+    },
+    "address": "30 Upper Main St., Callicoon, NY 12723",
+    "zipcode": "12723"
+  },
+  {
+    "id": "9770",
+    "name": "City Cinemas Beekman Theatre",
+    "location": {
+      "lat": "40.7652",
+      "lon": "-73.9609"
+    },
+    "address": "1271 Second Avenue, New York, NY 10021",
+    "zipcode": "10021"
+  },
+  {
+    "id": "9112",
+    "name": "AMC Village 7",
+    "location": {
+      "lat": "40.7315",
+      "lon": "-73.9887"
+    },
+    "address": "66 3rd Ave., New York, NY 10003",
+    "zipcode": "10003"
+  },
+  {
+    "id": "3034",
+    "name": "City Cinemas Village East",
+    "location": {
+      "lat": "40.7306",
+      "lon": "-73.9868"
+    },
+    "address": "181-189 Second Ave., New York, NY 10003",
+    "zipcode": "10003"
+  },
+  {
+    "id": "2955",
+    "name": "Kew Gardens Cinemas",
+    "location": {
+      "lat": "40.709",
+      "lon": "-73.8304"
+    },
+    "address": "81-05 Lefferts Blvd., Kew Gardens, NY 11415",
+    "zipcode": "11415"
+  },
+  {
+    "id": "11440",
+    "name": "Washington Township Cinemas",
+    "location": {
+      "lat": "40.9848",
+      "lon": "-74.0633"
+    },
+    "address": "249 Pascack Rd., Washington Township, NJ 07676",
+    "zipcode": "07676"
+  },
+  {
+    "id": "9029",
+    "name": "American Museum of Natural History",
+    "location": {
+      "lat": "40.7797",
+      "lon": "-73.9738"
+    },
+    "address": "175-208 Central Park Way, New York, NY 10024",
+    "zipcode": "10024"
+  },
+  {
+    "id": "2576",
+    "name": "BAM Rose Cinemas",
+    "location": {
+      "lat": "40.6866",
+      "lon": "-73.9781"
+    },
+    "address": "30 Lafayette Ave., Brooklyn, NY 11217",
+    "zipcode": "11217"
+  },
+  {
+    "id": "2976",
+    "name": "Lincoln Plaza Cinemas",
+    "location": {
+      "lat": "40.7716",
+      "lon": "-73.9819"
+    },
+    "address": "30 Lincoln Plaza, New York, NY 10023",
+    "zipcode": "10023"
+  },
+  {
+    "id": "2792",
+    "name": "City Cinemas 1, 2 & 3",
+    "location": {
+      "lat": "40.7617",
+      "lon": "-73.9667"
+    },
+    "address": "1001 Third Ave., New York, NY 10022",
+    "zipcode": "10022"
+  },
+  {
+    "id": "9640",
+    "name": "Maysles Cinema",
+    "location": {
+      "lat": "40.8092",
+      "lon": "-73.9445"
+    },
+    "address": "343 Lenox Ave., New York, NY 10027",
+    "zipcode": "10027"
+  },
+  {
+    "id": "8099",
+    "name": "Film Society of Lincoln Center's Walter Reade Theater",
+    "location": {
+      "lat": "40.7741",
+      "lon": "-73.9838"
+    },
+    "address": "70 Lincoln Center Plaza, New York, NY 10023",
+    "zipcode": "10023"
+  },
+  {
+    "id": "10447",
+    "name": "Film Society of Lincoln Center's Elinor Bunin Munroe Film Ce",
+    "location": {
+      "lat": "40.7735",
+      "lon": "-73.9836"
+    },
+    "address": "144 W 65th St., New York, NY 10023",
+    "zipcode": "10023"
+  },
+  {
+    "id": "1642",
+    "name": "IFC Center",
+    "location": {
+      "lat": "40.731",
+      "lon": "-74.0014"
+    },
+    "address": "323 6th Ave. at W 3rd St., New York, NY 10014",
+    "zipcode": "10014"
+  },
+  {
+    "id": "7784",
+    "name": "Film Forum",
+    "location": {
+      "lat": "40.7285",
+      "lon": "-74.0043"
+    },
+    "address": "209 W. Houston St., New York, NY 10014",
+    "zipcode": "10014"
+  },
+  {
+    "id": "9225",
+    "name": "Sunshine Cinema",
+    "location": {
+      "lat": "40.7231",
+      "lon": "-73.9899"
+    },
+    "address": "143 E. Houston St., New York, NY 10002",
+    "zipcode": "10002"
+  },
+  {
+    "id": "6648",
+    "name": "City Cinemas Paris Theatre",
+    "location": {
+      "lat": "40.7636",
+      "lon": "-73.9737"
+    },
+    "address": "4 W. 58th St., New York, NY 10019",
+    "zipcode": "10019"
+  },
+  {
+    "id": "9885",
+    "name": "Bombay Theatre",
+    "location": {
+      "lat": "40.7333",
+      "lon": "-73.7946"
+    },
+    "address": "6825 Fresh Meadow Lane, Flushing, NY 11365",
+    "zipcode": "11365"
+  },
+  {
+    "id": "642",
+    "name": "Museum of the Moving Image",
+    "location": {
+      "lat": "40.7563",
+      "lon": "-73.9245"
+    },
+    "address": "35 Ave. at 36 Street, Astoria, NY 11106",
+    "zipcode": "11106"
+  },
+  {
+    "id": "11626",
+    "name": "Roxy Cinema Tribeca",
+    "location": {
+      "lat": "40.7193",
+      "lon": "-74.0047"
+    },
+    "address": "2 Avenue of The Americas, New York, NY 10013",
+    "zipcode": "10013"
+  },
+  {
+    "id": "7785",
+    "name": "Quad Cinema",
+    "location": {
+      "lat": "40.7359",
+      "lon": "-73.9961"
+    },
+    "address": "34 West 13th St., New York, NY 10011",
+    "zipcode": "10011"
+  },
+  {
+    "id": "8448",
+    "name": "Cinema Village",
+    "location": {
+      "lat": "40.7341",
+      "lon": "-73.9933"
+    },
+    "address": "22 E. 12th St., New York, NY 10003",
+    "zipcode": "10003"
+  },
+  {
+    "id": "6652",
+    "name": "Anthology Film Archives",
+    "location": {
+      "lat": "40.7246",
+      "lon": "-73.9908"
+    },
+    "address": "32 2nd Ave., New York, NY 10008",
+    "zipcode": "10008"
+  },
+  {
+    "id": "11217",
+    "name": "Videology Bar & Cinema",
+    "location": {
+      "lat": "40.7139",
+      "lon": "-73.9617"
+    },
+    "address": "308 Bedford Ave., Brooklyn, NY 11249",
+    "zipcode": "11249"
+  },
+  {
+    "id": "11315",
+    "name": "Metrograph",
+    "location": {
+      "lat": "40.715",
+      "lon": "-73.9911"
+    },
+    "address": "7 Ludlow St., New York, NY 10002",
+    "zipcode": "10002"
+  },
+  {
+    "id": "11401",
+    "name": "Syndicated",
+    "location": {
+      "lat": "40.705",
+      "lon": "-73.9329"
+    },
+    "address": "40 Bogart Street, Brooklyn, NY 11206",
+    "zipcode": "11206"
+  }
+]
