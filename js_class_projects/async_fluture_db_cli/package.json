@@ -1,0 +1,24 @@
+{
+  "scripts": {
+    "build": "flow-remove-types src/ -d lib/",
+    "start": "yarn build && node lib/index.js",
+    "debug": "node src/index.js"
+  },
+  "name": "HW_1a",
+  "version": "1.0.0",
+  "license": "MIT",
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "fluture": "^7.1.2",
+    "fs-extra": "^4.0.1",
+    "json-2-csv": "^2.1.1",
+    "monet": "^0.8.10",
+    "parsimmon": "^1.6.2",
+    "ramda": "^0.24.1",
+    "terminal-kit": "^1.13.11"
+  },
+  "devDependencies": {
+    "flow-bin": "^0.54.1",
+    "flow-remove-types": "^1.2.1"
+  }
+}
