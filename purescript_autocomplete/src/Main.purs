@@ -3,32 +3,16 @@ module Main where
 import Prelude
 
 import Data.Time.Duration (Milliseconds(..))
-import Data.Foldable (class Foldable, foldl, traverse_)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Tuple (Tuple(..))
 import Effect (Effect)
-import Effect.Aff (Aff, Fiber, delay, error, forkAff, killFiber)
-import Effect.Aff.AVar (AVar)
-import Effect.Aff.AVar as AVar
+import Effect.Aff (Aff, delay, forkAff)
 import Effect.Console (log)
 import Halogen as H
 import Halogen.Aff as HA
-import Halogen.HTML as HH
-import Halogen.HTML.Events as HE
-import Halogen.HTML.Properties as HP
-import Halogen.Query.EventSource as HQES
 import Halogen.VDom.Driver (runUI)
-import Partial.Unsafe (unsafePartial)
 import Select (buildComponent, empty, defaultConfig, Query(..))
 import Web.DOM.ParentNode (QuerySelector(..))
-import Web.Event.Event as WEE
-import Web.Event.EventTarget as WEET
-import Web.HTML (window) as DOM
-import Web.HTML.HTMLDocument (HTMLDocument)
-import Web.HTML.HTMLDocument as HTMLDocument
-import Web.HTML.Window (document) as DOM
-import Web.UIEvent.KeyboardEvent as KE
-import Web.UIEvent.KeyboardEvent.EventTypes as KET
+
 
 -- data Query next
   -- | Init next
@@ -66,6 +50,12 @@ type IO = Aff
 --     H.liftEffect $ log $ KE.key ev
 --     pure (reply H.Listening)
 
+newtype Item = Item String
+derive newtype instance eqItem :: Eq Item
+derive newtype instance ordItem :: Ord Item
+instance showItem :: Show Item where
+  show (Item s) =  s
+
 main :: Effect Unit
 main = HA.runHalogenAff do
   body <- HA.awaitBody
@@ -74,7 +64,7 @@ main = HA.runHalogenAff do
     ( buildComponent
         show
         { internal : empty
-        , external : Just [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ]
+        , external : Just (map Item [ "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven" ])
         , config : defaultConfig
         }
     )
@@ -82,11 +72,8 @@ main = HA.runHalogenAff do
     (fromMaybe body app)
 
   _ <- H.liftAff $ forkAff do
-    delay (Milliseconds 5000.0)
-    H.liftEffect $ log "5 second"
-    io.query $ H.action $ Sync [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+    delay (Milliseconds 10000.0)
+    H.liftEffect $ log "10 second"
+    io.query $ H.action $ Sync (map Item [ "zero", "ten", "eight", "nine", "five", "four", "two", "three", "eleven", "one"])
 
   pure unit
-
-
-

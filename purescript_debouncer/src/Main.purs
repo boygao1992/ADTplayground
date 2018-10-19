@@ -16,6 +16,6 @@ main = HA.runHalogenAff do
   app <- HA.selectElement (QuerySelector "#app")
   runUI
     -- Search.component
-    Secret.component
+    Search.component
     unit
     (fromMaybe body app)

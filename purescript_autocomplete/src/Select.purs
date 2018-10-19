@@ -5,11 +5,15 @@ import Prelude
 import CSS.Geometry as CG
 import CSS.Size as CS
 import Control.MonadPlus (guard)
-import Data.Array (take)
+import Data.Array (take, index, filter, mapWithIndex) as A
 import Data.FoldableWithIndex (foldlWithIndex)
 import Data.Int (toNumber, floor, ceil)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Set (Set)
+import Data.Set (fromFoldable, member) as Set
+import Data.String (Pattern(Pattern), contains, length, take) as S
 import Data.Tuple (Tuple(..))
+import Data.Tuple (fst, snd) as T
 import Effect.Aff (Aff)
 import Halogen as H
 import Halogen.HTML as HH
@@ -20,6 +24,7 @@ import Utils (classList, (!))
 import Web.DOM.Element as WDE
 import Web.Event.Event as WEE
 import Web.HTML.HTMLElement as WHHE
+import Web.HTML.HTMLInputElement as WHHIE
 import Web.UIEvent.KeyboardEvent as KE
 
 heightPx :: Int
@@ -40,6 +45,9 @@ type InternalState =
   { key :: Maybe Int
   , mouse :: Maybe Int
   , head :: Number
+  , selection :: Maybe Int
+  , search :: String
+  , candidates :: Maybe (Set Int)
   }
 
 empty :: InternalState
@@ -47,6 +55,9 @@ empty =
   { key : Nothing
   , mouse : Nothing
   , head : 0.0
+  , selection : Nothing
+  , search : ""
+  , candidates : Nothing
   }
 
 type State item =
@@ -69,6 +80,7 @@ data Msg
   = Keyboard KeyboardMsg
   | Scroll ScrollMsg
   | Mouse MouseMsg
+  | Search SearchMsg
   | Reset
 
 type Input item = Array item
@@ -90,8 +102,37 @@ stateTransition config event state = case event of
     scrollTransition config subEvent state
   Mouse subEvent ->
     mouseTransition  config subEvent state
+  Search subEvent ->
+    searchTransition config subEvent state
   Reset ->
     Tuple (const empty) Nothing
+
+data SearchMsg
+  = SearchInput String (Array String)
+
+searchTransition
+  :: forall r
+   . Config
+  -> SearchMsg
+  -> { search :: String, candidates :: Maybe(Set Int) | r }
+  -> Tuple
+       ({ search :: String, candidates :: Maybe(Set Int) | r } ->
+        { search :: String, candidates :: Maybe(Set Int) | r }
+       )
+       (Maybe Output)
+searchTransition { listSize } event _ = case event of
+  SearchInput search xs ->
+    let
+      candidates
+          = Set.fromFoldable
+        <<< A.take listSize
+        <<< map T.snd
+        <<< A.filter T.fst
+        <<< A.mapWithIndex (\idx str-> Tuple (S.contains (S.Pattern search) str) idx)
+          $ xs
+    in
+     (_ { search = search, candidates = Just candidates }) ! Nothing
+
 
 data KeyboardMsg
   = KeyUp
@@ -101,18 +142,25 @@ keyboardTransition
   :: forall r
    . Config ->
      KeyboardMsg ->
-     { key :: Maybe Int, head :: Number | r } ->
+     { key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Int | r } ->
      Tuple
-       ({ key :: Maybe Int, head :: Number | r } ->
-        { key :: Maybe Int, head :: Number | r }
+       ({ key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Int | r } ->
+        { key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Int | r }
        )
        (Maybe Output)
-keyboardTransition { windowSize, listSize } event { key, head } =
+keyboardTransition { windowSize, listSize } event { key, mouse, head } =
   case event of
   KeyUp ->
     case key of
     Nothing ->
-      (_ { key = Just ((floor head) + windowSize - 1) }) ! Just WindowSlideDown
+      let
+        selection = Just ((floor head) + windowSize - 1)
+      in
+       case mouse of
+         Just _ ->
+           (_ { key = selection } ) ! Just WindowSlideDown
+         Nothing ->
+           (_ { key = selection, selection = selection } ) ! Just WindowSlideDown
     Just keyPos ->
       let
         windowAtUpperBoundary h =
@@ -126,20 +174,48 @@ keyboardTransition { windowSize, listSize } event { key, head } =
       in
         if outsideWindow keyPos head
         then
-          (_ { key = Just ((floor head) + windowSize - 1) }) ! Just WindowSlideDown
+          let
+            selection = Just ((floor head) + windowSize - 1)
+          in
+            case mouse of
+              Just _ ->
+                (_ { key = selection }) ! Just WindowSlideDown
+              Nothing ->
+                (_ { key = selection , selection = selection }) ! Just WindowSlideDown
         else
           case windowAtUpperBoundary (floor head), aboveWindow (keyPos - 1) head of
           true, true  ->
             identity ! Just WindowPushUpperBoundary
           false, true ->
-            (_ { key = Just $ keyPos - 1, head = toNumber $ keyPos - 1 }) ! Just WindowSlideUp
+            let
+              selection = Just $ keyPos - 1
+            in
+              case mouse of
+                Just _ ->
+                  (_ { key = selection, head = toNumber $ keyPos - 1 }) ! Just WindowSlideUp
+                Nothing ->
+                  (_ { key = selection, head = toNumber $ keyPos - 1, selection = selection }) ! Just WindowSlideUp
           _, _ ->
-            (_ { key = Just $ keyPos - 1 }) ! Nothing
+            let
+              selection = Just $ keyPos - 1
+            in
+              case mouse of
+                Just _ ->
+                  (_ { key = selection}) ! Nothing
+                Nothing ->
+                  (_ { key = selection, selection = selection}) ! Nothing
 
   KeyDown ->
     case key of
     Nothing ->
-      (_ { key = Just $ floor $ head }) ! Just WindowSlideUp
+      let
+        selection = Just $ floor $ head
+      in
+        case mouse of
+          Just _ ->
+            (_ { key = selection }) ! Just WindowSlideUp
+          Nothing ->
+            (_ { key = selection, selection = selection }) ! Just WindowSlideUp
     Just keyPos ->
       let
         windowAtLowerBoundary h =
@@ -153,15 +229,36 @@ keyboardTransition { windowSize, listSize } event { key, head } =
       in
         if outsideWindow keyPos head
         then
-          (_ { key = Just $ floor $ head }) ! Just WindowSlideUp
+          let
+            selection = Just $ floor $ head
+          in
+            case mouse of
+              Just _ ->
+                (_ { key = selection }) ! Just WindowSlideUp
+              Nothing ->
+                (_ { key = selection, selection = selection }) ! Just WindowSlideUp
         else
           case windowAtLowerBoundary (floor head), belowWindow (keyPos + 1) head of
           true, true ->
             identity ! Just WindowPushLowerBoundary
           false, true ->
-            (_ { key = Just $ keyPos + 1, head = toNumber $ keyPos + 2 - windowSize }) ! Just WindowSlideDown
+            let
+              selection = Just $ keyPos + 1
+            in
+              case mouse of
+                Just _ ->
+                  (_ { key = selection, head = toNumber $ keyPos + 2 - windowSize }) ! Just WindowSlideDown
+                Nothing ->
+                  (_ { key = selection, head = toNumber $ keyPos + 2 - windowSize, selection = selection }) ! Just WindowSlideDown
           _, _ ->
-            (_ { key = Just $ keyPos + 1 }) ! Nothing
+            let
+              selection = Just $ keyPos + 1
+            in
+              case mouse of
+                Just _ ->
+                  (_ { key = selection }) ! Nothing
+                Nothing ->
+                  (_ { key = selection, selection = selection }) ! Nothing
 
 data ScrollMsg
   = UpdateScrollPosition Number
@@ -239,20 +336,26 @@ mouseTransition
   :: forall r
    . Config ->
      MouseMsg ->
-     { mouse :: Maybe Int | r } ->
+     { key :: Maybe Int, mouse :: Maybe Int, selection :: Maybe Int | r } ->
      Tuple
-       ({ mouse :: Maybe Int | r } ->
-        { mouse :: Maybe Int | r }
+       ({ key :: Maybe Int, mouse :: Maybe Int, selection :: Maybe Int | r } ->
+        { key :: Maybe Int, mouse :: Maybe Int, selection :: Maybe Int | r }
        )
        (Maybe Output)
-mouseTransition _ event state@{ mouse } =
+mouseTransition _ event state@{ key, mouse } =
   case event of
     MouseEnter mousePos ->
-      (_ { mouse = Just mousePos }) ! Nothing
+      let
+        selection = Just mousePos
+      in
+       (_ { mouse = selection, selection = selection }) ! Nothing
     MouseLeave ->
-      (_ { mouse = Nothing }) ! Nothing
+      (_ { mouse = Nothing, selection = key }) ! Nothing
     MouseClick mousePos ->
-      (_ { mouse = Just mousePos }) ! Just (Select mousePos)
+      let
+        selection = Just mousePos
+      in
+        (_ { mouse = selection, selection = selection }) ! Just (Select mousePos)
 
 ulRef :: H.RefLabel
 ulRef = H.RefLabel "autocomplete-ul"
@@ -260,43 +363,68 @@ ulRef = H.RefLabel "autocomplete-ul"
 keySelectedRef :: H.RefLabel
 keySelectedRef = H.RefLabel "keySelected"
 
-buildRender :: forall item. (item -> String) -> State item -> H.ComponentHTML (Query item)
+inputRef :: H.RefLabel
+inputRef = H.RefLabel "autocomplete-input"
+
+buildRender :: forall item. Show item => (item -> String) -> State item -> H.ComponentHTML (Query item)
 buildRender li { config, internal , external } =
   HH.div_
-    [ HH.div_
-        [ HH.text $ show internal ]
-    , HH.div [ HP.class_ $ H.ClassName "example-autocomplete"]
+    [ HH.div [ HP.class_ $ H.ClassName "example-autocomplete"]
         [ HH.input
           [ HE.onKeyDown $ HE.input OnKeyDown
           , HP.class_ $ H.ClassName "autocomplete-input"
+          , HP.value $ inputValue
+          , HP.ref inputRef
           ]
         , HH.div [ HP.class_ $ H.ClassName "autocomplete-menu" ]
-            [ toUl external ]
+            [ toUl candidateList ]
         ]
+    -- , HH.div_
+    --     [ HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Keyboard KeyUp ]
+    --         [ HH.text "KeyUp" ]
+    --     , HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Keyboard KeyDown ]
+    --         [ HH.text "KeyDown" ]
+    --     , HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Scroll ScrollUp ]
+    --         [ HH.text "ScrollUp" ]
+    --     , HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Scroll ScrollDown ]
+    --         [ HH.text "ScrollDown" ]
+    --     ]
     , HH.div_
-        [ HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Keyboard KeyUp ]
-            [ HH.text "KeyUp" ]
-        , HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Keyboard KeyDown ]
-            [ HH.text "KeyDown" ]
-        -- , HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Scroll ScrollUp ]
-        --     [ HH.text "ScrollUp" ]
-        -- , HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Scroll ScrollDown ]
-        --     [ HH.text "ScrollDown" ]
-        ]
+        [ HH.text $ show internal ]
     ]
   where
-    toUl :: Maybe (Array item) -> H.ComponentHTML (Query item)
-    toUl = case _ of
-      Just xs  ->
-        HH.ul [ HE.onScroll $ HE.input_ OnScroll
-              , HP.class_ $ H.ClassName "autocomplete-list"
-              , HC.style $ CG.maxHeight $ CS.px $ toNumber
-                  $ heightPx * config.windowSize -- HACK: hard-coded offsetHeight
-              , HP.ref ulRef
-              ]
-          $ foldlWithIndex (\index acc item -> acc <> [ toLi index item ]) [] xs
-      _ ->
-        HH.div_ []
+    candidateList :: Array item
+    candidateList =
+      let
+        xs = fromMaybe [] $ external
+      in
+        case internal.candidates of
+          Just candidates ->
+            map T.snd <<< A.filter (flap(Set.member) candidates <<< T.fst) <<< A.mapWithIndex (\idx it -> Tuple idx it) $ xs
+          Nothing ->
+            xs
+
+    inputValue :: String
+    inputValue =
+      case external of
+        Just arr ->
+          case internal.selection of
+            Just idx ->
+              fromMaybe "" (show <$> (A.index arr idx))
+            Nothing ->
+              ""
+        Nothing ->
+          ""
+
+    toUl :: Array item -> H.ComponentHTML (Query item)
+    toUl xs =
+      HH.ul [ HE.onScroll $ HE.input_ OnScroll
+            , HP.class_ $ H.ClassName "autocomplete-list"
+            , HC.style $ CG.maxHeight $ CS.px $ toNumber
+                $ heightPx * config.windowSize -- HACK: hard-coded offsetHeight
+            , HP.ref ulRef
+            ]
+        $ foldlWithIndex (\index acc item -> acc <> [ toLi index item ]) [] xs
 
     toLi :: Int -> item -> H.ComponentHTML (Query item)
     toLi index item =
@@ -333,7 +461,7 @@ buildRender li { config, internal , external } =
 --   WEET.addEventListener KET.keydown listener false target
 --   pure $ WEET.removeEventListener KET.keydown listener false target
 
-eval :: forall item. Query item ~> H.ComponentDSL (State item) (Query item) Output IO
+eval :: forall item. Show item => Query item ~> H.ComponentDSL (State item) (Query item) Output IO
 -- eval (Init next) = do
 --   document <- H.liftEffect $ DOM.document =<< DOM.window
 --   H.subscribe $ HQES.eventSource' (onKeyUp_ document) (Just <<< H.request <<< HandleKey)
@@ -345,8 +473,10 @@ eval :: forall item. Query item ~> H.ComponentDSL (State item) (Query item) Outp
 --     H.liftEffect $ log $ KE.key ev
 --     pure (reply H.Listening)
 eval (Sync xs next) = do
-  listSize <- H.gets _.config.listSize
-  H.modify_ (\st -> st { internal = empty, external = Just $ take listSize xs })
+  { config , internal : internalState } <- H.get
+  H.modify_ (\st -> st { internal = st.internal { key = Nothing, mouse = Nothing, head = 0.0, selection = Nothing } , external = Just $ xs })
+  let Tuple reducer outMsg = _stateTransition config (Search (SearchInput internalState.search (show <$> xs))) internalState
+  H.modify_ (\st -> st { internal = reducer st.internal })
 
   mul <- H.getHTMLElementRef ulRef
   case mul of
@@ -356,12 +486,16 @@ eval (Sync xs next) = do
     _ -> pure unit
 
   pure next
+
+  where
+    _stateTransition = stateTransition
+
 eval (Configure config next) = do
   H.modify_ (\st -> st { config = config })
   pure next
+
 eval (StateTransition event next) = do
-  config <- H.gets _.config
-  internalState <- H.gets _.internal
+  { config, internal : internalState } <- H.get
   let Tuple reducer outMsg = _stateTransition config event internalState
   H.modify_ (\st -> st { internal = reducer st.internal })
   case outMsg of
@@ -423,7 +557,51 @@ eval (OnKeyDown ev next) = do
         Just msg -> H.raise msg
         Nothing -> pure unit
       pure next
-    _ -> pure next
+
+    "Backspace" -> do
+      minput <- H.getHTMLElementRef inputRef
+      case minput of
+        Just ip -> do
+          case WHHIE.fromHTMLElement ip of
+            Just ie -> do
+              search <- H.liftEffect $ WHHIE.value ie
+              { config , internal : internalState, external } <- H.get
+              let Tuple reducer outMsg = _stateTransition config (Search (SearchInput (S.take ((S.length search) - 1) search) (show <$> (fromMaybe [] external)))) internalState
+              H.modify_ (\st -> st { internal = reducer st.internal })
+              pure unit
+            Nothing -> pure unit
+        Nothing -> pure unit
+      mul <- H.getHTMLElementRef ulRef
+      case mul of
+        Just ul -> do
+          H.liftEffect
+            $ WDE.setScrollTop 0.0 (WHHE.toElement ul)
+        _ -> pure unit
+      pure next
+
+    key -> if S.length key == 1
+      then do
+        minput <- H.getHTMLElementRef inputRef
+        case minput of
+          Just ip -> do
+            case WHHIE.fromHTMLElement ip of
+              Just ie -> do
+                search <- H.liftEffect $ WHHIE.value ie
+                { config , internal : internalState, external } <- H.get
+                let Tuple reducer outMsg = _stateTransition config (Search (SearchInput (search <> key) (show <$> (fromMaybe [] external)))) internalState
+                H.modify_ (\st -> st { internal = reducer st.internal })
+                pure unit
+              Nothing -> pure unit
+          Nothing -> pure unit
+        mul <- H.getHTMLElementRef ulRef
+        case mul of
+          Just ul -> do
+            H.liftEffect
+              $ WDE.setScrollTop 0.0 (WHHE.toElement ul)
+          _ -> pure unit
+        pure next
+      else
+        pure next
 
   where
     _stateTransition = stateTransition
@@ -441,7 +619,7 @@ eval (OnScroll next) = do
 
 
 
-buildComponent :: forall item. (item -> String) -> State item -> H.Component HH.HTML (Query item) (Input item) Output IO
+buildComponent :: forall item. Show item => (item -> String) -> State item -> H.Component HH.HTML (Query item) (Input item) Output IO
 buildComponent li initialState = H.component spec
   where
     spec :: H.ComponentSpec HH.HTML (State item) (Query item) (Input item) Output IO
