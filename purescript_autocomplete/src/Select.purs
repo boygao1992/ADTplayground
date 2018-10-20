@@ -6,7 +6,6 @@ import CSS.Geometry as CG
 import CSS.Size as CS
 import Control.MonadPlus (guard)
 import Data.Array (filter, index, take, find) as A
--- import Data.Foldable (traverse_)
 import Data.FoldableWithIndex (foldlWithIndex)
 import Data.Int (toNumber, floor, ceil)
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -27,8 +26,7 @@ import Web.Event.Event as WEE
 import Web.HTML.HTMLElement as WHHE
 import Web.UIEvent.KeyboardEvent as KE
 
-heightPx :: Int
-heightPx = 30
+-- | Types
 
 type Config =
   { windowSize :: Int
@@ -58,16 +56,6 @@ type InternalState =
   , selection :: Maybe Index
   , search :: String
   , candidates :: Maybe (Array Id)
-  }
-
-empty :: InternalState
-empty =
-  { key : Nothing
-  , mouse : Nothing
-  , head : 0.0
-  , selection : Nothing
-  , search : ""
-  , candidates : Nothing
   }
 
 type State item =
@@ -103,6 +91,23 @@ data Output
   | Select Int
 
 type IO = Aff
+
+-- | Constants
+
+heightPx :: Int
+heightPx = 30
+
+empty :: InternalState
+empty =
+  { key : Nothing
+  , mouse : Nothing
+  , head : 0.0
+  , selection : Nothing
+  , search : ""
+  , candidates : Nothing
+  }
+
+-- | State Transitions
 
 stateTransition :: Config -> Msg -> InternalState -> Tuple (InternalState -> InternalState) (Maybe Output)
 stateTransition config event state = case event of
@@ -365,6 +370,7 @@ mouseTransition _ event state@{ key, mouse } =
       in
         (_ { mouse = selection, selection = selection }) ! Just (Select mousePos)
 
+-- | DOM node references
 ulRef :: H.RefLabel
 ulRef = H.RefLabel "autocomplete-ul"
 
@@ -373,6 +379,8 @@ keySelectedRef = H.RefLabel "keySelected"
 
 inputRef :: H.RefLabel
 inputRef = H.RefLabel "autocomplete-input"
+
+-- | Halogen Component
 
 buildRender
   :: forall item

@@ -11108,7 +11108,7 @@ var PS = {};
                       return $114;
                   })(new Data_Maybe.Just(new Select(event.value0)));
               };
-              throw new Error("Failed pattern match at Select line 354, column 3 - line 366, column 82: " + [ event.constructor.name ]);
+              throw new Error("Failed pattern match at Select line 359, column 3 - line 371, column 82: " + [ event.constructor.name ]);
           };
       };
   };
@@ -11143,7 +11143,7 @@ var PS = {};
                               return $130;
                           })(new Data_Maybe.Just(WindowSlideDown.value));
                       };
-                      throw new Error("Failed pattern match at Select line 167, column 8 - line 171, column 82: " + [ v1.mouse.constructor.name ]);
+                      throw new Error("Failed pattern match at Select line 172, column 8 - line 176, column 82: " + [ v1.mouse.constructor.name ]);
                   };
                   if (v1.key instanceof Data_Maybe.Just) {
                       var windowAtUpperBoundary = function (h) {
@@ -11192,7 +11192,7 @@ var PS = {};
                                   return $139;
                               })(new Data_Maybe.Just(WindowSlideDown.value));
                           };
-                          throw new Error("Failed pattern match at Select line 188, column 13 - line 192, column 87: " + [ v1.mouse.constructor.name ]);
+                          throw new Error("Failed pattern match at Select line 193, column 13 - line 197, column 87: " + [ v1.mouse.constructor.name ]);
                       };
                       var v2 = aboveWindow(v1.key.value0 - 1 | 0)(v1.head);
                       var v3 = windowAtUpperBoundary(Data_Int.floor(v1.head));
@@ -11228,7 +11228,7 @@ var PS = {};
                                   return $149;
                               })(new Data_Maybe.Just(WindowSlideUp.value));
                           };
-                          throw new Error("Failed pattern match at Select line 201, column 15 - line 205, column 116: " + [ v1.mouse.constructor.name ]);
+                          throw new Error("Failed pattern match at Select line 206, column 15 - line 210, column 116: " + [ v1.mouse.constructor.name ]);
                       };
                       var selection = Data_Maybe.Just.create(v1.key.value0 - 1 | 0);
                       if (v1.mouse instanceof Data_Maybe.Just) {
@@ -11256,9 +11256,9 @@ var PS = {};
                               return $157;
                           })(Data_Maybe.Nothing.value);
                       };
-                      throw new Error("Failed pattern match at Select line 210, column 15 - line 214, column 74: " + [ v1.mouse.constructor.name ]);
+                      throw new Error("Failed pattern match at Select line 215, column 15 - line 219, column 74: " + [ v1.mouse.constructor.name ]);
                   };
-                  throw new Error("Failed pattern match at Select line 162, column 5 - line 214, column 74: " + [ v1.key.constructor.name ]);
+                  throw new Error("Failed pattern match at Select line 167, column 5 - line 219, column 74: " + [ v1.key.constructor.name ]);
               };
               if (event instanceof KeyDown) {
                   if (v1.key instanceof Data_Maybe.Nothing) {
@@ -11288,7 +11288,7 @@ var PS = {};
                               return $167;
                           })(new Data_Maybe.Just(WindowSlideUp.value));
                       };
-                      throw new Error("Failed pattern match at Select line 222, column 9 - line 226, column 80: " + [ v1.mouse.constructor.name ]);
+                      throw new Error("Failed pattern match at Select line 227, column 9 - line 231, column 80: " + [ v1.mouse.constructor.name ]);
                   };
                   if (v1.key instanceof Data_Maybe.Just) {
                       var windowAtLowerBoundary = function (h) {
@@ -11337,7 +11337,7 @@ var PS = {};
                                   return $176;
                               })(new Data_Maybe.Just(WindowSlideUp.value));
                           };
-                          throw new Error("Failed pattern match at Select line 243, column 13 - line 247, column 84: " + [ v1.mouse.constructor.name ]);
+                          throw new Error("Failed pattern match at Select line 248, column 13 - line 252, column 84: " + [ v1.mouse.constructor.name ]);
                       };
                       var v2 = belowWindow(v1.key.value0 + 1 | 0)(v1.head);
                       var v3 = windowAtLowerBoundary(Data_Int.floor(v1.head));
@@ -11373,7 +11373,7 @@ var PS = {};
                                   return $186;
                               })(new Data_Maybe.Just(WindowSlideDown.value));
                           };
-                          throw new Error("Failed pattern match at Select line 256, column 15 - line 260, column 131: " + [ v1.mouse.constructor.name ]);
+                          throw new Error("Failed pattern match at Select line 261, column 15 - line 265, column 131: " + [ v1.mouse.constructor.name ]);
                       };
                       var selection = Data_Maybe.Just.create(v1.key.value0 + 1 | 0);
                       if (v1.mouse instanceof Data_Maybe.Just) {
@@ -11401,11 +11401,11 @@ var PS = {};
                               return $194;
                           })(Data_Maybe.Nothing.value);
                       };
-                      throw new Error("Failed pattern match at Select line 265, column 15 - line 269, column 75: " + [ v1.mouse.constructor.name ]);
+                      throw new Error("Failed pattern match at Select line 270, column 15 - line 274, column 75: " + [ v1.mouse.constructor.name ]);
                   };
-                  throw new Error("Failed pattern match at Select line 217, column 5 - line 269, column 75: " + [ v1.key.constructor.name ]);
+                  throw new Error("Failed pattern match at Select line 222, column 5 - line 274, column 75: " + [ v1.key.constructor.name ]);
               };
-              throw new Error("Failed pattern match at Select line 160, column 3 - line 269, column 75: " + [ event.constructor.name ]);
+              throw new Error("Failed pattern match at Select line 165, column 3 - line 274, column 75: " + [ event.constructor.name ]);
           };
       };
   };
@@ -11438,7 +11438,7 @@ var PS = {};
               if (event instanceof Reset) {
                   return new Data_Tuple.Tuple(Data_Function["const"](empty), Data_Maybe.Nothing.value);
               };
-              throw new Error("Failed pattern match at Select line 108, column 38 - line 118, column 32: " + [ event.constructor.name ]);
+              throw new Error("Failed pattern match at Select line 113, column 38 - line 123, column 32: " + [ event.constructor.name ]);
           };
       };
   };
@@ -11488,7 +11488,7 @@ var PS = {};
               if (v1.internal.candidates instanceof Data_Maybe.Nothing) {
                   return xs;
               };
-              throw new Error("Failed pattern match at Select line 404, column 9 - line 411, column 15: " + [ v1.internal.candidates.constructor.name ]);
+              throw new Error("Failed pattern match at Select line 412, column 9 - line 419, column 15: " + [ v1.internal.candidates.constructor.name ]);
           })();
           return Halogen_HTML_Elements.div_([ Halogen_HTML_Elements.div([ Halogen_HTML_Properties.class_("example-autocomplete") ])([ Halogen_HTML_Elements.input([ Halogen_HTML_Events.onKeyDown(Halogen_HTML_Events.input(OnKeyDown.create)), Halogen_HTML_Events.onValueInput(Halogen_HTML_Events.input(OnInput.create)), Halogen_HTML_Properties.class_("autocomplete-input"), Halogen_HTML_Properties.value(inputValue), Halogen_HTML_Properties.ref(inputRef) ]), Halogen_HTML_Elements.div([ Halogen_HTML_Properties.class_("autocomplete-menu") ])([ toUl(candidateList) ]) ]), Halogen_HTML_Elements.div_([ Halogen_HTML_Core.text(Data_Show.show(Data_Show.showRecord()(Data_Show.showRecordFieldsCons(new Data_Symbol.IsSymbol(function () {
               return "candidates";
@@ -11591,7 +11591,7 @@ var PS = {};
                           if (v3.value1 instanceof Data_Maybe.Nothing) {
                               return Control_Applicative.pure(Halogen_Query_HalogenM.applicativeHalogenM)(Data_Unit.unit);
                           };
-                          throw new Error("Failed pattern match at Select line 509, column 7 - line 511, column 29: " + [ v3.value1.constructor.name ]);
+                          throw new Error("Failed pattern match at Select line 517, column 7 - line 519, column 29: " + [ v3.value1.constructor.name ]);
                       })())(function () {
                           return Control_Applicative.pure(Halogen_Query_HalogenM.applicativeHalogenM)(v1.value1);
                       });
@@ -11643,7 +11643,7 @@ var PS = {};
                                           if (v5.value1 instanceof Data_Maybe.Nothing) {
                                               return Control_Applicative.pure(Halogen_Query_HalogenM.applicativeHalogenM)(Data_Unit.unit);
                                           };
-                                          throw new Error("Failed pattern match at Select line 536, column 11 - line 538, column 33: " + [ v5.value1.constructor.name ]);
+                                          throw new Error("Failed pattern match at Select line 544, column 11 - line 546, column 33: " + [ v5.value1.constructor.name ]);
                                       })())(function () {
                                           return Control_Applicative.pure(Halogen_Query_HalogenM.applicativeHalogenM)(v1.value1);
                                       });
@@ -11698,7 +11698,7 @@ var PS = {};
                                           if (v5.value1 instanceof Data_Maybe.Nothing) {
                                               return Control_Applicative.pure(Halogen_Query_HalogenM.applicativeHalogenM)(Data_Unit.unit);
                                           };
-                                          throw new Error("Failed pattern match at Select line 562, column 11 - line 564, column 33: " + [ v5.value1.constructor.name ]);
+                                          throw new Error("Failed pattern match at Select line 570, column 11 - line 572, column 33: " + [ v5.value1.constructor.name ]);
                                       })())(function () {
                                           return Control_Applicative.pure(Halogen_Query_HalogenM.applicativeHalogenM)(v1.value1);
                                       });
@@ -11720,7 +11720,7 @@ var PS = {};
                   if (v2 instanceof Data_Maybe.Nothing) {
                       return Control_Applicative.pure(Halogen_Query_HalogenM.applicativeHalogenM)(v1.value0);
                   };
-                  throw new Error("Failed pattern match at Select line 571, column 7 - line 575, column 29: " + [ v2.constructor.name ]);
+                  throw new Error("Failed pattern match at Select line 579, column 7 - line 583, column 29: " + [ v2.constructor.name ]);
               });
           };
           if (v1 instanceof OnInput) {
@@ -11761,7 +11761,7 @@ var PS = {};
                   });
               });
           };
-          throw new Error("Failed pattern match at Select line 474, column 5 - line 474, column 77: " + [ v1.constructor.name ]);
+          throw new Error("Failed pattern match at Select line 482, column 5 - line 482, column 77: " + [ v1.constructor.name ]);
       };
       return $$eval;
   };
@@ -11776,9 +11776,7 @@ var PS = {};
           return Halogen_Component.component(Halogen_HTML_Core.bifunctorHTML)(spec);
       };
   };
-  exports["heightPx"] = heightPx;
   exports["defaultConfig"] = defaultConfig;
-  exports["empty"] = empty;
   exports["StateTransition"] = StateTransition;
   exports["Sync"] = Sync;
   exports["Configure"] = Configure;
@@ -11795,6 +11793,8 @@ var PS = {};
   exports["WindowSlideUp"] = WindowSlideUp;
   exports["WindowSlideDown"] = WindowSlideDown;
   exports["Select"] = Select;
+  exports["heightPx"] = heightPx;
+  exports["empty"] = empty;
   exports["stateTransition"] = stateTransition;
   exports["SearchInput"] = SearchInput;
   exports["searchTransition"] = searchTransition;
@@ -11821,7 +11821,6 @@ var PS = {};
   var Control_Bind = PS["Control.Bind"];
   var Data_Eq = PS["Data.Eq"];
   var Data_Function = PS["Data.Function"];
-  var Data_Functor = PS["Data.Functor"];
   var Data_Maybe = PS["Data.Maybe"];
   var Data_Ord = PS["Data.Ord"];
   var Data_Show = PS["Data.Show"];
@@ -11837,6 +11836,7 @@ var PS = {};
   var Halogen_Aff_Util = PS["Halogen.Aff.Util"];
   var Halogen_HTML = PS["Halogen.HTML"];
   var Halogen_HTML_Core = PS["Halogen.HTML.Core"];
+  var Halogen_HTML_Elements = PS["Halogen.HTML.Elements"];
   var Halogen_Query = PS["Halogen.Query"];
   var Halogen_VDom_Driver = PS["Halogen.VDom.Driver"];
   var Prelude = PS["Prelude"];
@@ -11855,27 +11855,45 @@ var PS = {};
   var showItem = new Data_Show.Show(function (v) {
       return v;
   });
+  var personToKeyword = function (v) {
+      return v.name;
+  };
+  var personToId = function (v) {
+      return v.name;
+  };
+  var personToHTML = function (v) {
+      return Halogen_HTML_Elements.div_([ Halogen_HTML_Core.text(v.name) ]);
+  };
+  var person = function (name) {
+      return function (year) {
+          return function (city) {
+              return function (state) {
+                  return {
+                      name: name,
+                      year: year,
+                      city: city,
+                      state: state
+                  };
+              };
+          };
+      };
+  };
+  var presidents = [ person("George Washington")(1732)("Westmoreland County")("Virginia"), person("John Adams")(1735)("Braintree")("Massachusetts"), person("Thomas Jefferson")(1743)("Shadwell")("Virginia"), person("James Madison")(1751)("Port Conway")("Virginia"), person("James Monroe")(1758)("Monroe Hall")("Virginia"), person("Andrew Jackson")(1767)("Waxhaws Region")("South/North Carolina"), person("John Quincy Adams")(1767)("Braintree")("Massachusetts"), person("William Henry Harrison")(1773)("Charles City County")("Virginia"), person("Martin Van Buren")(1782)("Kinderhook")("New York"), person("Zachary Taylor")(1784)("Barboursville")("Virginia"), person("John Tyler")(1790)("Charles City County")("Virginia"), person("James Buchanan")(1791)("Cove Gap")("Pennsylvania"), person("James K. Polk")(1795)("Pineville")("North Carolina"), person("Millard Fillmore")(1800)("Summerhill")("New York"), person("Franklin Pierce")(1804)("Hillsborough")("New Hampshire"), person("Andrew Johnson")(1808)("Raleigh")("North Carolina"), person("Abraham Lincoln")(1809)("Sinking spring")("Kentucky"), person("Ulysses S. Grant")(1822)("Point Pleasant")("Ohio"), person("Rutherford B. Hayes")(1822)("Delaware")("Ohio"), person("Chester A. Arthur")(1829)("Fairfield")("Vermont"), person("James A. Garfield")(1831)("Moreland Hills")("Ohio"), person("Benjamin Harrison")(1833)("North Bend")("Ohio"), person("Grover Cleveland")(1837)("Caldwell")("New Jersey"), person("William McKinley")(1843)("Niles")("Ohio"), person("Woodrow Wilson")(1856)("Staunton")("Virginia"), person("William Howard Taft")(1857)("Cincinnati")("Ohio"), person("Theodore Roosevelt")(1858)("New York City")("New York"), person("Warren G. Harding")(1865)("Blooming Grove")("Ohio"), person("Calvin Coolidge")(1872)("Plymouth")("Vermont"), person("Herbert Hoover")(1874)("West Branch")("Iowa"), person("Franklin D. Roosevelt")(1882)("Hyde Park")("New York"), person("Harry S. Truman")(1884)("Lamar")("Missouri"), person("Dwight D. Eisenhower")(1890)("Denison")("Texas"), person("Lyndon B. Johnson")(1908)("Stonewall")("Texas"), person("Ronald Reagan")(1911)("Tampico")("Illinois"), person("Richard M. Nixon")(1913)("Yorba Linda")("California"), person("Gerald R. Ford")(1913)("Omaha")("Nebraska"), person("John F. Kennedy")(1917)("Brookline")("Massachusetts"), person("George H. W. Bush")(1924)("Milton")("Massachusetts"), person("Jimmy Carter")(1924)("Plains")("Georgia"), person("George W. Bush")(1946)("New Haven")("Connecticut"), person("Bill Clinton")(1946)("Hope")("Arkansas"), person("Barack Obama")(1961)("Honolulu")("Hawaii") ];
   var ordItem = Data_Ord.ordString;
   var main = Halogen_Aff_Util.runHalogenAff(Control_Bind.bind(Effect_Aff.bindAff)(Halogen_Aff_Util.awaitBody)(function (v) {
       return Control_Bind.bind(Effect_Aff.bindAff)(Halogen_Aff_Util.selectElement("#app"))(function (v1) {
           return Control_Bind.bind(Effect_Aff.bindAff)(Halogen_VDom_Driver.runUI(Select.buildComponent({
-              toHTML: function (v2) {
-                  return Halogen_HTML_Core.text(v2);
-              },
-              toId: function (v2) {
-                  return v2;
-              },
-              toKeyword: function (v2) {
-                  return v2;
-              }
+              toHTML: personToHTML,
+              toId: personToId,
+              toKeyword: personToKeyword
           })({
               internal: Select.empty,
-              external: new Data_Maybe.Just(Data_Functor.map(Data_Functor.functorArray)(Item)([ "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven" ])),
+              external: new Data_Maybe.Just(presidents),
               config: Select.defaultConfig
           }))([  ])(Data_Maybe.fromMaybe(v)(v1)))(function (v2) {
               return Control_Bind.bind(Effect_Aff.bindAff)(Effect_Aff_Class.liftAff(Effect_Aff_Class.monadAffAff)(Effect_Aff.forkAff(Control_Bind.discard(Control_Bind.discardUnit)(Effect_Aff.bindAff)(Effect_Aff.delay(10000.0))(function () {
                   return Control_Bind.discard(Control_Bind.discardUnit)(Effect_Aff.bindAff)(Effect_Class.liftEffect(Effect_Aff.monadEffectAff)(Effect_Console.log("10 second")))(function () {
-                      return v2.query(Halogen_Query.action(Select.Sync.create(Data_Functor.map(Data_Functor.functorArray)(Item)([ "zero", "ten", "eight", "nine", "five", "four", "two", "three", "eleven", "one" ]))));
+                      return v2.query(Halogen_Query.action(Select.Sync.create(presidents)));
                   });
               }))))(function (v3) {
                   return Control_Applicative.pure(Effect_Aff.applicativeAff)(Data_Unit.unit);
@@ -11886,6 +11904,11 @@ var PS = {};
   var eqItem = Data_Eq.eqString;
   exports["Void"] = Void;
   exports["Item"] = Item;
+  exports["person"] = person;
+  exports["presidents"] = presidents;
+  exports["personToId"] = personToId;
+  exports["personToKeyword"] = personToKeyword;
+  exports["personToHTML"] = personToHTML;
   exports["main"] = main;
   exports["eqItem"] = eqItem;
   exports["ordItem"] = ordItem;
