@@ -5,15 +5,16 @@ import Prelude
 import CSS.Geometry as CG
 import CSS.Size as CS
 import Control.MonadPlus (guard)
-import Data.Array (take, index, filter, mapWithIndex) as A
+import Data.Array (filter, index, take, find) as A
+-- import Data.Foldable (traverse_)
 import Data.FoldableWithIndex (foldlWithIndex)
 import Data.Int (toNumber, floor, ceil)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Set (Set)
+import Data.Profunctor.Strong ((&&&))
 import Data.Set (fromFoldable, member) as Set
-import Data.String (Pattern(Pattern), contains, length, take) as S
+import Data.String (Pattern(Pattern), contains) as S
 import Data.Tuple (Tuple(..))
-import Data.Tuple (fst, snd) as T
+import Data.Tuple (fst, snd) as Tuple
 import Effect.Aff (Aff)
 import Halogen as H
 import Halogen.HTML as HH
@@ -24,7 +25,6 @@ import Utils (classList, (!))
 import Web.DOM.Element as WDE
 import Web.Event.Event as WEE
 import Web.HTML.HTMLElement as WHHE
-import Web.HTML.HTMLInputElement as WHHIE
 import Web.UIEvent.KeyboardEvent as KE
 
 heightPx :: Int
@@ -35,19 +35,29 @@ type Config =
   , listSize :: Int
   }
 
+type DataConfig item q =
+  { toHTML :: item -> H.ComponentHTML q
+  , toId :: item -> String
+  , toKeyword :: item -> String
+  }
+
 defaultConfig :: Config
 defaultConfig =
   { windowSize : 5
   , listSize : 10
   }
 
+type Index = Int
+type Id = String
+type Content = String
+
 type InternalState =
   { key :: Maybe Int
   , mouse :: Maybe Int
   , head :: Number
-  , selection :: Maybe Int
+  , selection :: Maybe Index
   , search :: String
-  , candidates :: Maybe (Set Int)
+  , candidates :: Maybe (Array Id)
   }
 
 empty :: InternalState
@@ -70,9 +80,9 @@ data Query item next
   = StateTransition Msg next
   | Sync (Array item) next
   | Configure Config next -- reconfigure at runtime
-  -- | PreventDefault WEE.Event (Query f item next)
   | OnKeyDown KE.KeyboardEvent next
   | OnScroll next
+  | OnInput String next
   -- | Init next
   -- | HandleKey KE.KeyboardEvent (H.SubscribeStatus -> next)
 
@@ -108,27 +118,25 @@ stateTransition config event state = case event of
     Tuple (const empty) Nothing
 
 data SearchMsg
-  = SearchInput String (Array String)
+  = SearchInput String (Array (Tuple Id Content))
 
 searchTransition
   :: forall r
    . Config
   -> SearchMsg
-  -> { search :: String, candidates :: Maybe(Set Int) | r }
+  -> { search :: String, candidates :: Maybe(Array Id) | r }
   -> Tuple
-       ({ search :: String, candidates :: Maybe(Set Int) | r } ->
-        { search :: String, candidates :: Maybe(Set Int) | r }
+       ({ search :: String, candidates :: Maybe(Array Id) | r } ->
+        { search :: String, candidates :: Maybe(Array Id) | r }
        )
        (Maybe Output)
 searchTransition { listSize } event _ = case event of
   SearchInput search xs ->
     let
       candidates
-          = Set.fromFoldable
-        <<< A.take listSize
-        <<< map T.snd
-        <<< A.filter T.fst
-        <<< A.mapWithIndex (\idx str-> Tuple (S.contains (S.Pattern search) str) idx)
+          = A.take listSize
+        <<< map Tuple.fst
+        <<< A.filter ( S.contains (S.Pattern search) <<< Tuple.snd)
           $ xs
     in
      (_ { search = search, candidates = Just candidates }) ! Nothing
@@ -142,10 +150,10 @@ keyboardTransition
   :: forall r
    . Config ->
      KeyboardMsg ->
-     { key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Int | r } ->
+     { key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Index | r } ->
      Tuple
-       ({ key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Int | r } ->
-        { key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Int | r }
+       ({ key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Index | r } ->
+        { key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Index | r }
        )
        (Maybe Output)
 keyboardTransition { windowSize, listSize } event { key, mouse, head } =
@@ -366,12 +374,17 @@ keySelectedRef = H.RefLabel "keySelected"
 inputRef :: H.RefLabel
 inputRef = H.RefLabel "autocomplete-input"
 
-buildRender :: forall item. Show item => (item -> String) -> State item -> H.ComponentHTML (Query item)
-buildRender li { config, internal , external } =
+buildRender
+  :: forall item
+   . DataConfig item (Query item)
+  -> State item
+  -> H.ComponentHTML (Query item)
+buildRender { toHTML, toId, toKeyword } { config, internal , external } =
   HH.div_
     [ HH.div [ HP.class_ $ H.ClassName "example-autocomplete"]
         [ HH.input
           [ HE.onKeyDown $ HE.input OnKeyDown
+          , HE.onValueInput $ HE.input OnInput
           , HP.class_ $ H.ClassName "autocomplete-input"
           , HP.value $ inputValue
           , HP.ref inputRef
@@ -379,16 +392,6 @@ buildRender li { config, internal , external } =
         , HH.div [ HP.class_ $ H.ClassName "autocomplete-menu" ]
             [ toUl candidateList ]
         ]
-    -- , HH.div_
-    --     [ HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Keyboard KeyUp ]
-    --         [ HH.text "KeyUp" ]
-    --     , HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Keyboard KeyDown ]
-    --         [ HH.text "KeyDown" ]
-    --     , HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Scroll ScrollUp ]
-    --         [ HH.text "ScrollUp" ]
-    --     , HH.button [ HE.onClick $ HE.input_ $ StateTransition $ Scroll ScrollDown ]
-    --         [ HH.text "ScrollDown" ]
-    --     ]
     , HH.div_
         [ HH.text $ show internal ]
     ]
@@ -399,22 +402,22 @@ buildRender li { config, internal , external } =
         xs = fromMaybe [] $ external
       in
         case internal.candidates of
-          Just candidates ->
-            map T.snd <<< A.filter (flap(Set.member) candidates <<< T.fst) <<< A.mapWithIndex (\idx it -> Tuple idx it) $ xs
+          Just ids ->
+            let
+              idSet = Set.fromFoldable ids
+            in
+              A.filter (flap(Set.member) idSet <<< toId) xs
           Nothing ->
             xs
 
     inputValue :: String
-    inputValue =
-      case external of
-        Just arr ->
-          case internal.selection of
-            Just idx ->
-              fromMaybe "" (show <$> (A.index arr idx))
-            Nothing ->
-              ""
-        Nothing ->
-          ""
+    inputValue = fromMaybe internal.search do
+      items <- external
+      idx <- internal.selection
+      ids <- internal.candidates
+      id <- A.index ids idx
+      item <- A.find ( (_ == id) <<< toId ) items
+      pure $ toKeyword item
 
     toUl :: Array item -> H.ComponentHTML (Query item)
     toUl xs =
@@ -445,7 +448,7 @@ buildRender li { config, internal , external } =
               , HE.onClick $ HE.input_ $ StateTransition $ Mouse $ MouseClick index
               ]
             )
-        [ HH.text $ li item ]
+        [ toHTML item ]
 
 -- onKeyUp_ :: HTMLDocument -> (KE.KeyboardEvent -> Effect Unit) -> Effect (Effect Unit)
 -- onKeyUp_ document fn = do
@@ -461,172 +464,132 @@ buildRender li { config, internal , external } =
 --   WEET.addEventListener KET.keydown listener false target
 --   pure $ WEET.removeEventListener KET.keydown listener false target
 
-eval :: forall item. Show item => Query item ~> H.ComponentDSL (State item) (Query item) Output IO
--- eval (Init next) = do
---   document <- H.liftEffect $ DOM.document =<< DOM.window
---   H.subscribe $ HQES.eventSource' (onKeyUp_ document) (Just <<< H.request <<< HandleKey)
---   H.subscribe $ HQES.eventSource' (onKeyDown_ document) (Just <<< H.request <<< HandleKey)
---   pure next
--- eval (HandleKey ev reply)
---   = do
---     H.liftEffect $ WEE.preventDefault $ KE.toEvent ev
---     H.liftEffect $ log $ KE.key ev
---     pure (reply H.Listening)
-eval (Sync xs next) = do
-  { config , internal : internalState } <- H.get
-  H.modify_ (\st -> st { internal = st.internal { key = Nothing, mouse = Nothing, head = 0.0, selection = Nothing } , external = Just $ xs })
-  let Tuple reducer outMsg = _stateTransition config (Search (SearchInput internalState.search (show <$> xs))) internalState
-  H.modify_ (\st -> st { internal = reducer st.internal })
-
-  mul <- H.getHTMLElementRef ulRef
-  case mul of
-    Just ul -> do
-      H.liftEffect
-        $ WDE.setScrollTop 0.0 (WHHE.toElement ul)
-    _ -> pure unit
-
-  pure next
-
+buildEval
+  :: forall item
+   . DataConfig item (Query item)
+  -> Query item
+  ~> H.ComponentDSL (State item) (Query item) Output IO
+buildEval { toId, toKeyword } = eval
   where
-    _stateTransition = stateTransition
-
-eval (Configure config next) = do
-  H.modify_ (\st -> st { config = config })
-  pure next
-
-eval (StateTransition event next) = do
-  { config, internal : internalState } <- H.get
-  let Tuple reducer outMsg = _stateTransition config event internalState
-  H.modify_ (\st -> st { internal = reducer st.internal })
-  case outMsg of
-    Just msg -> H.raise msg
-    Nothing -> pure unit
-  pure next
-
-  where
-    _stateTransition = stateTransition
-
-eval (OnKeyDown ev next) = do
-  case KE.key ev of
-    "ArrowUp" -> do
-      H.liftEffect <<< WEE.preventDefault <<< KE.toEvent $ ev
-      config <- H.gets _.config
-      internalState <- H.gets _.internal
-      let Tuple reducer outMsg = _stateTransition config (Keyboard KeyUp) internalState
+    eval :: Query item ~> H.ComponentDSL (State item) (Query item) Output IO
+    -- eval (Init next) = do
+    --   document <- H.liftEffect $ DOM.document =<< DOM.window
+    --   H.subscribe $ HQES.eventSource' (onKeyUp_ document) (Just <<< H.request <<< HandleKey)
+    --   H.subscribe $ HQES.eventSource' (onKeyDown_ document) (Just <<< H.request <<< HandleKey)
+    --   pure next
+    -- eval (HandleKey ev reply)
+    --   = do
+    --     H.liftEffect $ WEE.preventDefault $ KE.toEvent ev
+    --     H.liftEffect $ log $ KE.key ev
+    --     pure (reply H.Listening)
+    eval (Sync xs next) = do
+      { config , internal : internalState } <- H.get
+      H.modify_ (\st -> st { internal = st.internal { key = Nothing, mouse = Nothing, head = 0.0, selection = Nothing } , external = Just $ xs })
+      let Tuple reducer outMsg = stateTransition config (Search (SearchInput internalState.search (( toId &&& toKeyword) <$> xs))) internalState
       H.modify_ (\st -> st { internal = reducer st.internal })
-      case outMsg of
-        Just WindowSlideUp -> do
-          mul <- H.getHTMLElementRef ulRef
-          mli <- H.getHTMLElementRef keySelectedRef
-          case mul, mli of
-            Just ul, Just li -> do
-              liTop <- H.liftEffect $ WHHE.offsetTop li
-              liHeight <- H.liftEffect $ WHHE.offsetHeight li
-              H.liftEffect
-                $ WDE.setScrollTop (liTop) (WHHE.toElement ul)
-            _, _ -> pure unit
-        _ -> do
-          pure unit
-      case outMsg of
-        Just msg -> H.raise msg
-        Nothing -> pure unit
-      pure next
-    "ArrowDown" -> do
-      H.liftEffect <<< WEE.preventDefault <<< KE.toEvent $ ev
-      config <- H.gets _.config
-      internalState <- H.gets _.internal
-      let Tuple reducer outMsg = _stateTransition config (Keyboard KeyDown) internalState
-      H.modify_ (\st -> st { internal = reducer st.internal })
-      case outMsg of
-        Just WindowSlideDown -> do
-          mul <- H.getHTMLElementRef ulRef
-          mli <- H.getHTMLElementRef keySelectedRef
-          case mul, mli of
-            Just ul, Just li -> do
-              liTop <- H.liftEffect $ WHHE.offsetTop li
-              liHeight <- H.liftEffect $ WHHE.offsetHeight li
-              ulHeight <- H.liftEffect $ WDE.clientHeight (WHHE.toElement ul)
-              H.liftEffect
-                $ WDE.setScrollTop
-                    (liTop + liHeight - ulHeight)
-                    (WHHE.toElement ul)
-            _, _ -> pure unit
-        _ -> do
-          pure unit
-      case outMsg of
-        Just msg -> H.raise msg
-        Nothing -> pure unit
-      pure next
 
-    "Backspace" -> do
-      minput <- H.getHTMLElementRef inputRef
-      case minput of
-        Just ip -> do
-          case WHHIE.fromHTMLElement ip of
-            Just ie -> do
-              search <- H.liftEffect $ WHHIE.value ie
-              { config , internal : internalState, external } <- H.get
-              let Tuple reducer outMsg = _stateTransition config (Search (SearchInput (S.take ((S.length search) - 1) search) (show <$> (fromMaybe [] external)))) internalState
-              H.modify_ (\st -> st { internal = reducer st.internal })
-              pure unit
-            Nothing -> pure unit
-        Nothing -> pure unit
       mul <- H.getHTMLElementRef ulRef
       case mul of
         Just ul -> do
           H.liftEffect
             $ WDE.setScrollTop 0.0 (WHHE.toElement ul)
         _ -> pure unit
+
       pure next
 
-    key -> if S.length key == 1
-      then do
-        minput <- H.getHTMLElementRef inputRef
-        case minput of
-          Just ip -> do
-            case WHHIE.fromHTMLElement ip of
-              Just ie -> do
-                search <- H.liftEffect $ WHHIE.value ie
-                { config , internal : internalState, external } <- H.get
-                let Tuple reducer outMsg = _stateTransition config (Search (SearchInput (search <> key) (show <$> (fromMaybe [] external)))) internalState
-                H.modify_ (\st -> st { internal = reducer st.internal })
-                pure unit
-              Nothing -> pure unit
-          Nothing -> pure unit
-        mul <- H.getHTMLElementRef ulRef
-        case mul of
-          Just ul -> do
-            H.liftEffect
-              $ WDE.setScrollTop 0.0 (WHHE.toElement ul)
-          _ -> pure unit
-        pure next
-      else
-        pure next
 
-  where
-    _stateTransition = stateTransition
+    eval (Configure config next) = do
+      H.modify_ (\st -> st { config = config })
+      pure next
 
--- eval (PreventDefault ev next) = do
---   H.liftEffect $ WEE.preventDefault ev
---   eval next
-eval (OnScroll next) = do
-  mul <- H.getHTMLElementRef ulRef
-  case mul of
-    Just ul-> do
-      ulHeight <- H.liftEffect $ WDE.scrollTop (WHHE.toElement ul)
-      eval (StateTransition (Scroll $ UpdateScrollPosition $ ulHeight / (toNumber heightPx)) next)
-    Nothing -> pure next
+    eval (StateTransition event next) = do
+      { config, internal : internalState } <- H.get
+      let Tuple reducer outMsg = stateTransition config event internalState
+      H.modify_ (\st -> st { internal = reducer st.internal })
+      case outMsg of
+        Just msg -> H.raise msg
+        Nothing -> pure unit
+      pure next
 
 
+    eval (OnKeyDown ev next) = do
+      case KE.key ev of
+        "ArrowUp" -> do
+          H.liftEffect <<< WEE.preventDefault <<< KE.toEvent $ ev
+          config <- H.gets _.config
+          internalState <- H.gets _.internal
+          let Tuple reducer outMsg = stateTransition config (Keyboard KeyUp) internalState
+          H.modify_ (\st -> st { internal = reducer st.internal })
+          case outMsg of
+            Just WindowSlideUp -> do
+              mul <- H.getHTMLElementRef ulRef
+              mli <- H.getHTMLElementRef keySelectedRef
+              case mul, mli of
+                Just ul, Just li -> do
+                  liTop <- H.liftEffect $ WHHE.offsetTop li
+                  liHeight <- H.liftEffect $ WHHE.offsetHeight li
+                  H.liftEffect
+                    $ WDE.setScrollTop (liTop) (WHHE.toElement ul)
+                _, _ -> pure unit
+            _ -> do
+              pure unit
+          case outMsg of
+            Just msg -> H.raise msg
+            Nothing -> pure unit
+          pure next
+        "ArrowDown" -> do
+          H.liftEffect <<< WEE.preventDefault <<< KE.toEvent $ ev
+          config <- H.gets _.config
+          internalState <- H.gets _.internal
+          let Tuple reducer outMsg = stateTransition config (Keyboard KeyDown) internalState
+          H.modify_ (\st -> st { internal = reducer st.internal })
+          case outMsg of
+            Just WindowSlideDown -> do
+              mul <- H.getHTMLElementRef ulRef
+              mli <- H.getHTMLElementRef keySelectedRef
+              case mul, mli of
+                Just ul, Just li -> do
+                  liTop <- H.liftEffect $ WHHE.offsetTop li
+                  liHeight <- H.liftEffect $ WHHE.offsetHeight li
+                  ulHeight <- H.liftEffect $ WDE.clientHeight (WHHE.toElement ul)
+                  H.liftEffect
+                    $ WDE.setScrollTop
+                        (liTop + liHeight - ulHeight)
+                        (WHHE.toElement ul)
+                _, _ -> pure unit
+            _ -> do
+              pure unit
+          case outMsg of
+            Just msg -> H.raise msg
+            Nothing -> pure unit
+          pure next
 
-buildComponent :: forall item. Show item => (item -> String) -> State item -> H.Component HH.HTML (Query item) (Input item) Output IO
-buildComponent li initialState = H.component spec
+        _ -> pure next
+
+    eval (OnScroll next) = do
+      mul <- H.getHTMLElementRef ulRef
+      case mul of
+        Just ul-> do
+          ulHeight <- H.liftEffect $ WDE.scrollTop (WHHE.toElement ul)
+          eval (StateTransition (Scroll $ UpdateScrollPosition $ ulHeight / (toNumber heightPx)) next)
+        Nothing -> pure next
+
+    eval (OnInput search next) = do
+      { config , internal : internalState, external } <- H.get
+      let Tuple reducer outMsg = stateTransition config (Search (SearchInput search ((toId &&& toKeyword) <$> (fromMaybe [] external)))) internalState
+      H.modify_ (\st -> st { internal = reducer st.internal })
+      H.modify_ (\st -> st { internal = st.internal { key = Nothing, selection = Nothing } })
+      pure next
+
+
+buildComponent :: forall item. DataConfig item (Query item)-> State item -> H.Component HH.HTML (Query item) (Input item) Output IO
+buildComponent dataConfig initialState = H.component spec
   where
     spec :: H.ComponentSpec HH.HTML (State item) (Query item) (Input item) Output IO
     spec =
       { initialState : const initialState
-      , render: buildRender li
-      , eval
+      , render: buildRender dataConfig
+      , eval: buildEval dataConfig
       , receiver : HE.input Sync
       }
 

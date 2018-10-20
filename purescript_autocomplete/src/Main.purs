@@ -8,6 +8,7 @@ import Effect (Effect)
 import Effect.Aff (Aff, delay, forkAff)
 import Effect.Console (log)
 import Halogen as H
+import Halogen.HTML as HH
 import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI)
 import Select (buildComponent, empty, defaultConfig, Query(..))
@@ -62,7 +63,10 @@ main = HA.runHalogenAff do
   app <- HA.selectElement (QuerySelector "#app")
   io <- runUI
     ( buildComponent
-        show
+        { toHTML : \(Item it) -> HH.text it
+        , toId : \(Item it) -> it
+        , toKeyword : \(Item it) -> it
+        }
         { internal : empty
         , external : Just (map Item [ "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven" ])
         , config : defaultConfig
