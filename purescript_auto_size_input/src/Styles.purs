@@ -2,7 +2,7 @@ module Styles where
 
 import Prelude
 
-import CSS (absolute, border, display, height, inlineBlock, lightgreen, nil, position, px, em, relative, select, solid, textWhitespace, top, whitespaceNoWrap, width, black) as CSS
+import CSS (absolute, black, border, display, em, height, inlineBlock, lightgreen, nil, position, px, relative, select, solid, textWhitespace, top, whitespaceNoWrap, width) as CSS
 import CSS.Overflow (hidden, overflow) as CSS
 import CSS.Stylesheet (CSS)
 import CSSUtils (class_, margin1) as CSS
@@ -38,3 +38,8 @@ root = do
   CSS.select (CSS.class_ CN.container) container
   CSS.select (CSS.class_ CN.item) item
   CSS.select (CSS.class_ CN.ghostItem) ghostItem
+
+-- | CSS function
+inputWidth :: Number -> CSS
+inputWidth x = do
+  CSS.width (CSS.px x)
