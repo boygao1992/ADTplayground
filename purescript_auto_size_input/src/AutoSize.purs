@@ -3,7 +3,7 @@ module AutoSize where
 import Prelude
 
 import ClassNames as CN
-import Data.Array (snoc)
+import Data.Array (snoc, filter)
 import Data.Foldable (traverse_)
 import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff)
@@ -32,9 +32,12 @@ type InputState =
   , width :: Number
   }
 
+type Id = String
+
 data Query next
   = OnInput String next
   | OnKeyDown KE.KeyboardEvent next
+  | OnClick Id next
 
 type Input = Unit
 
@@ -66,18 +69,24 @@ ghostRef = H.RefLabel "auto-size-input-ghost"
 render :: State -> H.ComponentHTML Query
 render { input, selections } =
   HH.div [ classList [ CN.container]]
-  ( renderList selections
-  `snoc` renderAutoSizeInput input
-  `snoc` HC.stylesheet Styles.root
-  )
+  [ HH.div_ (renderList selections `snoc` renderAutoSizeInput input)
+  , HH.div [ classList [ CN.ghostItem ]
+            , HP.ref ghostRef
+            ]
+    [ HH.text input.text]
+  , HC.stylesheet Styles.root
+  ]
 
   where
-    renderItem :: forall q. String -> H.ComponentHTML q
+    renderItem :: String -> H.ComponentHTML Query
     renderItem str =
       HH.div [ classList [ CN.item] ]
-      [ HH.text str ]
+      [ HH.button [ HE.onClick $ HE.input_ (OnClick str)]
+        [ HH.text "x"]
+      , HH.text str
+      ]
 
-    renderList :: forall q. Array String -> Array (H.ComponentHTML q)
+    renderList :: Array String -> Array (H.ComponentHTML Query)
     renderList = map renderItem
 
     renderAutoSizeInput :: InputState -> H.ComponentHTML Query
@@ -88,9 +97,6 @@ render { input, selections } =
                  , HC.style $ Styles.inputWidth width
                  , HP.ref inputRef
                  ]
-      , HH.div [ classList [ CN.ghostItem ]
-                , HP.ref ghostRef]
-        [ HH.text text]
       ]
 
 
@@ -115,6 +121,8 @@ eval (OnKeyDown ev next) = next <$ do
       traverse_ (H.liftEffect <<< WHHE.focus) ie
     _ ->
       pure unit
+eval (OnClick id next) = next <$ do
+  H.modify_ $ \st -> st { selections = filter (not <<< (_ == id)) $ st.selections }
 
 component :: H.Component HH.HTML Query Input Output IO
 component = H.component spec
