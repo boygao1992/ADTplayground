@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "start": "yarn run browser-sync start -s -f index.html src/app.js --no-ui --no-notify"
+  },
+  "name": "d3v4-starter",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "browser-sync": "^2.26.3"
+  }
+}

@@ -1,5 +1,7 @@
 module Select where
 
+-- | TODO bug: boundary conditions of keyboardTransition, should consider length of candidates rather than listSize
+
 import Prelude
 
 import CSS.Geometry as CG
@@ -155,13 +157,13 @@ keyboardTransition
   :: forall r
    . Config ->
      KeyboardMsg ->
-     { key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Index | r } ->
+     { key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Index, candidates :: Maybe (Array Id) | r } ->
      Tuple
-       ({ key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Index | r } ->
-        { key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Index | r }
+       ({ key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Index, candidates :: Maybe (Array Id) | r } ->
+        { key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Index, candidates :: Maybe (Array Id)  | r }
        )
        (Maybe Output)
-keyboardTransition { windowSize, listSize } event { key, mouse, head } =
+keyboardTransition { windowSize, listSize } event { key, mouse, head , candidates } =
   case event of
   KeyUp ->
     case key of
