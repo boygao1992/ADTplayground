@@ -1,4 +1,6 @@
-/* global d3 */
+/* global d3 Fluture*/
+
+const { Future } = Fluture
 
 // d3.scaleLinear :: Tuple Number Number -> Tuple Number Number -> Number -> Number
 // linearScale :: Number -> Number
@@ -54,4 +56,47 @@ const scaleOrdinal = d3.scaleOrdinal()
   .domain( [ "A", "B" ] )
   .range( [ 4, 3 ] )
 
-document.body.innerHTML = `<h1>${linearScale("-1")}</h1>`
+
+// Main
+
+const fetchData = Future( ( rej, res ) => {
+  d3.json( "data/scores.json", ( data ) => {
+    console.log( data )
+    res( data )
+  } )
+} )
+
+const main = Future.do( function* () {
+  // D3Object :: Type -> Type -> Type
+  const body = d3.select( "body" ) // select :: forall datum. String -> D3Object Node datum
+    .append( "div" )
+    .attr( "class", "chart" )
+
+  const scores = yield fetchData
+
+  const chart = d3
+    .select( ".chart" )
+    .append( "svg" )
+    .attr( "width", 225 )
+    .attr( "height", 300 )
+
+  const bar = chart
+    .selectAll( "g" )
+    .data( scores ) // data :: forall rawDatum datum. D3Object Node datum ~> Array rawDatum -> (rawDatum -> datum) -> D3Object Node datum
+    .enter()
+    .append( "g" )
+    .attr( "transform", ( _, i ) => ( `translate(0, ${i * 33})` ) )
+
+  const rect = bar
+    .append( "rect" )
+    .attr( "height", 30 )
+    .attr( "width", ( { score } ) => ( score ) )
+    .attr( "class", "bar" )
+
+  const text = bar
+    .append( "text" )
+    .text( ( { name } ) => ( name ) )
+    .attr( "y", "1.2em" )
+} )
+
+main.fork( console.error, console.log )

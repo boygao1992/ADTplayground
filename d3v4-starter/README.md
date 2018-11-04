@@ -1,4 +1,6 @@
-## `scaleLinear`
+## d3-scale
+
+### `scaleLinear`
 
 ```haskell
 d3.scaleLinear :: Tuple Number Number -> Tuple Number Number -> Number -> Number
@@ -51,18 +53,14 @@ edge cases
    linearScale("A") = NaN // invalid input
    ```
 
-
-
-## `scaleTime`
+### `scaleTime`
 
 ```haskell
 d3.scaleTime :: Tuple Date Date -> Tuple Number Number -> Date -> Number
 d3.scaleTime domain range date = scale
 ```
 
-
-
-## `scaleQuantize`
+### `scaleQuantize`, `scaleThreshold`
 
 ```haskell
 d3.scaleQuantize :: forall a. Tuple Number Number -> Array a -> Number -> a
@@ -71,7 +69,30 @@ d3.scaleQuantize domain range x = a
 
 from a continuous domain to a discrete range
 
-## `scaleOrdinal`
+example
+
+```javascript
+// scaleQuantize :: Number -> a
+// scaleQuantize x =
+//   x in ( -infinity, 100/3 )      -> "aqua"
+//   x in [     100/3, 200/3 )      -> "blue"
+//   x in [     200/3, + infinity ) -> "charcoal"
+// exactly the same behaivor as `scaleThreshold`
+const scaleQuantize = d3.scaleQuantize()
+  .domain( [ 0, 100 ] )
+  .range( [ "aqua", "blue", "charcoal" ] )
+
+// quantizeScale :: a -> Tuple Number Number
+// quantizeScale a
+//   | a == "aqua"     = [     0, 100/3 ]
+//   | a == "blue"     = [ 100/3, 200/3 ]
+//   | a == "charcoal" = [ 200/3,   100 ]
+const quantizeScale = scaleQuantize.invertExtent
+```
+
+
+
+### `scaleOrdinal`
 
 ```haskell
 d3.scaleOrdinal :: forall a b. Array a -> Array b -> a -> b
@@ -96,3 +117,8 @@ edge cases:
     // [ "A", "B", "C", "D", "E" ] -> [ 4, 3 ]
     scaleOrdinal("E") = 4 // i = 4, m = 2, i % m = 0
     ```
+
+### `scaleSequential`
+
+### `scaleDiverging`
+
