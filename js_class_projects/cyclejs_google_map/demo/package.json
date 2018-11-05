@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "start": "node app.js"
+  },
+  "name": "expressTest",
+  "version": "1.0.0",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.138.0",
+    "bluebird": "^3.5.1",
+    "cors": "^2.8.4",
+    "elasticsearch": "^13.3.1",
+    "express": "^4.16.2",
+    "http-aws-es": "^3.1.1",
+    "ramda": "^0.25.0"
+  }
+}
