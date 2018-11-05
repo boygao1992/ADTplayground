@@ -7,7 +7,7 @@ import Prelude
 import CSS.Geometry as CG
 import CSS.Size as CS
 import Control.MonadPlus (guard)
-import Data.Array (filter, index, take, find) as A
+import Data.Array (filter, index, take, find, length) as A
 import Data.FoldableWithIndex (foldlWithIndex)
 import Data.Int (toNumber, floor, ceil)
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -163,117 +163,124 @@ keyboardTransition
         { key :: Maybe Int, mouse :: Maybe Int, head :: Number, selection :: Maybe Index, candidates :: Maybe (Array Id)  | r }
        )
        (Maybe Output)
-keyboardTransition { windowSize, listSize } event { key, mouse, head , candidates } =
-  case event of
-  KeyUp ->
-    case key of
-    Nothing ->
-      let
-        selection = Just ((floor head) + windowSize - 1)
-      in
-       case mouse of
-         Just _ ->
-           (_ { key = selection } ) ! Just WindowSlideDown
-         Nothing ->
-           (_ { key = selection, selection = selection } ) ! Just WindowSlideDown
-    Just keyPos ->
-      let
-        windowAtUpperBoundary h =
-          h <= 0
-        aboveWindow k h =
-          k - (ceil h) < 0
-        belowWindow k h =
-          k - (floor h) >= windowSize
-        outsideWindow k h =
-          k - (floor h) < 0 || k - (ceil h) > windowSize
-      in
-        if outsideWindow keyPos head
-        then
-          let
-            selection = Just ((floor head) + windowSize - 1)
-          in
-            case mouse of
-              Just _ ->
-                (_ { key = selection }) ! Just WindowSlideDown
-              Nothing ->
-                (_ { key = selection , selection = selection }) ! Just WindowSlideDown
-        else
-          case windowAtUpperBoundary (floor head), aboveWindow (keyPos - 1) head of
-          true, true  ->
-            identity ! Just WindowPushUpperBoundary
-          false, true ->
-            let
-              selection = Just $ keyPos - 1
-            in
-              case mouse of
-                Just _ ->
-                  (_ { key = selection, head = toNumber $ keyPos - 1 }) ! Just WindowSlideUp
-                Nothing ->
-                  (_ { key = selection, head = toNumber $ keyPos - 1, selection = selection }) ! Just WindowSlideUp
-          _, _ ->
-            let
-              selection = Just $ keyPos - 1
-            in
-              case mouse of
-                Just _ ->
-                  (_ { key = selection}) ! Nothing
-                Nothing ->
-                  (_ { key = selection, selection = selection}) ! Nothing
-
-  KeyDown ->
-    case key of
-    Nothing ->
-      let
-        selection = Just $ floor $ head
-      in
+keyboardTransition config event { key, mouse, head , candidates } =
+  case candidates of
+  Nothing ->
+    (_ { key = Nothing, selection = Nothing}) ! Nothing
+  Just candidateList ->
+    let
+      listSize = A.length candidateList
+      windowSize = min config.windowSize listSize
+    in case event of
+    KeyUp ->
+      case key of
+      Nothing ->
+        let
+          selection = Just ((floor head) + windowSize - 1)
+        in
         case mouse of
           Just _ ->
-            (_ { key = selection }) ! Just WindowSlideUp
+            (_ { key = selection } ) ! Just WindowSlideDown
           Nothing ->
-            (_ { key = selection, selection = selection }) ! Just WindowSlideUp
-    Just keyPos ->
-      let
-        windowAtLowerBoundary h =
-          h >= (listSize - windowSize)
-        aboveWindow k h =
-          k - (ceil h) < 0
-        belowWindow k h =
-          k - (floor h) >= windowSize
-        outsideWindow k h =
-          k - (floor h) < 0 || k - (ceil h) > windowSize
-      in
-        if outsideWindow keyPos head
-        then
-          let
-            selection = Just $ floor $ head
-          in
-            case mouse of
-              Just _ ->
-                (_ { key = selection }) ! Just WindowSlideUp
-              Nothing ->
-                (_ { key = selection, selection = selection }) ! Just WindowSlideUp
-        else
-          case windowAtLowerBoundary (floor head), belowWindow (keyPos + 1) head of
-          true, true ->
-            identity ! Just WindowPushLowerBoundary
-          false, true ->
+            (_ { key = selection, selection = selection } ) ! Just WindowSlideDown
+      Just keyPos ->
+        let
+          windowAtUpperBoundary h =
+            h <= 0
+          aboveWindow k h =
+            k - (ceil h) < 0
+          belowWindow k h =
+            k - (floor h) >= windowSize
+          outsideWindow k h =
+            k - (floor h) < 0 || k - (ceil h) > windowSize
+        in
+          if outsideWindow keyPos head
+          then
             let
-              selection = Just $ keyPos + 1
+              selection = Just ((floor head) + windowSize - 1)
             in
               case mouse of
                 Just _ ->
-                  (_ { key = selection, head = toNumber $ keyPos + 2 - windowSize }) ! Just WindowSlideDown
+                  (_ { key = selection }) ! Just WindowSlideDown
                 Nothing ->
-                  (_ { key = selection, head = toNumber $ keyPos + 2 - windowSize, selection = selection }) ! Just WindowSlideDown
-          _, _ ->
+                  (_ { key = selection , selection = selection }) ! Just WindowSlideDown
+          else
+            case windowAtUpperBoundary (floor head), aboveWindow (keyPos - 1) head of
+            true, true  ->
+              identity ! Just WindowPushUpperBoundary
+            false, true ->
+              let
+                selection = Just $ keyPos - 1
+              in
+                case mouse of
+                  Just _ ->
+                    (_ { key = selection, head = toNumber $ keyPos - 1 }) ! Just WindowSlideUp
+                  Nothing ->
+                    (_ { key = selection, head = toNumber $ keyPos - 1, selection = selection }) ! Just WindowSlideUp
+            _, _ ->
+              let
+                selection = Just $ keyPos - 1
+              in
+                case mouse of
+                  Just _ ->
+                    (_ { key = selection}) ! Nothing
+                  Nothing ->
+                    (_ { key = selection, selection = selection}) ! Nothing
+
+    KeyDown ->
+      case key of
+      Nothing ->
+        let
+          selection = Just $ floor $ head
+        in
+          case mouse of
+            Just _ ->
+              (_ { key = selection }) ! Just WindowSlideUp
+            Nothing ->
+              (_ { key = selection, selection = selection }) ! Just WindowSlideUp
+      Just keyPos ->
+        let
+          windowAtLowerBoundary h =
+            h >= (listSize - windowSize)
+          aboveWindow k h =
+            k - (ceil h) < 0
+          belowWindow k h =
+            k - (floor h) >= windowSize
+          outsideWindow k h =
+            k - (floor h) < 0 || k - (ceil h) > windowSize
+        in
+          if outsideWindow keyPos head
+          then
             let
-              selection = Just $ keyPos + 1
+              selection = Just $ floor $ head
             in
               case mouse of
                 Just _ ->
-                  (_ { key = selection }) ! Nothing
+                  (_ { key = selection }) ! Just WindowSlideUp
                 Nothing ->
-                  (_ { key = selection, selection = selection }) ! Nothing
+                  (_ { key = selection, selection = selection }) ! Just WindowSlideUp
+          else
+            case windowAtLowerBoundary (floor head), belowWindow (keyPos + 1) head of
+            true, true ->
+              identity ! Just WindowPushLowerBoundary
+            false, true ->
+              let
+                selection = Just $ keyPos + 1
+              in
+                case mouse of
+                  Just _ ->
+                    (_ { key = selection, head = toNumber $ keyPos + 2 - windowSize }) ! Just WindowSlideDown
+                  Nothing ->
+                    (_ { key = selection, head = toNumber $ keyPos + 2 - windowSize, selection = selection }) ! Just WindowSlideDown
+            _, _ ->
+              let
+                selection = Just $ keyPos + 1
+              in
+                case mouse of
+                  Just _ ->
+                    (_ { key = selection }) ! Nothing
+                  Nothing ->
+                    (_ { key = selection, selection = selection }) ! Nothing
 
 data ScrollMsg
   = UpdateScrollPosition Number
