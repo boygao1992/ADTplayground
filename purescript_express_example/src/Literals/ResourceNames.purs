@@ -11,20 +11,21 @@ route = (":" <> _)
 root :: String
 root = "/"
 
-list :: String
-list = root <> "list"
-
-create :: String
-create = root <> "create"
-
-update :: String
-update = root <> "update" <> "/" <> route RP.id
-
-delete :: String
-delete = root <> "delete" <> "/" <> route RP.id
-
-done :: String
-done = root <> "done" <> "/" <> route RP.id
-
 logger :: String
 logger = root <> "logger"
+
+todos :: String
+todos = root <> "todos"
+
+todosCreate :: String
+todosCreate = todos <> "/" <> "create"
+
+todosUpdate :: String
+todosUpdate = todos <> "/" <> "update" <> "/" <> route RP.id
+
+todosDelete :: String
+todosDelete = todos <> "/" <> "delete" <> "/" <> route RP.id
+
+todosDone :: String
+todosDone = todos <> "/" <> "done" <> "/" <> route RP.id
+

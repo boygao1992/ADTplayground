@@ -43,11 +43,11 @@ indexHandler _ = do
     help =
       { name : "PureScript-Express Example"
       , endpoints :
-        { listTodos : "/list"
-        , createTodo : "/create?desc=Do+something"
-        , updateTodo : "/update/:id?desc=Do+something+else"
-        , doneTodo : "/done/:id"
-        , deleteTodo : "/delete/:id"
+        { listTodos : "/todos"
+        , createTodo : "/todos/create?desc=Do+something"
+        , updateTodo : "/todos/update/:id?desc=Do+something+else"
+        , doneTodo : "/todos/done/:id"
+        , deleteTodo : "/todos/delete/:id"
         }
       }
 
