@@ -1,9 +1,17 @@
 {
+  "scripts": {
+    "dev": "pulp run"
+  },
   "name": "purescript_express_example",
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
     "express": "^4.16.4"
+  },
+  "devDependencies": {
+    "pulp": "^12.3.0",
+    "purescript": "^0.12.0",
+    "purescript-psa": "^0.7.2"
   }
 }
