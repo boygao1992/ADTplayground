@@ -1,0 +1,22 @@
+{
+  "name": "purescript_express_example",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.1.0",
+    "purescript-console": "^4.2.0",
+    "purescript-effect": "^2.0.0",
+    "purescript-express": "^0.7.0",
+    "purescript-aff": "^5.0.2",
+    "purescript-test-unit": "^14.0.0",
+    "purescript-refs": "^4.1.0",
+    "purescript-node-process": "^6.0.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^4.0.0"
+  }
+}
