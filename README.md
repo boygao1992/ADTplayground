@@ -15,6 +15,10 @@ Folders
   - `Enter` for confirmation to add an item
   - click on `X` to remove an item
   - This will be integrated into `prescript_autocomplete`
+- `purescript-pseudo-random_enhance`
+  - built on top of `purescript-pseudo-random`
+  - `randomsWithSeed` and `randomRsWithSeed` return randomly generated values with the final seed which can later be feed into another random generation
+  - an example using State monad to compose seed-dependent computations
 - `elm_register_form`
   - demo: `demo/`
     - `yarn install`
