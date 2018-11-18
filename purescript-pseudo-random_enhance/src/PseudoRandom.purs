@@ -23,13 +23,15 @@ initRandomsState :: forall a. Int -> Seed -> RandomsState a
 initRandomsState n seed = { values : [], n, seed }
 
 -- tailRecM :: forall a b. (a -> m (Step a b)) -> a -> m b
+-- a = Unit
+-- b = Unit
+-- m = State (RandomState _)
 randomStep :: forall a. Random a => Unit -> State (RandomsState a) (Step Unit Unit)
 randomStep _ = do
   { values, seed, n } <- State.get
   let
     { newVal, newSeed } = random seed
-    n' = abs n
-  if n' == 0
+  if n == 0
     then
       pure $ Done unit
     else do
@@ -46,7 +48,7 @@ randomsFWithSeed f n seed =
   $ State.execState (do
       tailRecM randomStep unit
     )
-    (initRandomsState n seed)
+    (initRandomsState (abs n) seed)
 
 class Random a <= RandomsWithSeed a where
   randomsWithSeed :: Int -> Seed -> Result a
