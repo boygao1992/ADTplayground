@@ -12,7 +12,10 @@
     "purescript-effect": "^2.0.0",
     "purescript-pseudo-random": "^0.1.0",
     "purescript-enums": "^4.0.0",
-    "purescript-transformers": "^4.1.0"
+    "purescript-transformers": "^4.1.0",
+    "purescript-ordered-collections": "^1.4.0",
+    "purescript-strings": "^4.0.1",
+    "purescript-profunctor": "^4.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"

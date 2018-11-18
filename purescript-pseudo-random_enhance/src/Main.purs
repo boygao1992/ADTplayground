@@ -3,14 +3,19 @@ module Main where
 import Prelude
 
 import Effect (Effect)
-import Effect.Console (log)
+import Effect.Console (logShow) as Console
 import Random.PseudoRandom (randomSeed)
-import Random.PseudoRandom.WithSeed (randomRsWithSeed)
+import Utils (getClosestEventsWithCheapestTicket)
+import GenData (genData)
+
 
 main :: Effect Unit
 main = do
   seed <- randomSeed
-  log $ "seed0: " <> show seed
-  let { values, seed : seed1 } = randomRsWithSeed 'a' 'z' (-20) seed
-  log $ "values: " <> show values
-  log $ "seed1: " <> show seed1
+  let initState = genData seed
+  Console.logShow
+    $ getClosestEventsWithCheapestTicket
+        5
+        { x : 0.0, y : 0.0 }
+        initState.events
+        initState.tickets
