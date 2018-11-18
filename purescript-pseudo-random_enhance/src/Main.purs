@@ -11,6 +11,6 @@ main :: Effect Unit
 main = do
   seed <- randomSeed
   log $ "seed0: " <> show seed
-  let { values, seed : seed1 } = randomRsWithSeed 0.0 1.0 (-20) seed
+  let { values, seed : seed1 } = randomRsWithSeed 'a' 'z' (-20) seed
   log $ "values: " <> show values
   log $ "seed1: " <> show seed1

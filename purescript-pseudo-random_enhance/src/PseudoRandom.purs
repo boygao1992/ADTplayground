@@ -26,11 +26,11 @@ initRandomsState n seed = { values : [], n, seed }
 -- a = Unit
 -- b = Unit
 -- m = State (RandomState _)
-randomStep :: forall a. Random a => Unit -> State (RandomsState a) (Step Unit Unit)
-randomStep _ = do
+randomStep :: forall a. (Seed -> RandomPair a) -> Unit -> State (RandomsState a) (Step Unit Unit)
+randomStep f _ = do
   { values, seed, n } <- State.get
   let
-    { newVal, newSeed } = random seed
+    { newVal, newSeed } = f seed
   if n == 0
     then
       pure $ Done unit
@@ -42,11 +42,11 @@ randomStep _ = do
           }
       pure $ Loop unit
 
-randomsFWithSeed :: forall a. Random a => (Seed -> RandomPair a) -> Int -> Seed -> Result a
+randomsFWithSeed :: forall a. (Seed -> RandomPair a) -> Int -> Seed -> Result a
 randomsFWithSeed f n seed =
     (\state -> { values : state.values, seed : state.seed })
   $ State.execState (do
-      tailRecM randomStep unit
+      tailRecM (randomStep f) unit
     )
     (initRandomsState (abs n) seed)
 
