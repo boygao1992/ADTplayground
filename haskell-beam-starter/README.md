@@ -1,0 +1,1 @@
+# haskell-beam-starter
