@@ -17,11 +17,10 @@ export type Config =
 type Props =
   { state : State
   , handlers : Handlers
-  , config : Config
   }
 
-const GemList = (props : Props) =>  {
-    const { title } = props.config
+const GemList = (config : Config) => (props : Props) =>  {
+    const { title } = config
     const gems = props.state
     const { toggleSave } = props.handlers
     return (

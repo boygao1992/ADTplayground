@@ -10,4 +10,4 @@ export default GemList
 
 export type State = { state : GemListState }
 export type Handlers = { handlers : GemListHandlers }
-export type Config = { config : GemListConfig }
+export type Config = GemListConfig

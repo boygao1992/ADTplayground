@@ -16,27 +16,25 @@ import React from 'react'
 type Handlers
   = GemListHandlers
   & ({ initSavedList : () => void })
-type Props = State & Handlers & Config
+type Props = State & Handlers
+
+const config : Config = { title : "Saved Gems" }
+const SavedList = GemList(config)
 
 class SavedListContainer extends React.Component<Props> {
   componentDidMount() {
     this.props.initSavedList()
   }
   render() {
-    const { config, state, handlers } = this.props
+    const { state, handlers } = this.props
     return (
-      <GemList config={config} state={state} handlers={handlers}/>
+      <SavedList state={state} handlers={handlers}/>
     )
   }
 }
 
 
 const mapStateToProps = ({ saved } : AppState) : State => ({ state: saved })
-
-const config : Config = { config : { title : "Saved Gems" } }
-
-const addConfig = (config : Config) => (state : State) =>
-  ({ ...state, ...config })
 
 const mapDispatchToProps = (dispatch : Dispatch) : Handlers =>
   ({ handlers:
@@ -47,7 +45,7 @@ const mapDispatchToProps = (dispatch : Dispatch) : Handlers =>
 
 const Connected =
   connect(
-    state => addConfig(config)(mapStateToProps(state)),
+    mapStateToProps,
     mapDispatchToProps
   )(SavedListContainer)
 

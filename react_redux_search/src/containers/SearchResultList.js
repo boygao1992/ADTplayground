@@ -9,10 +9,8 @@ import { saveGemThunk } from '../thunks'
 
 const mapStateToProps = ({ gems } : AppState) : State => ({ state: gems })
 
-const config : Config = { config : { title : "Search Results" } }
-
-const addConfig = (config : Config) => (state : State) =>
-  ({ ...state, ...config })
+const config : Config = { title : "Search Results" }
+const SearchResultList = GemList(config)
 
 const mapDispatchToProps = (dispatch : Dispatch) : Handlers =>
   ({ handlers:
@@ -21,8 +19,8 @@ const mapDispatchToProps = (dispatch : Dispatch) : Handlers =>
 
 const Connected =
   connect(
-    state => addConfig(config)(mapStateToProps(state)),
+    mapStateToProps,
     mapDispatchToProps
-  )(GemList)
+  )(SearchResultList)
 
 export default Connected
