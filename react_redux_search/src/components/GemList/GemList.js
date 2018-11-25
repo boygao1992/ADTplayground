@@ -7,19 +7,26 @@ import type { State as GemItemState
             } from './GemItem'
 
 export type State = Array<GemItemState>
+
 export type Handlers =
   { toggleSave : string => void }
+
+export type Config =
+  { title : string }
 
 type Props =
   { state : State
   , handlers : Handlers
+  , config : Config
   }
 
 const GemList = (props : Props) =>  {
+    const { title } = props.config
     const gems = props.state
     const { toggleSave } = props.handlers
     return (
       <div>
+        <h3>{title}</h3>
         { gems.map( gem => {
             const state : GemItemState = gem
             const handlers : GemItemHandlers =

@@ -6,6 +6,7 @@ import type { Action as Action$input
 import { updateInput
        , reducer as reducer$input
        } from './input'
+
 import type { Action as Action$searching
             , State as State$searching
             } from './searching'
@@ -22,6 +23,15 @@ import { fetchSuccess
        , reducer as reducer$gems
        } from './gems'
 
+import type { Action as Action$saved
+            , State as State$saved
+            } from './saved'
+import { addGemToSaved
+       , removeGemFromSaved
+       , fetchSavedGemsSuccess
+       , reducer as reducer$saved
+       } from './saved'
+
 import type { Reducer } from 'redux'
 import { combineReducers } from 'redux'
 
@@ -29,12 +39,14 @@ export type State =
   { input : State$input
   , searching : State$searching
   , gems : State$gems
+  , saved : State$saved
   }
 
 export type Action
   = Action$input
   | Action$searching
   | Action$gems
+  | Action$saved
 
 export const actionCreators =
   { updateInput
@@ -42,6 +54,9 @@ export const actionCreators =
   , fetchSuccess
   , fetchFailure
   , toggleSave
+  , addGemToSaved
+  , removeGemFromSaved
+  , fetchSavedGemsSuccess
   }
 
 export type ReduxDispatch = Action => void
@@ -59,6 +74,7 @@ const reducer : Reducer<State, Action> =
     { input : reducer$input
     , searching : reducer$searching
     , gems : reducer$gems
+    , saved : reducer$saved
     }
   )
 

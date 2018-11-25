@@ -2,26 +2,11 @@
 
 import type { Reducer } from 'redux'
 
-export type Gem =
-  {| name : string
-   , authors : Array<string>
-   , info : string
-   , version : string
-   , downloads: number
-   , saved : boolean
-   |}
+import type { Gem } from '../../shared/types'
 
 export type State = Array<Gem>
 
-export const initialState : State =
-  [ { name: "rails"
-    , downloads: 150542845
-    , version: "5.2.1"
-    , authors: ["David Heinemeier Hansson"]
-    , info: "Ruby on Rails is a full-stack web framework optimized for programmer happiness and sustainable productivity. It encourages beautiful code by favoring convention over configuration."
-    , saved: false
-    }
-  ]
+export const initialState : State = []
 
 export type Action$FetchSuccess =
   {| type: "gems_FetchSuccess", gems : Array<Gem> |}

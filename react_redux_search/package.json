@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "crocks": "^0.11.1",
     "express": "^4.16.4",
     "react": "^16.6.3",
     "react-dom": "^16.6.3",
@@ -14,10 +15,11 @@
     "whatwg-fetch": "^3.0.0"
   },
   "scripts": {
-    "start": "node server && react-scripts start",
+    "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "server": "yarn run babel-node server"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -29,6 +31,12 @@
     "not op_mini all"
   ],
   "devDependencies": {
+    "@babel/cli": "^7.1.5",
+    "@babel/core": "^7.1.6",
+    "@babel/node": "^7.0.0",
+    "@babel/plugin-syntax-jsx": "^7.0.0",
+    "@babel/preset-env": "^7.1.6",
+    "@babel/preset-flow": "^7.0.0",
     "cors": "^2.8.5",
     "flow-bin": "^0.86.0"
   }
