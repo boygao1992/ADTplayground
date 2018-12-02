@@ -5,6 +5,11 @@ class PurchasesController < ApplicationController
   # GET /purchases.json
   def index
     @purchases = Purchase.all
+
+    respond_to do |format|
+      format.html # index.html.erb
+      format.json { render json: @purchases }
+    end
   end
 
   # GET /purchases/1
