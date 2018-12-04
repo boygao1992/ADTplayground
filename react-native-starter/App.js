@@ -1,11 +1,35 @@
-import React from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import React from "react";
+import
+  { Dimensions
+  , TextInput
+  , StyleSheet
+  , Text
+  , View
+  } from "react-native";
 
 export default class App extends React.Component {
+  state = { text: "" }
+
+  config = { placeholder: "type whatever you want here" }
+
+  onChangeText(text) {
+    return this.setState({...this.state, text })
+  }
+
   render() {
     return (
       <View style={styles.container}>
-        <Text>Hello World!</Text>
+        <Text> {this.state.text.split('').reverse().join('')} </Text>
+        <TextInput
+          style={{
+              borderWidth: 1
+            , borderColor: "gray"
+            , padding: 5
+          }}
+          onChangeText={this.onChangeText.bind(this)}
+          placeholder={this.config.placeholder}
+          value={this.state.text}
+        />
       </View>
     );
   }
@@ -14,9 +38,7 @@ export default class App extends React.Component {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
-    display: 'flex',
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
