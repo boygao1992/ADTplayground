@@ -18,13 +18,13 @@ export default class App extends React.Component {
   }
 
   componentDidMount(){
-    fetch("http://localhost:8080/gems")
+    fetch("http://10.0.2.2:8080/gems")
     .then( res => res.json() )
     .then( data => {
       this.setState({...this.state, data })
     })
     .catch( err => {
-      console.err(err)
+      console.warn(err)
     })
   }
 
@@ -44,7 +44,8 @@ export default class App extends React.Component {
         />
         <FlatList
           data={this.state.data}
-          renderItem={({item}) => <Text>{item.title}</Text>}
+          renderItem={({ item }) => <Text>{item.title}</Text>}
+          keyExtractor={ (item, idx) => idx.toString() }
         />
       </View>
     );
