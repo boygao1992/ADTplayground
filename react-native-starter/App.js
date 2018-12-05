@@ -1,6 +1,7 @@
 import React from "react";
 import
   { Dimensions
+  , FlatList
   , TextInput
   , StyleSheet
   , Text
@@ -8,12 +9,23 @@ import
   } from "react-native";
 
 export default class App extends React.Component {
-  state = { text: "" }
+  state = { text: "", data: [] }
 
   config = { placeholder: "type whatever you want here" }
 
   onChangeText(text) {
     return this.setState({...this.state, text })
+  }
+
+  componentDidMount(){
+    fetch("http://localhost:8080/gems")
+    .then( res => res.json() )
+    .then( data => {
+      this.setState({...this.state, data })
+    })
+    .catch( err => {
+      console.err(err)
+    })
   }
 
   render() {
@@ -29,6 +41,10 @@ export default class App extends React.Component {
           onChangeText={this.onChangeText.bind(this)}
           placeholder={this.config.placeholder}
           value={this.state.text}
+        />
+        <FlatList
+          data={this.state.data}
+          renderItem={({item}) => <Text>{item.title}</Text>}
         />
       </View>
     );
