@@ -1,0 +1,9 @@
+{
+  "name": "purescript-graphql_starter",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "graphql": "^14.0.2"
+  }
+}
