@@ -2,43 +2,52 @@ module Main where
 
 import Prelude
 
+import Context (Context)
 import Data.Argonaut.Core (Json, stringify)
-import Data.Argonaut.Core (stringify) as JSON
-import Data.Argonaut.Decode (class DecodeJson, decodeJson, getField, getFieldOptional')
-import Data.Argonaut.Decode.Generic.Rep (genericDecodeJson)
-import Data.Either (either)
-import Data.Generic.Rep as GR
-import Data.Maybe (Maybe(..))
+import Data.Argonaut.Decode (decodeJson, (.:), (.:?))
+import Data.Argonaut.Parser (jsonParser)
+import Data.Either (Either(..), either)
+import Data.Maybe (Maybe)
 import Effect (Effect)
 import Effect.Aff (runAff_)
-import Effect.Console (log, error) as Console
+import Effect.Class (liftEffect)
+import Effect.Console (error, log, logShow) as Console
 import GraphQL (graphql)
-import GraphQL.Type as G
+import HTTPure as HTTPure
+import Schema (schema)
+import Store (createStore)
 
-newtype GraphQLParams = GraphQLParams
+type GraphQLParams =
   { query :: String
   , variables :: Maybe Json
   , operationName :: Maybe String
   }
-derive instance genericGraphQLParams :: GR.Generic GraphQLParams _
-instance decodeJsonGraphQLParams :: DecodeJson GraphQLParams where
-  decodeJson = genericDecodeJson
 
-queryType :: G.ObjectType Unit (Maybe Unit)
-queryType =
-  G.objectType
-    "Query"
-    (Just "The main query type") -- description
-    { hello:
-        G.field'
-          (G.nonNull G.string)
-          (Just "A simple field that always returns \"world\".")
-          \_ _ -> pure "world"
-    }
-schema :: G.Schema Unit Unit
-schema = G.schema queryType Nothing
+decodeParams :: Json -> Either String GraphQLParams
+decodeParams json = do
+  obj <- decodeJson json
+  query <- obj .: "query"
+  variables <- obj .:? "variables"
+  operationName <- obj .:? "operationName"
+  pure { query, variables, operationName }
+
+createRouter :: Context -> HTTPure.Request -> HTTPure.ResponseM
+createRouter ctx { body, method: HTTPure.Post, path : [ "graphql" ]} =
+  case decodeParams =<< (jsonParser body) of
+    Left error ->
+      do
+        HTTPure.badRequest error
+
+    Right { query, variables, operationName } ->
+      do
+        (HTTPure.ok <<< stringify)
+          =<< graphql schema query unit ctx variables operationName
+createRouter _ { path } = do
+  liftEffect $ Console.logShow path
+  HTTPure.notFound
 
 main :: Effect Unit
-main = do
-  runAff_ (either (Console.error <<< show) (Console.log <<< JSON.stringify))
-    $ graphql schema "{ hello }" unit unit Nothing Nothing
+main = runAff_ (either (Console.error <<< show) pure) do
+  store <- createStore
+  let router = createRouter { store }
+  liftEffect $ HTTPure.serve 8080 router $ Console.log "listening at localhost:8080"

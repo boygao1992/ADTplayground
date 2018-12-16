@@ -13,7 +13,8 @@
     "purescript-graphql": "^1.0.1",
     "purescript-uuid": "^5.2.0",
     "purescript-argonaut": "^5.0.0",
-    "purescript-argonaut-generic": "^3.0.0"
+    "purescript-argonaut-generic": "^3.0.0",
+    "purescript-httpure": "^0.7.1"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
