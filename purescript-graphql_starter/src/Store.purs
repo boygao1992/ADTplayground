@@ -15,12 +15,12 @@ type Id = String
 type Post =
   { id :: Id
   , title :: String
-  , context :: String
+  , content :: String
   }
 
 type PostDraft =
   { title :: String
-  , context :: String
+  , content :: String
   }
 
 type Store =
@@ -40,9 +40,9 @@ findById
 findById id = find ( (_ == id) <<< _.id )
 
 createPost :: PostDraft -> Store -> Aff (Maybe Post)
-createPost ({ title, context }) ({ posts }) = liftEffect do
+createPost ({ title, content }) ({ posts }) = liftEffect do
   id <- show <$> genUUID
-  let post = { id, title, context }
+  let post = { id, title, content }
   Ref.modify_ (post : _) posts
   pure $ pure post
 
@@ -52,12 +52,12 @@ readPosts = liftEffect <<< Ref.read <<< _.posts
 readPostById :: Id -> Store -> Aff (Maybe Post)
 readPostById id = map (findById id) <<< readPosts
 
-updatePost :: Post -> Store -> Aff Unit
-updatePost newPost ({ posts }) =
-  liftEffect
-  $ Ref.modify_
-      (map (\post -> if post.id == newPost.id then newPost else post))
-      posts
+updatePost :: Post -> Store -> Aff (Maybe Post)
+updatePost newPost store@({ posts }) = do
+  liftEffect $ Ref.modify_
+    (map (\post -> if post.id == newPost.id then newPost else post))
+    posts
+  readPostById newPost.id store
 
 deletePost :: Id -> Store -> Aff Unit
 deletePost id ({ posts }) =
