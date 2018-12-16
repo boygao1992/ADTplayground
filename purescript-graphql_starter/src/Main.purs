@@ -1,29 +1,42 @@
 module Main where
 
 import Prelude
-import Data.Maybe(Maybe(..))
-import Data.Either(either)
-import Effect (Effect)
-import Effect.Console (log, error) as Console
+
+import Data.Argonaut.Core (Json, stringify)
 import Data.Argonaut.Core (stringify) as JSON
-
+import Data.Argonaut.Decode (class DecodeJson, decodeJson, getField, getFieldOptional')
+import Data.Argonaut.Decode.Generic.Rep (genericDecodeJson)
+import Data.Either (either)
+import Data.Generic.Rep as GR
+import Data.Maybe (Maybe(..))
+import Effect (Effect)
 import Effect.Aff (runAff_)
+import Effect.Console (log, error) as Console
 import GraphQL (graphql)
-import GraphQL.Type as GraphQL
+import GraphQL.Type as G
 
-queryType :: GraphQL.ObjectType Unit (Maybe Unit)
+newtype GraphQLParams = GraphQLParams
+  { query :: String
+  , variables :: Maybe Json
+  , operationName :: Maybe String
+  }
+derive instance genericGraphQLParams :: GR.Generic GraphQLParams _
+instance decodeJsonGraphQLParams :: DecodeJson GraphQLParams where
+  decodeJson = genericDecodeJson
+
+queryType :: G.ObjectType Unit (Maybe Unit)
 queryType =
-  GraphQL.objectType
+  G.objectType
     "Query"
     (Just "The main query type") -- description
     { hello:
-        GraphQL.field'
-          (GraphQL.nonNull GraphQL.string)
+        G.field'
+          (G.nonNull G.string)
           (Just "A simple field that always returns \"world\".")
           \_ _ -> pure "world"
     }
-schema :: GraphQL.Schema Unit Unit
-schema = GraphQL.schema queryType Nothing
+schema :: G.Schema Unit Unit
+schema = G.schema queryType Nothing
 
 main :: Effect Unit
 main = do

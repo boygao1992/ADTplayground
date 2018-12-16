@@ -35,7 +35,7 @@ mutationType =
         , actions:
             G.argument
               (G.nonNull $ G.list
-              $ G.nonNull $ postActionType
+              $ G.nonNull postActionType
               )
               (Just "A list of actions that should be applied to this post.")
         }
