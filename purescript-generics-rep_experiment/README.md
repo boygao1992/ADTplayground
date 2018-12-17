@@ -8,23 +8,16 @@ Algebraic composition can be generalized into two binary operators on types
 which can be further generalized as Tensor Product in Monoidal Category.
 
 Terminals
-- `NoConstructors :: Type`
-- `NoArguments :: Type`
+- `NoConstructors :: ConstructorKind`
+- `NoArguments :: ArgumentKind`
 - `name :: Symbol`
 
-Non-terminals
-- `Argument :: Type -> Type`
-- `Constructor :: Symbol -> Type -> Type`
-- `Sum :: Type -> Type -> Type`
-- `Product :: Type -> Type -> Type`
+Non-terminals (with Grammar)
+- `Argument :: Type -> ArgumentKind`
+- `Constructor :: Symbol -> ArgumentKind -> ConstructorKind`
+- `Sum :: ConstructorKind -> ConstructorKind -> ConstructorKind`
+- `Product :: ArgumentKind -> ArgumentKind -> ArgumentKind`
 
-Grammer
-- `a -> Argument a`, where `a :: Type`
-- `name, Argument a -> Constructor name (Argument a)`
-- `(NoConstructors | Constructor name1 (Argument a)),
-(NoConstructors | Constructor name2 (Arbument b))
--> Sum (...) (...)`
-- `(NoArguments | Argument a), (NoArguments | Argument b) -> Product (...) (...)`
 
 # Mapping Example
 
