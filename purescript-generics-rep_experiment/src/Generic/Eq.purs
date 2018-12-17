@@ -1,7 +1,7 @@
 module Generic.Eq where
 
 import Prelude
-import Generic
+import Generic (class Generic, Argument(..), Constructor(..), NoArguments, NoConstructors, Product(..), Sum(..), from)
 
 class GenericEq a where
   genericEq' :: a -> a -> Boolean
