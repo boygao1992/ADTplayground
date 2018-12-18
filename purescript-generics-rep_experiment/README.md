@@ -233,6 +233,59 @@ class HMapWithIndex f a b | f a -> b where
 
 ## Type.Eval (purescript-typelevel-eval)
 
+## Record (purescript-record)
+```purescript
+class EqualFields (rs :: RowList) (row :: # Type) | rs -> row where
+  equalFields :: RLProxy rs -> Record row -> Record row -> Boolean
+```
+- two 
+
+```purescript
+instance equalFieldsCons
+  ::
+  ( IsSymbol name
+  , Eq ty
+  , Cons name ty tailRow row
+  , EqualFields tail row
+  ) => EqualFields (Cons name ty tail) row where
+  equalFields _ a b = get' a == get' b && equalRest a b
+    where
+      get' = get (SProxy :: SProxy name)
+      equalRest = equalFields (RLProxy :: RLProxy tail)
+
+instance equalFieldsNil :: EqualFields Nil row where
+equalFields _ _ _ = true
+
+equal
+  :: forall r rs
+   . RowToList r rs
+  => EqualFields rs r
+  => Record r
+  -> Record r
+  -> Boolean
+equal a b = equalFields (RLProxy :: RLProxy rs) a b
+```
+- check two Records of the same type for equality
+- `rs :: RowList` here is to enumerate all the field names
+- given a field name, `Symbol`, we can `get` its field value
+
+- `get :: forall r r' l a. IsSymbol l => Cons l a r' r => SProxy l -> { | r } -> a`
+- `set :: forall r1 r2 r l a b. IsSymbol l => Cons l a r r1 => Cons l b r r2 => SProxy l -> b -> { | r1 } -> { | r2 }`
+- `modify :: forall r1 r2 r l a b. IsSymbol l => Cons l a r r1 => Cons l b r r2 => SProxy l -> (a -> b) -> { | r1 } -> { | r2 }`
+- `insert :: forall r1 r2 l a. IsSymbol l => Lacks l r1 => Cons l a r1 r2 => SProxy l -> a -> { | r1 } -> { | r2 }`
+- `delete :: forall r1 r2 l a. IsSymbol l => Lacks l r1 => Cons l a r1 r2 => SProxy l -> { | r2 } -> { | r1 }`
+- `rename :: forall prev next ty input inter output. IsSymbol prev => IsSymbol next => Cons prev ty inter input => Lacks prev inter => Cons next ty inter output => Lacks next inter => SProxy prev -> SProxy next -> { | input } -> { | output }`
+- `equal :: forall r rs. RowToList r rs => EqualFields rs r => { | r } -> { | r } -> Boolean`
+- `merge :: forall r1 r2 r3 r4. Union r1 r2 r3 => Nub r3 r4 => { | r1 } -> { | r2 } -> { | r4 }`
+- `union :: forall r1 r2 r3. Union r1 r2 r3 => { | r1 } -> { | r2 } -> { | r3 }`
+- `disjointUnion :: forall r1 r2 r3. Union r1 r2 r3 => Nub r3 r3 => { | r1 } -> { | r2 } -> { | r3 }`
+- `nub :: forall r1 r2. Nub r1 r2 => { | r1 } -> { | r2 }`
+
+## Record.Builder (purescript-record)
+`newtype Builder a b = Builder(a -> b)`
+
+## Record.ST (purescript-record)
+`data STRecord :: Region -> # Type -> Type`
 
 # Mapping Example
 
