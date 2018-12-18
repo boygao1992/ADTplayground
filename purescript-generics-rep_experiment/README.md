@@ -18,6 +18,31 @@ Non-terminals (with Grammar)
 - `Sum :: ConstructorKind -> ConstructorKind -> ConstructorKind`
 - `Product :: ArgumentKind -> ArgumentKind -> ArgumentKind`
 
+`newtype` definition basically wraps a `ArgumentKind` (called anonymous/structural Type) by a `Constructor` with a `Symbol`
+- to derive an instance for `Record` (Row Kind, or `ArgumentKind` here) need to wrap it by `newtype` to assign it a unique `Symbol`
+
+# Primitive Types
+Product
+- `data Tuple :: Type -> Type -> Type`
+- `data Record :: # Type -> Type`
+- (purescript-functors) Functor.Product
+- (Prim) Array
+- (purescript-lists) List
+- (purescript-infinite-lists) List.Infinite
+- (purescript-unordered-collections) HashMap, HashSet
+- (purescript-ordered-collections) Map, Set
+
+Sum
+- `data Either :: Type -> Type -> Type`
+- (purescript-variant) `data Variant :: # Type -> Type`
+- (purescript-variant) `data VariantF :: # Type -> Type -> Type`
+- (purescript-functors) Functor.Coproduct
+
+Compose
+- `compose :: forall b c d a. Semigroupoid a => a c d -> a b c -> a b d`
+- (purescript-functors) `Compose :: (Type -> Type) -> (Type -> Type) -> Type -> Type`
+- (purescript-free) `Coyoneda`, compose functions that map over a Functor
+
 # Type-Level Programming
 
 ## Prim.Row (compiler)
@@ -87,10 +112,6 @@ type-level boolean
 `FProxy :: (Type -> Type) -> Type`
 - uniquely map `Type -> Type` Arrow Kind to `Type` Kind
 
-## Type.Row (purescript-typelevel-prelude)
-`RProxy :: # Type -> Type`
-- uniquely map `# Type` Row Kind to `Type` Kind
-
 ## Prim.RowList (compiler)
 `kind RowList`
 - `data Cons :: Symbol -> Type -> RowList -> RowList`
@@ -101,6 +122,36 @@ type-level boolean
 - compiler generates a RowList from a **closed** Row behind the scene
   - fields are sorted by label
   - duplicates are preserved in the order they appeared in the Row
+
+## Type.Row (purescript-typelevel-prelude)
+`RProxy :: # Type -> Type`
+- uniquely map `# Type` Row Kind to `Type` Kind
+
+`class ListToRow (list :: RowList) (row :: # Type) | list -> row`
+- inverse of `RowToList`
+
+```purescript
+instance listToRowNil
+  :: ListToRow Nil ()
+
+instance listToCons
+  :: ( ListToRow tail tailRow
+     , Cons label ty tailRow row )
+=> ListToRow (Cons label ty tail) row
+```
+- `()` empty Row
+- `label ty` a field
+  - `label :: Symbol`
+  - `ty :: Type`
+- `row :: # Type`
+  - is equal to `label ty` field concatenated with `tailRow :: # Type`
+
+  
+- `RowListRemove`
+- `RowListSet`
+- `RowListNub`
+- `RowAppend`
+- `RowApply`
 
 ## Type.Row.Homogeneous (purescript-typelevel-prelude)
 A type class constraint that enforces all fields of a Record (Row Kind) carrying the same Type.
@@ -136,10 +187,51 @@ instance homogeneousRowListNil :: HomogeneousRowList Nil fieldType
 - `TypeEquals fieldType fieldType2`
   - enforce `fieldType` to be the same as `fieldType2`
   - if not, compiler will raise "no type class instance" TypeError
+  
+## Data.Variant (purescript-variant)
+`data Variant :: # Type -> Type`
+
+## Data.Functor.Variant (purescript-variant)
+`data VariantF (f :: # Type) a`
 
 ## Heterogeneous.Mapping (purescript-heterogeneous)
+```purescript
+class Mapping f a b | f a -> b where
+  mapping :: f -> a -> b
+
+class MappingWithIndex f i a b | f i a -> b where
+  mappingWithIndex :: f -> i -> a -> b
+```
+
+```purescript
+instance mappingFunction :: Mapping (a -> b) a b where
+  mapping k = k
+```
+- function application
+
+```purescript
+newtype ConstMapping f = ConstMapping f
+
+instance constMapping
+  :: Mapping f a b
+  => MappingWithIndex (ConstMapping f) ix a b
+  where
+    mappingWithIndex (ConstMapping f) _ = mapping f
+```
+
+```purescript
+class HMap f a b | f a -> b where
+  hmap :: f -> a -> b
+
+class HMapWithIndex f a b | f a -> b where
+  hmapWithIndex :: f -> a -> b
+```
+
 ## Heterogeneous.Folding (purescript-heterogeneous)
+
 ## Type.Prelude (purescript-typelevel-prelude)
+
+## Type.Eval (purescript-typelevel-eval)
 
 
 # Mapping Example
