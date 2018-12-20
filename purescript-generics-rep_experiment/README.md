@@ -192,7 +192,7 @@ instance homogeneousRowListNil :: HomogeneousRowList Nil fieldType
 `data Variant :: # Type -> Type`
 
 ## Data.Functor.Variant (purescript-variant)
-`data VariantF (f :: # Type) a`
+`data VariantF (f :: # Type) a :: # Type -> Type -> Type`
 
 ## Heterogeneous.Mapping (purescript-heterogeneous)
 ```purescript
