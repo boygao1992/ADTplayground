@@ -5,7 +5,8 @@ import Effect (Effect)
 import Effect.Console (log)
 import Effect.Aff (Aff, Canceler, Error, makeAff, throwError)
 import Control.Monad.Except.Trans (ExceptT(..), runExceptT)
-import Data.Either (Either, either)
+import Data.Either (Either)
+import Data.Profunctor.Choice ((|||))
 
 type Task x a = ExceptT x Aff a
 
@@ -24,11 +25,8 @@ newTask =
 toAff :: forall x a. Task x a -> Aff (Either x a)
 toAff = runExceptT
 
--- class Choice => fanin
 fork :: forall a b c. (a -> Aff c) -> (b -> Aff c) -> Task a b -> Aff c
-fork f g t = do
-  result <- toAff t
-  either f g result
+fork f g t = (f ||| g) =<< toAff t
 
 -- class Monad => bind
 chain :: forall x a b. (a -> Task x b) -> Task x a -> Task x b
