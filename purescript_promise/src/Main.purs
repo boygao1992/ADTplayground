@@ -8,6 +8,11 @@ import Control.Monad.Except.Trans (ExceptT(..), runExceptT)
 import Data.Either (Either)
 import Data.Profunctor.Choice ((|||))
 
+-- | purescript-aff, 3.1.0
+-- | `data Aff :: # Effect -> Type -> Type`
+-- | An asynchronous computation with effects e. The computation either errors or produces a value of type a.
+-- |  is moral equivalent of `ErrorT (ContT Unit (Eff e)) a`.
+
 type Task x a = ExceptT x Aff a
 
 resolve :: forall x a. a -> Task x a

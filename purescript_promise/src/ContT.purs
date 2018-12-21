@@ -3,6 +3,7 @@ module ContT where
 import Prelude
 import Data.Newtype (class Newtype, unwrap)
 import Control.Monad.Trans.Class (class MonadTrans)
+import Data.Identity (Identity)
 
 class Monad m <= MonadCont m where
   callCC :: forall a. ((forall b. a -> m b) -> m a) -> m a
@@ -11,6 +12,7 @@ class Monad m <= MonadCont m where
 newtype ContT r m a = ContT ((a -> m r) -> m r)
 
 derive instance newtypeContT :: Newtype (ContT r m a) _
+derive instance newtypeContTIdentity :: Newtype (ContT r Identity a) _
 
 runContT :: forall r m a. ContT r m a -> (a -> m r) -> m r
 runContT (ContT c)= c
@@ -18,12 +20,12 @@ runContT (ContT c)= c
 mapContT :: forall r m a. (m r -> m r) -> ContT r m a -> ContT r m a
 mapContT f (ContT c)= ContT $ f <<< c
 
-cmapContT
+withContT
   :: forall r m a b
   .  ((b -> m r) -> (a -> m r))
   -> ContT r m a
   -> ContT r m b
-cmapContT f (ContT c) = ContT $ c <<< f
+withContT f (ContT c) = ContT $ c <<< f
 
 instance functorContT :: Functor m => Functor (ContT r m) where
   map :: forall a b. (a -> b) -> (ContT r m a) -> (ContT r m b)
