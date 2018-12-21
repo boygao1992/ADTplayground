@@ -1,49 +1,38 @@
 module Main where
 
-import Prelude
-
-import Cont2 (runCont, pathagoras)
-import Control.Monad.Except.Trans (ExceptT(..), runExceptT)
-import Data.Either (Either(..))
-import Data.Profunctor.Choice ((|||))
+import Prelude hiding (add)
+import Control.Monad.Cont (Cont, runCont)
+import Control.Monad.Cont.Trans (ContT(..), runContT)
+import Control.Monad.Trans.Class (lift)
 import Effect (Effect)
-import Effect.Aff (Aff, Canceler, Error, makeAff, throwError, attempt)
-import Effect.Console (logShow)
+import Effect.Console (logShow, log)
 
--- | purescript-aff, 3.1.0
--- | `data Aff :: # Effect -> Type -> Type`
--- | An asynchronous computation with effects e. The computation either errors or produces a value of type a.
--- |  is moral equivalent of `ErrorT (ContT Unit (Eff e)) a`.
 
-type Task a = ExceptT Error Aff a
+add :: forall r. Int -> Int -> Cont r Int
+add x y = pure $ x + y
 
-resolve :: forall a. a -> Task a
-resolve = pure
+square :: forall r. Int -> Cont r Int
+square x = pure $ x * x
 
-reject :: forall a. Error -> Task a
-reject = throwError
+pathagoras :: forall r. Int -> Int -> Cont r Int
+pathagoras x y = do
+  x2 <- square x
+  y2 <- square y
+  add x2 y2
 
-newTask
-  :: forall a
-   . ((Either Error a -> Effect Unit) -> Effect Canceler) -> Task a
-newTask =
-  ExceptT <<< attempt <<< makeAff
+both :: String -> String -> ContT Unit Effect String
+both person1 person2 = ContT $ \rest_of_program -> do
+  rest_of_program person1
+  rest_of_program person2
 
-toAff :: forall a. Task a -> Aff (Either Error a)
-toAff = runExceptT
-
-fork :: forall a r. (Error -> Aff r) -> (a -> Aff r) -> Task a -> Aff r
-fork f g t = (f ||| g) =<< toAff t
-
-chain :: forall a b. (a -> Task b) -> Task a -> Task b
-chain = (=<<)
-
-res :: forall a. a -> Either Error a
-res = Right
-
-rej :: forall a. Error -> Either Error a
-rej = Left
+prog :: ContT Unit Effect Unit
+prog = do
+  lift $ log "Show names:"
+  name <- both "wenbo" "robot"
+  lift $ log name -- rest of the program runs twice, once for each person
 
 main :: Effect Unit
 main = do
   logShow $ runCont (pathagoras 3 4) identity
+
+  runContT prog pure

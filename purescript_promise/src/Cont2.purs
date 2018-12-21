@@ -22,15 +22,3 @@ instance bindCont :: Bind (Cont r) where
   bind (Cont c) k = Cont \l -> c ( \a -> unwrap(k a) l)
 
 instance monadCont :: Monad (Cont r)
-
-add :: forall r. Int -> Int -> Cont r Int
-add x y = pure $ x + y
-
-square :: forall r. Int -> Cont r Int
-square x = pure $ x * x
-
-pathagoras :: forall r. Int -> Int -> Cont r Int
-pathagoras x y = do
-  x2 <- square x
-  y2 <- square y
-  add x2 y2
