@@ -3,9 +3,9 @@ module Main where
 import Prelude
 import Effect (Effect)
 import Effect.Console (log)
-import Effect.Aff (Aff, Canceler, Error, makeAff, throwError)
+import Effect.Aff (Aff, Canceler, Error, makeAff, throwError, attempt)
 import Control.Monad.Except.Trans (ExceptT(..), runExceptT)
-import Data.Either (Either)
+import Data.Either (Either(..))
 import Data.Profunctor.Choice ((|||))
 
 -- | purescript-aff, 3.1.0
@@ -13,29 +13,34 @@ import Data.Profunctor.Choice ((|||))
 -- | An asynchronous computation with effects e. The computation either errors or produces a value of type a.
 -- |  is moral equivalent of `ErrorT (ContT Unit (Eff e)) a`.
 
-type Task x a = ExceptT x Aff a
+type Task a = ExceptT Error Aff a
 
-resolve :: forall x a. a -> Task x a
+resolve :: forall a. a -> Task a
 resolve = pure
 
-reject :: forall x a. x -> Task x a
+reject :: forall a. Error -> Task a
 reject = throwError
 
 newTask
-  :: forall x a
-   . (( Either Error (Either x a) -> Effect Unit) -> Effect Canceler) -> Task x a
+  :: forall a
+   . ((Either Error a -> Effect Unit) -> Effect Canceler) -> Task a
 newTask =
-  ExceptT <<< makeAff
+  ExceptT <<< attempt <<< makeAff
 
-toAff :: forall x a. Task x a -> Aff (Either x a)
+toAff :: forall a. Task a -> Aff (Either Error a)
 toAff = runExceptT
 
-fork :: forall a b c. (a -> Aff c) -> (b -> Aff c) -> Task a b -> Aff c
+fork :: forall a r. (Error -> Aff r) -> (a -> Aff r) -> Task a -> Aff r
 fork f g t = (f ||| g) =<< toAff t
 
--- class Monad => bind
-chain :: forall x a b. (a -> Task x b) -> Task x a -> Task x b
+chain :: forall a b. (a -> Task b) -> Task a -> Task b
 chain = (=<<)
+
+res :: forall a. a -> Either Error a
+res = Right
+
+rej :: forall a. Error -> Either Error a
+rej = Left
 
 main :: Effect Unit
 main = do
