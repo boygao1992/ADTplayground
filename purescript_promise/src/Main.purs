@@ -1,12 +1,14 @@
 module Main where
 
 import Prelude
-import Effect (Effect)
-import Effect.Console (log)
-import Effect.Aff (Aff, Canceler, Error, makeAff, throwError, attempt)
+
+import Cont2 (runCont, pathagoras)
 import Control.Monad.Except.Trans (ExceptT(..), runExceptT)
 import Data.Either (Either(..))
 import Data.Profunctor.Choice ((|||))
+import Effect (Effect)
+import Effect.Aff (Aff, Canceler, Error, makeAff, throwError, attempt)
+import Effect.Console (logShow)
 
 -- | purescript-aff, 3.1.0
 -- | `data Aff :: # Effect -> Type -> Type`
@@ -44,4 +46,4 @@ rej = Left
 
 main :: Effect Unit
 main = do
-  log "Hello sailor!"
+  logShow $ runCont (pathagoras 3 4) identity
