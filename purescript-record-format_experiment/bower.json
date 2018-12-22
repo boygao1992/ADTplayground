@@ -1,0 +1,18 @@
+{
+  "name": "purescript-record-format_experiment",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.1.0",
+    "purescript-console": "^4.2.0",
+    "purescript-effect": "^2.0.0",
+    "purescript-record-format": "^0.1.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^4.0.0"
+  }
+}
