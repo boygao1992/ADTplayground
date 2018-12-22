@@ -76,6 +76,41 @@ instance refl :: TypeEquals a a where
   - with this instance defined, `to` and `from` methods are unnecessary because transforming a Type to itself is pointless
 - if `a` and `b` are not of the same Type, then compiler will raise "no type class instance" TypeError
 
+## Type.Proxy (purescript-proxy)
+A proxy value carrying a single phantom Type.
+Can be used for remote type-level coordination which cannot simply be scoped.
+
+`data Proxy a = Proxy`
+- `Proxy :: Type -> Type`
+
+### Example (from purescript-proxy)
+```purescript
+class AjaxResponse a where
+  responseType :: Proxy a -> ResponseType
+  fromResponse :: Foreign -> a
+
+type URL = String
+
+-- | a general function from Ajax library to send an Ajax request
+makeRequest :: URL -> ResponseType -> Aff Foreign
+makeRequest = ...
+
+-- | a less general function which encapsulates the decoding of `Foreign` response into Type `a`
+fetchData :: forall a. (AjaxResponse a) => URL -> Aff a
+fetchData url = fromResponse <$> makeRequest url (responseType (Proxy :: Proxy a))
+```
+- no value of Type `a` is available or necessary at the time the request is sent
+- use `Proxy` to inject the expected Type, `a`, of response
+
+```purescript
+main :: Effect Unit
+main = do
+  movie <- liftAff ((fetchData "http://purescript.org/movie") :: Aff String) -- coerce `a` into `String`, then `fetchData` will use `AjaxResponse String` instance
+  log movie
+```
+- seems to me there's no need to use `Proxy` in this case
+- `responseType` and `fromResponse` are "entangled" under `AjaxResponse` Type Class which nicely injects `a` through scope
+
 ## Type.Data.Symbol (purescript-typelevel-prelude)
 type-level literal
 
@@ -287,26 +322,12 @@ equal a b = equalFields (RLProxy :: RLProxy rs) a b
 ## Record.ST (purescript-record)
 `data STRecord :: Region -> # Type -> Type`
 
+## Data.Record.Fold (purescript-record-fold)
+
 # Mapping Example
 
-## Example 1
-```haskell
-data Fruit
-  = Apple Int
-  | Banana Int String
-```
-is equivalent to
-```haskell
-Sum (Inl (Constructor "Apple" (Argument Int)))
-    (Inr (Constructor "Banana" (Product (Argument Int)
-                                        (Argument String)
-                               )
-         )
-    )
-```
-
-## Example 2: Nested Product
-```haskell
+## Example 1: Product - Record vs Multi-Argument Constructor
+```purescript
 data State = State
   { seed :: Int
   , value :: Int
@@ -314,7 +335,7 @@ data State = State
   }
 ```
 is equivalent to
-```
+```purescript
 Constructor "State" (Product (Constructor "seed" (Argument Int))
                              (Product (Constructor "value" (Argument Int))
                                       (Constructor "iteration" (Argument Int))
@@ -322,15 +343,48 @@ Constructor "State" (Product (Constructor "seed" (Argument Int))
                     )
 ```
 
-## Example 3: Nested Sum
-```haskell
+```purescript
+data Position = Position Number Number Number
+```
+is equivalent to
+```purescript
+Constructor "Position" (Product (Argument Number)
+                                (Product (Argument Number)
+                                         (Argument Number)
+                                )
+                       )
+```
+
+
+## Example 2: Sum - Union vs Enum
+
+```purescript
+data Query
+  = Init
+  | OnKeyDown KeyboardEvent
+  | SearchInput String Date
+```
+is equivalent to
+```purescript
+Sum (Inl (Constructor "Init" NoArguments))
+    (Inr (Sum (Inl (Constructor "OnKeyDown" (Argument KeyboardEvent)))
+              (Inr (Constructor "SearchInput" (Product (Argument String)
+                                                       (Argument Date)
+                                              )
+                   )
+              )
+         )
+    )
+```
+
+```purescript
 data Status
   = Idle
   | Playing
   | Paused
 ```
 is equivalent to
-```haskell
+```purescript
 Sum (Inl (Constructor "Idle" NoArguments))
     (Inr (Sum (Inl (Constructor "Playing" NoArguments))
               (Inr (Constructor "Paused" NoArguments))
