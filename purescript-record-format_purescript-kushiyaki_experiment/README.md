@@ -12,3 +12,6 @@ Current implementation is not as powerful as JS native template literal
 - parser is yet too simple to handle cases like below
   - `{ name }` is parsed as ` name `, which is not a valid field name
   - `{{name}}` is parsed as `{name`, which is not a valid field name
+  
+# Kushiyaki (purescript-kushiyaki)
+
