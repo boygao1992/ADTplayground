@@ -9,6 +9,7 @@ import Effect.Console (log, logShow)
 import Kushiyaki (parseURL)
 import Record.Format (format)
 import Type.Data.Symbol (SProxy(..))
+import RuntimeParser (parse) as RP
 
 -- | inferred Type of formatter, given the type-level template literal containing two `FormatVar`s, `name` and `number`
 -- formatter
@@ -40,6 +41,8 @@ main = do
 
   for_ (parseURL endpoint url) \user -> do
     logShow user
+
+  logShow $ RP.parse "/user/create/${name:String}/${age:Int}"
 
   where
     formatted :: String
