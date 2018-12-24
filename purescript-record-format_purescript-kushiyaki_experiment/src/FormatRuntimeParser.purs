@@ -75,3 +75,9 @@ parse = Symbol.uncons >>> case _ of
                 Tuple (Var (h <> restVar)) rest
               _ ->
                 Tuple (Var "") rest -- Error
+
+type Type_ = String
+
+data Row_
+  = RowNil
+  | RowCons Symbol Type_ Row_

@@ -12,7 +12,11 @@ Currently, the type-level inferences are centered around Type Class abstraction 
   - `Foreign import data`
     - keyword to construct type constructor for a `kind` different than `kind Type`
 
-- `kind`, the type of type, grouping a set of types together
+- `kind`, the type of type
+  - grouping a set of types together through Union/Sum/Coproduct
+    - closed polymorphism
+      - close-world assumption at compile time
+      - at compile time, we can assume all the instances defined under this kind are all possible instances we will encounter at runtime
   - if type is type-level value, then kind is type-level type
   - `Type`, a built-in `kind` from compiler which groups primitive types and any types constructed through type constructor (`data`)
     - primitive-types: `Boolean`, `Int`, `Number`, `Char`, `String`
@@ -25,6 +29,9 @@ Currently, the type-level inferences are centered around Type Class abstraction 
     - `Record :: # Type -> Type` (under `Prim`)
       - following the naming convention, this can be called `RProxy`
       - we do have `RProxy` under `Type.Row` (`purescript-typelevel-prelude`)
+        - but its data constructor is a simple no-argument constructor `RProxy`
+          - so it's purpose is sorely carrying the type
+        - while `Record`'s data constructor is richer and contains all the key-value pairs at value level
   - `RowList`, RowList `kind`
     - `RLProxy :: RowList -> Type`
   - `Foreign import kind`
@@ -32,7 +39,16 @@ Currently, the type-level inferences are centered around Type Class abstraction 
     - define proxy similar to `SProxy` to project it into `Type`
 
 - `class`, type class
-    
+  - single-argument type class
+    - grouping a set of types through Union/Sum/Coproduct
+      - closed polymorphism
+  - multi-argument type class, grouping a set of (Sum) types through Product
+    - without functional dependency
+      - Cartesian product of multiple sets
+    - functional dependency
+      - enforce functional constraint on relationship between two sets
+        - an element in the input set can only be uniquely mapped to an element in the output set
+      - multi-argument function dependencies are allowed
 
 # Record.Format (purescript-record-format)
 With type-level programming arsenal, no compiler support for template literal is needed.

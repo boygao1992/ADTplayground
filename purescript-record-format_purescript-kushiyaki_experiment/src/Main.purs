@@ -7,10 +7,11 @@ import Data.Foldable (for_)
 import Effect (Effect)
 import Effect.Console (log, logShow)
 import Kushiyaki (parseURL)
-import Record.Format (format)
+-- import Record.Format (format)
 import Type.Data.Symbol (SProxy(..))
-import RuntimeParser (parse) as RP
+-- import RuntimeParser (parse) as RP
 import Record.Format.RuntimeParser (parse) as FRRP
+import Format (format)
 
 -- | inferred Type of formatter, given the type-level template literal containing two `FormatVar`s, `name` and `number`
 -- formatter
@@ -51,4 +52,4 @@ main = do
     formatted =
       format
         (SProxy :: SProxy "Hi {name}! Your favorite number is {number}")
-        { name : "Bill", number : 16 }
+        { number : 16, name : "Bill" }
