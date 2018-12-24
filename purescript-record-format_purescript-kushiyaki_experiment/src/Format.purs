@@ -34,6 +34,32 @@ class Parse (string :: Symbol) (fl :: FList) | string -> fl
 class ParseLit (h :: Symbol) (t :: Symbol) (o :: FList) | h t -> o
 class ParseVar (h :: Symbol) (t :: Symbol) (var :: Fmt) (rest :: Symbol) | h t -> var rest
 
+instance aParse :: Parse "" FNil
+else instance bParse ::
+  ( Symbol.Cons h t i
+  , ParseLit h t o
+  ) => Parse i o
+
+instance aParseLit :: ParseLit h "" (FCons (Lit o) FNil)
+else instance bParseLit ::
+  ( Symbol.Cons t_h t_t t
+  , ParseVar t_h t_t (Var match) rest
+  , Parse rest restFl
+  ) => ParseLit "{" t (FCons (Lit "") (FCons (Var match) restFl)) -- extra (Lit "") as base case for cParseLit ?
+else instance cParseLit ::
+  ( Parse t (FCons (Lit restLit) restFl)
+  , Symbol.Cons h restLit lit
+  ) => ParseLit h t (FCons (Lit lit) restFl)
+
+instance aParseVar :: ParseVar "" t (Var "") ""
+else instance bParseVar :: ParseVar "}" t (Var "") t
+else instance cParseVar :: ParseVar h "" (Var h) ""
+else instance dParseVar ::
+  ( Symbol.Cons t_h t_t t
+  , ParseVar t_h t_t (Var restVar) rest
+  , Symbol.Cons h restVar var
+  ) => ParseVar h t (Var var) rest
+
 -- | A list of Format Tokens can be uniquely mapped to a Row
 -- | e.g.
 -- | [Lit "/user/create/", Var "name", Var "age"]

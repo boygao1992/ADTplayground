@@ -16,10 +16,17 @@ Currently, the type-level inferences are centered around Type Class abstraction 
   - if type is type-level value, then kind is type-level type
   - `Type`, a built-in `kind` from compiler which groups primitive types and any types constructed through type constructor (`data`)
     - primitive-types: `Boolean`, `Int`, `Number`, `Char`, `String`
+  - `Function` / `->`, Arrow `kind`
+    - no proxy is needed, `a -> b` or `Function a b` is of `kind Type`
+      - it will be super cumbersome if each time we construct a function, we need to explicitly convert the type under `kind Arrow` to `kind Type` through a proxy
   - `Symbol`, another built-in `kind` for type-level strings
     - we can use `data SProxy (sym :: Symbol) :: Symbol -> Type` to project/unify `kind Symbol` into `kind Type` which the type system can work with during type inference
   - `# Type`, Row `kind`
-  - `->`, Arrow `kind`
+    - `Record :: # Type -> Type` (under `Prim`)
+      - following the naming convention, this can be called `RProxy`
+      - we do have `RProxy` under `Type.Row` (`purescript-typelevel-prelude`)
+  - `RowList`, RowList `kind`
+    - `RLProxy :: RowList -> Type`
   - `Foreign import kind`
     - keyword to construct user-define `kind`
     - define proxy similar to `SProxy` to project it into `Type`

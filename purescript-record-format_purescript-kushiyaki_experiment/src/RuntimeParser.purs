@@ -9,10 +9,10 @@ data Fmt
   = Lit String
   | Var String
 
-instance showFmt :: Show Fmt where
-  show = case _ of
-    Lit str -> "(Lit \"" <> str <> "\")"
-    Var str -> "(Var \"" <> str <> "\")"
+-- instance showFmt :: Show Fmt where
+--   show = case _ of
+--     Lit str -> "(Lit \"" <> str <> "\")"
+--     Var str -> "(Var \"" <> str <> "\")"
 
 type ErrorMsg = String
 

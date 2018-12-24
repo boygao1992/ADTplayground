@@ -10,6 +10,7 @@ import Kushiyaki (parseURL)
 import Record.Format (format)
 import Type.Data.Symbol (SProxy(..))
 import RuntimeParser (parse) as RP
+import Record.Format.RuntimeParser (parse) as FRRP
 
 -- | inferred Type of formatter, given the type-level template literal containing two `FormatVar`s, `name` and `number`
 -- formatter
@@ -42,11 +43,12 @@ main = do
   for_ (parseURL endpoint url) \user -> do
     logShow user
 
-  logShow $ RP.parse "/user/create/${name:String}/${age:Int}"
+  -- logShow $ RP.parse "/user/create/${name:String}/${age:Int}"
+  logShow $ FRRP.parse "Hi {name}! Your favorite number is {number}."
 
   where
     formatted :: String
     formatted =
       format
-        (SProxy :: SProxy "Hi {name}! Your favorite number is {number}.")
+        (SProxy :: SProxy "Hi {name}! Your favorite number is {number}")
         { name : "Bill", number : 16 }
