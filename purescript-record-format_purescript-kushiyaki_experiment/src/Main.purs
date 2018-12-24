@@ -42,7 +42,7 @@ main = do
   log formatted
 
   for_ (parseURL endpoint url) \user -> do
-    logShow user
+    logShow $ user :: User
 
   -- logShow $ RP.parse "/user/create/${name:String}/${age:Int}"
   logShow $ FRRP.parse "Hi {name}! Your favorite number is {number}."
@@ -52,4 +52,4 @@ main = do
     formatted =
       format
         (SProxy :: SProxy "Hi {name}! Your favorite number is {number}")
-        { number : 16, name : "Bill" }
+        { number : 12, name : "Bill" }

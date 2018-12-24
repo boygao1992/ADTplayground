@@ -6,6 +6,17 @@ import Prim.Symbol as Symbol
 import Record as Record
 import Type.Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 
+-- TODO add TypeError (class Fail) to refine those partial functions to total functions
+-- import Prim.TypeError (class Fail, Above, Beside, Quote, Text)
+-- an example from purescript-graphql
+-- | else instance objectTypeOutputTypeFail
+-- |   :: Fail (Above
+-- |     (Text "Cannot use object type with different context as field result.")
+-- |     (Above
+-- |       (Beside (Text "Expected context type: ") (Quote expected))
+-- |       (Beside (Text "But received constext type: ") (Quote actual))))
+-- |   => OutputType (ObjectType actual a) expected
+
 
 -- | create a new Kind (type-level Union), Fmt, to represent Format Token
 --   kind Fmt
@@ -47,7 +58,7 @@ else instance bParseLit ::
   ( Symbol.Cons t_h t_t t
   , ParseVar t_h t_t (Var match) rest
   , Parse rest restFl
-  ) => ParseLit "{" t (FCons (Lit "") (FCons (Var match) restFl)) -- extra (Lit "") as base case for cParseLit ?
+  ) => ParseLit "{" t (FCons (Lit "") (FCons (Var match) restFl)) -- extra (Lit "") as base case for cParseLit
 else instance cParseLit ::
   ( Parse t (FCons (Lit restLit) restFl)
   , Symbol.Cons h restLit lit
@@ -124,7 +135,7 @@ else instance bFormatVar :: Show a => FormatVar a where
   -- | Compose Parse(string -> fl) and FormatParsed(fl -> row)
   -- | we have Format(string -> row).
   -- | The value level is a little bit richer with String as the output.
-class Format (string :: Symbol) (row :: # Type) where
+class Format (string :: Symbol) (row :: # Type) | string -> row where
   format :: SProxy string -> Record row -> String
 
 instance formatParsedFormat ::

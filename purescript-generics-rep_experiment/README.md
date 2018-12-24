@@ -222,6 +222,8 @@ instance homogeneousRowListNil :: HomogeneousRowList Nil fieldType
 - `TypeEquals fieldType fieldType2`
   - enforce `fieldType` to be the same as `fieldType2`
   - if not, compiler will raise "no type class instance" TypeError
+
+## Data.HObject (purescript-homogeneous-objects)
   
 ## Data.Variant (purescript-variant)
 `data Variant :: # Type -> Type`
@@ -323,6 +325,16 @@ equal a b = equalFields (RLProxy :: RLProxy rs) a b
 `data STRecord :: Region -> # Type -> Type`
 
 ## Data.Record.Fold (purescript-record-fold)
+
+## Global (purescript-globals)
+Parse `String` into `Int`/`Number` (helpful because we don't have type-level number and arithmetic yet)
+- `readInt :: Int -> String -> Number` ~ `parseInt`
+- `readFloat :: String -> Number` ~ `parseFloat`
+
+- `nan :: Number` ~ `NaN`
+- `isNaN :: Nubmer -> Boolean` ~ `isNaN`
+- `infinity :: Number` ~ `Infinity`
+- `isFinite :: Number -> Boolean` ~ `isFinite`
 
 # Mapping Example
 
