@@ -49,6 +49,10 @@ Currently, the type-level inferences are centered around Type Class abstraction 
       - enforce functional constraint on relationship between two sets
         - an element in the input set can only be uniquely mapped to an element in the output set
       - multi-argument function dependencies are allowed
+  - function definition under type class
+    - essence: two functions of the same "shape"/"content" but of different types are distinct functions
+    - we use type inference to derive function instances of different types
+      - type class instance is like a template to construct those concrete functions
 
 # Record.Format (purescript-record-format)
 With type-level programming arsenal, no compiler support for template literal is needed.

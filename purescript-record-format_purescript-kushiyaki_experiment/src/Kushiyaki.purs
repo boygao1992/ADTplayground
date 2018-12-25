@@ -10,15 +10,17 @@ import Format (kind FList, FLProxy)
 import Record.Builder (Builder)
 
 type Url = String
-class ParseUrl (template :: Symbol) (row :: # Type) | template -> row where
-  parseUrl :: SProxy template -> Url -> Either String { | row }
+type Error = String
 
-class ParseURLImpl (xs :: FList) (from :: # Type) (to :: # Type)
+class ParseUrl (template :: Symbol) (row :: # Type) | template -> row where
+  parseUrl :: SProxy template -> Url -> Either Error { | row }
+
+class ParseUrlImpl (xs :: FList) (from :: # Type) (to :: # Type)
   | xs -> from to where
   parseURLImpl
     :: FLProxy xs
-    -> String
-    -> Either String (Builder { | from } { | to })
+    -> Url
+    -> Either Error (Builder { | from } { | to })
 
 class ParseTypedParam (s :: Symbol) (name :: Symbol) (ty :: Type) | s -> name ty
 
