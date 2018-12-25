@@ -12,6 +12,7 @@ import Type.Data.Symbol (SProxy(..))
 -- import RuntimeParser (parse) as RP
 import Record.Format.RuntimeParser (parse) as FRRP
 import Format (format)
+import Kushiyaki.RuntimeParser as KR
 
 -- | inferred Type of formatter, given the type-level template literal containing two `FormatVar`s, `name` and `number`
 -- formatter
@@ -46,6 +47,13 @@ main = do
 
   -- logShow $ RP.parse "/user/create/${name:String}/${age:Int}"
   logShow $ FRRP.parse "Hi {name}! Your favorite number is {number}."
+
+  logShow $ FRRP.parse KR.sampleTemplate
+
+  logShow $ KR.parseTypedParam "name:String"
+  logShow $ KR.parseTypedParam "number:Int"
+  logShow $ KR.parseTypedParam "hello:world" -- Error
+  logShow $ KR.parseTypedParam "name" -- default type, String
 
   where
     formatted :: String

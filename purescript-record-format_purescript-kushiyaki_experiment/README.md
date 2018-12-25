@@ -53,6 +53,47 @@ Currently, the type-level inferences are centered around Type Class abstraction 
     - essence: two functions of the same "shape"/"content" but of different types are distinct functions
     - we use type inference to derive function instances of different types
       - type class instance is like a template to construct those concrete functions
+      
+# Type Class
+
+- Type
+  - a set of values
+- Type Constructor (function)
+- Type Class
+  - number of arguments
+    - Single-argument Type Class
+    - Multi-argument Type Class
+  - with/without bounded values/functions
+    - with
+    - without
+
+```purescript
+-- | single-argument type classes
+class Name (a :: Type) where
+  -- value
+  name :: String
+
+class Eq (a :: Type) where
+  -- functions with one type argument (relationship between values in the same set)
+  eq :: a -> a -> Boolean
+
+-- | multi-argument type classes
+-- relationship between different types
+
+  -- Tuple :: Type -> Type -> Type
+              -- Tuple :: (a :: Type) -> (b :: Type) -> (Tuple a b :: Type)
+data Tuple a b = Tuple a b
+
+-- Product is a universal construction that connect any two types (in `kind Type`) to a distinct type,
+--   whose definition is also by arrows/functions
+class Product (a :: Type) (b :: Type) where
+  product :: a -> b -> Tuple a b
+
+class Sum (a :: Type) (b :: Type) where
+  -- relationship between values in different sets
+  sum :: a -> b -> Either a b
+
+```
 
 # Record.Format (purescript-record-format)
 With type-level programming arsenal, no compiler support for template literal is needed.
