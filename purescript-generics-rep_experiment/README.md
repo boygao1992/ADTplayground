@@ -1,6 +1,8 @@
 PureScript compiler Generic support
 [purescript/src/Language/PureScript/Sugar/TypeClasses/Deriving.hs](https://github.com/purescript/purescript/blob/master/src/Language/PureScript/Sugar/TypeClasses/Deriving.hs)
 
+[Haskell Generics - HaskellWiki](https://wiki.haskell.org/Generics)
+
 Algebraic composition can be generalized into two binary operators on types
 - Sum
 - Product
