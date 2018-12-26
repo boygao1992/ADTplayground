@@ -6,7 +6,7 @@ import Prelude
 import Data.Foldable (for_)
 import Effect (Effect)
 import Effect.Console (log, logShow)
-import Kushiyaki (parseURL)
+import Kushiyaki.Annotated (parseUrl)
 -- import Record.Format (format)
 import Type.Data.Symbol (SProxy(..))
 -- import RuntimeParser (parse) as RP
@@ -42,7 +42,7 @@ main :: Effect Unit
 main = do
   log formatted
 
-  for_ (parseURL endpoint url) \user -> do
+  for_ (parseUrl endpoint url) \user -> do
     logShow $ user :: User
 
   -- logShow $ RP.parse "/user/create/${name:String}/${age:Int}"
@@ -54,6 +54,8 @@ main = do
   logShow $ KR.parseTypedParam "number:Int"
   logShow $ KR.parseTypedParam "hello:world" -- Error
   logShow $ KR.parseTypedParam "name" -- default type, String
+
+  logShow $ KR.parseUrl "/user/create/{name:String}/{age:Int}"
 
   where
     formatted :: String

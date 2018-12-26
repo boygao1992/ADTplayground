@@ -3,11 +3,11 @@ module Kushiyaki.RuntimeParser where
 import Prelude
 
 import Data.Either (Either(..), either)
-import Data.Map (Map, fromFoldable) as Map
+import Data.Map (Map, insert, empty, fromFoldable) as Row
 import Data.Maybe (Maybe(..))
 import Data.String.CodeUnits (uncons, singleton) as Symbol
 import Data.Tuple (Tuple(..))
-import Record.Format.RuntimeParser (FList, parse)
+import Record.Format.RuntimeParser (FList(..), Fmt(..), parse)
 
 type User
   = { name :: String
@@ -54,24 +54,26 @@ parseTypedParam s = case Symbol.uncons s of
         Just { head : y, tail : ys } ->
           parseTypedParamImpl (Symbol.singleton y) ys (acc <> x)
 
+type Row_ = Row.Map Symbol Type_
+
+type Template = String
 type Url = String
 
-type Row_ = Map.Map Symbol Type_
+parseUrl :: Template -> Either Error Row_
+parseUrl template = parseUrlImpl xs Row.empty
+  where
+    xs :: FList
+    xs = parse template
 
-data Value_
-  = StringVal String
-  | IntVal Int
+    parseUrlImpl :: FList -> Row_ -> Either Error Row_
+    parseUrlImpl FNil row = Right row
+    parseUrlImpl (FCons fmt restFl) row = case fmt of
+      Var var -> case parseTypedParam var of
+        Left error -> Left error
+        Right (Tuple name ty) -> case parseUrlImpl restFl row of
+          Left error -> Left error
+          Right row' ->
+            Right $ Row.insert name ty row'
+      Lit lit ->
+        parseUrlImpl restFl row
 
-type Record_ = Map.Map Symbol Value_
-
-type State
-  = { typeLevel :: Row_
-    , valueLevel :: Record_
-    }
-
--- parseUrl :: Url -> Either Error Row
--- parseUrl s = case parseTypedParam s of
---   Left error -> Left error
---   Right t -> parseUrlImpl t
---   where
---     parseUrlImpl :: Tuple Symbol Type_ -> Row_

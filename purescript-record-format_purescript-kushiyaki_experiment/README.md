@@ -60,12 +60,16 @@ Currently, the type-level inferences are centered around Type Class abstraction 
   - a set of values
 - Type Constructor (function)
 - Type Class
+  - ad-hoc/instance-wise polymorphism
+    - need to manually add instances to the set/dictionary or by `derive instance`
+      - no way to `derive` instances for recursive types
+    - `kind Symbol` and other user-defined `kind` that are regular and limited
+      - we can write type-level functions to algorithmically describe the mapping between them rather than laying out all possible instances
   - number of arguments
     - Single-argument Type Class
     - Multi-argument Type Class
-  - with/without bounded values/functions
-    - with
-    - without
+  - bounded values/functions
+    - connecting types and values/functions
 
 ```purescript
 -- | single-argument type classes
@@ -80,12 +84,14 @@ class Eq (a :: Type) where
 -- | multi-argument type classes
 -- relationship between different types
 
+-- forall (a :: Type) (b :: Type). A universal construction, Product.
   -- Tuple :: Type -> Type -> Type
-              -- Tuple :: (a :: Type) -> (b :: Type) -> (Tuple a b :: Type)
+              -- Tuple :: a -> b -> (Tuple a b :: Type)
 data Tuple a b = Tuple a b
 
 -- Product is a universal construction that connect any two types (in `kind Type`) to a distinct type,
 --   whose definition is also by arrows/functions
+-- Therefore, ad-hoc polymorphism through type class is trivial.
 class Product (a :: Type) (b :: Type) where
   product :: a -> b -> Tuple a b
 
@@ -111,4 +117,3 @@ Current implementation is not as powerful as JS native template literal
   - `{{name}}` is parsed as `{name`, which is not a valid field name
   
 # Kushiyaki (purescript-kushiyaki)
-
