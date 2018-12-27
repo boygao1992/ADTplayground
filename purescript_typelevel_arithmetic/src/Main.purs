@@ -6,8 +6,8 @@ import Effect.Console (log)
 import Type.Data.Boolean (BProxy, True, False)
 import Type.Data.Symbol (SProxy(..))
 import Utils (removeSpace, reverseSymbol)
-import Digit (isDigit)
-import Number (isNumber)
+import Digit (isDigitPred)
+import Number (isNumberPred)
 
 removeSpaceExample1 :: SProxy ""
 removeSpaceExample1 = removeSpace $ SProxy :: SProxy ""
@@ -30,20 +30,20 @@ reverseSymbolExample2 = reverseSymbol $ SProxy :: SProxy "123"
 reverseSymbolAfterRemoveSpaceExample :: SProxy "4321"
 reverseSymbolAfterRemoveSpaceExample = reverseSymbol <<< removeSpace $ SProxy :: SProxy " 1 2 3 4 "
 
-isDigitExample1 :: BProxy False
-isDigitExample1 = isDigit $ SProxy :: SProxy ""
+isDigitPredExample1 :: BProxy False
+isDigitPredExample1 = isDigitPred $ SProxy :: SProxy ""
 
-isDigitExample2 :: BProxy True
-isDigitExample2 = isDigit $ SProxy :: SProxy "2"
+isDigitPredExample2 :: BProxy True
+isDigitPredExample2 = isDigitPred $ SProxy :: SProxy "2"
 
-isNumberExample1 :: BProxy False
-isNumberExample1 = isNumber $ SProxy :: SProxy ""
+isNumberPredExample1 :: BProxy False
+isNumberPredExample1 = isNumberPred $ SProxy :: SProxy ""
 
-isNumberExample2 :: BProxy True
-isNumberExample2 = isNumber $ SProxy :: SProxy "123"
+isNumberPredExample2 :: BProxy True
+isNumberPredExample2 = isNumberPred $ SProxy :: SProxy "123"
 
-isNumberExample3 :: BProxy False
-isNumberExample3 = isNumber $ SProxy :: SProxy "298723958-04"
+isNumberPredExample3 :: BProxy False
+isNumberPredExample3 = isNumberPred $ SProxy :: SProxy "298723958-04"
 
 main :: Effect Unit
 main = do

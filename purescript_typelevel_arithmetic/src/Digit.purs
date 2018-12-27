@@ -8,32 +8,32 @@ import Type.Data.Boolean as Boolean
 
 -- | Type-level Digit
 
-class Digit (d :: Symbol)
+class IsDigit (d :: Symbol)
 
-instance numberZero :: Digit "0"
-instance numberOne :: Digit "1"
-instance numberTwo :: Digit "2"
-instance numberThree :: Digit "3"
-instance numberFour :: Digit "4"
-instance numberFive :: Digit "5"
-instance numberSix :: Digit "6"
-instance numberSeven :: Digit "7"
-instance numberEight :: Digit "8"
-instance numberNine :: Digit "9"
+instance numberZero :: IsDigit "0"
+instance numberOne :: IsDigit "1"
+instance numberTwo :: IsDigit "2"
+instance numberThree :: IsDigit "3"
+instance numberFour :: IsDigit "4"
+instance numberFive :: IsDigit "5"
+instance numberSix :: IsDigit "6"
+instance numberSeven :: IsDigit "7"
+instance numberEight :: IsDigit "8"
+instance numberNine :: IsDigit "9"
 
-class IsDigit (d :: Symbol) (b :: Boolean.Boolean) | d -> b
+class IsDigitPred (d :: Symbol) (b :: Boolean.Boolean) | d -> b
 
-instance isDigitZero :: IsDigit "0" Boolean.True
-else instance isDigitOne :: IsDigit "1" Boolean.True
-else instance isDigitTwo :: IsDigit "2" Boolean.True
-else instance isDigitThree :: IsDigit "3" Boolean.True
-else instance isDigitFour :: IsDigit "4" Boolean.True
-else instance isDigitFive :: IsDigit "5" Boolean.True
-else instance isDigitSix :: IsDigit "6" Boolean.True
-else instance isDigitSeven :: IsDigit "7" Boolean.True
-else instance isDigitEight :: IsDigit "8" Boolean.True
-else instance isDigitNine :: IsDigit "9" Boolean.True
-else instance notDigit :: IsDigit d Boolean.False
+instance isDigitZero :: IsDigitPred "0" Boolean.True
+else instance isDigitOne :: IsDigitPred "1" Boolean.True
+else instance isDigitTwo :: IsDigitPred "2" Boolean.True
+else instance isDigitThree :: IsDigitPred "3" Boolean.True
+else instance isDigitFour :: IsDigitPred "4" Boolean.True
+else instance isDigitFive :: IsDigitPred "5" Boolean.True
+else instance isDigitSix :: IsDigitPred "6" Boolean.True
+else instance isDigitSeven :: IsDigitPred "7" Boolean.True
+else instance isDigitEight :: IsDigitPred "8" Boolean.True
+else instance isDigitNine :: IsDigitPred "9" Boolean.True
+else instance notDigit :: IsDigitPred d Boolean.False
 
-isDigit :: forall d b. IsDigit d b => SProxy d -> BProxy b
-isDigit _ = BProxy :: BProxy b
+isDigitPred :: forall d b. IsDigitPred d b => SProxy d -> BProxy b
+isDigitPred _ = BProxy :: BProxy b

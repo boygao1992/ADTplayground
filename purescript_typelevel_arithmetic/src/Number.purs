@@ -7,31 +7,56 @@ import Type.Data.Symbol as Symbol
 import Type.Data.Boolean (BProxy(..))
 import Type.Data.Boolean as Boolean
 
-import Digit (class IsDigit)
+import Digit (class IsDigit, class IsDigitPred)
+import Utils (class ReverseSymbol)
 
 -- | Type-level Number
 
-class IsNumber (n :: Symbol) (b :: Boolean.Boolean) | n -> b
+-- | IsNumber
+class IsNumber (n :: Symbol)
 
-instance isNumberEmpty :: IsNumber "" Boolean.False
+instance isNumberSingleDigit ::
+  (IsDigit n
+  ) => IsNumber n
+else instance isNumberMultiDigits ::
+  ( Symbol.Cons h t n
+  , IsDigit h
+  , IsNumber t
+  ) => IsNumber n
+
+-- | IsNumberPred
+class IsNumberPred (n :: Symbol) (b :: Boolean.Boolean) | n -> b
+
+instance isNumberEmpty :: IsNumberPred "" Boolean.False
 else instance isNumberOtherwise ::
   ( Symbol.Cons h t n
-  , IsNumberImpl h t b
-  ) => IsNumber n b
+  , IsNumberPredImpl h t b
+  ) => IsNumberPred n b
 
-class IsNumberImpl (h :: Symbol) (t :: Symbol) (b :: Boolean.Boolean) | h t -> b
+class IsNumberPredImpl (h :: Symbol) (t :: Symbol) (b :: Boolean.Boolean) | h t -> b
 
 instance isNumberImplBaseCase ::
-  ( IsDigit h b
-  ) => IsNumberImpl h "" b
+  ( IsDigitPred h b
+  ) => IsNumberPredImpl h "" b
 else instance isNumberImplInductionStep ::
-  ( IsDigit h b1
-  , IsNumber t b2
+  ( IsDigitPred h b1
+  , IsNumberPred t b2
   , Boolean.And b1 b2 b
-  ) => IsNumberImpl h t b
+  ) => IsNumberPredImpl h t b
 
-isNumber :: forall n b. IsNumber n b => SProxy n -> BProxy b
-isNumber _ = BProxy :: BProxy b
+isNumberPred :: forall n b. IsNumberPred n b => SProxy n -> BProxy b
+isNumberPred _ = BProxy :: BProxy b
 
 -- | Type-level Arithmetic: Add
 class Add (x :: Symbol) (y :: Symbol) (z :: Symbol) | x y -> z
+
+instance addAll ::
+  ( ReverseSymbol x x'
+  , ReverseSymbol y y'
+  , AddReversed x' y' z'
+  , ReverseSymbol z' z
+  ) => Add x y z
+
+class AddReversed (x :: Symbol) (y :: Symbol) (z :: Symbol) | x y -> z
+
+class AddImpl (x_h :: Symbol) (x_t :: Symbol) (y_h :: Symbol) (y_t :: Symbol) (z :: Symbol) | x_h x_t y_h y_t -> z

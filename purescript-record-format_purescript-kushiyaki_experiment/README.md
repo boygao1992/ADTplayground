@@ -118,5 +118,12 @@ Current implementation is not as powerful as JS native template literal
 - parser is yet too simple to handle cases like below
   - `{ name }` is parsed as ` name `, which is not a valid field name
   - `{{name}}` is parsed as `{name`, which is not a valid field name
+
+![](./01-Parse.jpg)
+![](./02-ParseLit.jpg)
+![](./03-ParseVar.jpg)
+![](./04-FormatParse.jpg)
   
 # Kushiyaki (purescript-kushiyaki)
+
+![](./05-ParseUrl.jpg)
