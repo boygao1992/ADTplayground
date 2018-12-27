@@ -14,6 +14,7 @@ import Prim.TypeError as TE
 import Record.Builder (Builder)
 import Record.Builder as Builder
 import Type.Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
+import Utils (class RemoveSpace)
 
 type Url = String
 type Error = String
@@ -40,7 +41,8 @@ instance parseUrlImplNil :: ParseUrlImpl FNil () () where
   parseUrlImpl _ _ = pure identity
 
 instance parseUrlImplFConsVar ::
-  ( ParseTypedParam var name ty -- (var :: Symbol) -> (name :: Symbol) (ty :: Type)
+  ( RemoveSpace var varNoSpace
+  , ParseTypedParam varNoSpace name ty -- (var :: Symbol) -> (name :: Symbol) (ty :: Type)
   , ParseUrlImpl restFl from restTo
   , Row.Cons name ty restTo to
   , Row.Lacks name restTo -- no replicate field names

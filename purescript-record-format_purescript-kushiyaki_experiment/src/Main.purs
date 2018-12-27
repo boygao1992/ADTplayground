@@ -2,17 +2,15 @@ module Main where
 
 import Prelude
 
--- import Data.Either (Either)
 import Data.Foldable (for_)
 import Effect (Effect)
 import Effect.Console (log, logShow)
-import Kushiyaki.Annotated (parseUrl)
--- import Record.Format (format)
-import Type.Data.Symbol (SProxy(..))
--- import RuntimeParser (parse) as RP
-import Record.Format.RuntimeParser (parse) as FRRP
 import Format (format)
+import Kushiyaki.Annotated (parseUrl)
 import Kushiyaki.RuntimeParser as KR
+import Record.Format.RuntimeParser (parse) as FRRP
+import Type.Data.Symbol (SProxy(..), reflectSymbol)
+import Utils (removeSpace)
 
 -- | inferred Type of formatter, given the type-level template literal containing two `FormatVar`s, `name` and `number`
 -- formatter
@@ -36,7 +34,7 @@ type User =
 url :: String
 url = "/user/create/Bill/12"
 
-endpoint = SProxy :: SProxy "/user/create/{name:String}/{age:Int}"
+endpoint = SProxy :: SProxy "/user/create/{ name : String }/{ age : Int }"
 
 main :: Effect Unit
 main = do
@@ -56,6 +54,12 @@ main = do
   logShow $ KR.parseTypedParam "name" -- default type, String
 
   logShow $ KR.parseUrl "/user/create/{name:String}/{age:Int}"
+
+  log $ reflectSymbol $ removeSpace $ SProxy :: SProxy ""
+  log $ reflectSymbol $ removeSpace $ SProxy :: SProxy " "
+  log $ reflectSymbol $ removeSpace $ SProxy :: SProxy "  "
+  log $ reflectSymbol $ removeSpace $ SProxy :: SProxy " 1 2 3 "
+
 
   where
     formatted :: String

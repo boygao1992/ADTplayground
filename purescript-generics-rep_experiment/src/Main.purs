@@ -5,11 +5,9 @@ import Prelude
 import Control.Alt ((<|>))
 import Data.Argonaut.Core (stringify)
 import Data.Argonaut.Decode.Class (class DecodeJson, decodeJson)
-import Data.Argonaut.Encode.Class (class EncodeJson, encodeJson)
-import Data.Argonaut.Decode.Generic.Rep (genericDecodeJson)
-import Data.Argonaut.Encode.Generic.Rep (genericEncodeJson)
-import Data.Argonaut.Types.Generic.Rep (Encoding, defaultEncoding)
-import Data.Argonaut.Parser (jsonParser)
+import Data.Argonaut.Decode.Generic.Rep
+import Data.Argonaut.Encode.Class
+import Data.Argonaut.Encode.Generic.Rep
 import Data.Either (Either(..))
 import Data.Generic.Rep as GR
 import Data.Generic.Rep.Eq (genericEq)
