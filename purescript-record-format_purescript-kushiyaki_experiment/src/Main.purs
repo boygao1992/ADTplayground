@@ -9,8 +9,9 @@ import Format (format)
 import Kushiyaki.Annotated (parseUrl)
 import Kushiyaki.RuntimeParser as KR
 import Record.Format.RuntimeParser (parse) as FRRP
-import Type.Data.Symbol (SProxy(..), reflectSymbol)
-import Utils (removeSpace)
+import Type.Data.Symbol (SProxy(..))
+import Type.Data.Boolean (BProxy, False, True)
+import Utils (removeSpace, reverseSymbol, isDigit, isNumber)
 
 -- | inferred Type of formatter, given the type-level template literal containing two `FormatVar`s, `name` and `number`
 -- formatter
@@ -54,12 +55,6 @@ main = do
   logShow $ KR.parseTypedParam "name" -- default type, String
 
   logShow $ KR.parseUrl "/user/create/{name:String}/{age:Int}"
-
-  log $ reflectSymbol $ removeSpace $ SProxy :: SProxy ""
-  log $ reflectSymbol $ removeSpace $ SProxy :: SProxy " "
-  log $ reflectSymbol $ removeSpace $ SProxy :: SProxy "  "
-  log $ reflectSymbol $ removeSpace $ SProxy :: SProxy " 1 2 3 "
-
 
   where
     formatted :: String
