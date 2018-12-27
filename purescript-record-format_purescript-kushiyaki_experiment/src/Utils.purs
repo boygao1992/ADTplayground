@@ -16,15 +16,11 @@ else instance removeSpaceAll ::
 
 class RemoveSpaceImpl (h :: Symbol) (t :: Symbol) (o :: Symbol) | h t ->o
 
-instance removeSpaceImplBaseCase1 :: RemoveSpaceImpl " " "" ""
-else instance removeSpaceImplBaseCase2 :: RemoveSpaceImpl h "" h
-else instance removeSpaceImplInductionStepSpace ::
-  ( Symbol.Cons t_h t_t t
-  , RemoveSpaceImpl t_h t_t o
+instance removeSpaceImplInductionStepSpace ::
+  ( RemoveSpace t o
   ) => RemoveSpaceImpl " " t o
 else instance removeSpaceImplInductionStepNonSpace ::
-  ( Symbol.Cons t_h t_t t
-  , RemoveSpaceImpl t_h t_t rest
+  ( RemoveSpace t rest
   , Symbol.Append h rest o
   ) => RemoveSpaceImpl h t o
 
