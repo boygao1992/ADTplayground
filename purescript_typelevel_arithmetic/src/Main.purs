@@ -7,7 +7,7 @@ import Type.Data.Boolean (BProxy, True, False)
 import Type.Data.Symbol (SProxy(..))
 import Utils (removeSpace, reverseSymbol)
 import Digit (isDigitPred)
-import Number (isNumberPred)
+import Number (isNumberPred, add) as Number
 
 removeSpaceExample1 :: SProxy ""
 removeSpaceExample1 = removeSpace $ SProxy :: SProxy ""
@@ -37,13 +37,22 @@ isDigitPredExample2 :: BProxy True
 isDigitPredExample2 = isDigitPred $ SProxy :: SProxy "2"
 
 isNumberPredExample1 :: BProxy False
-isNumberPredExample1 = isNumberPred $ SProxy :: SProxy ""
+isNumberPredExample1 = Number.isNumberPred $ SProxy :: SProxy ""
 
 isNumberPredExample2 :: BProxy True
-isNumberPredExample2 = isNumberPred $ SProxy :: SProxy "123"
+isNumberPredExample2 = Number.isNumberPred $ SProxy :: SProxy "123"
 
 isNumberPredExample3 :: BProxy False
-isNumberPredExample3 = isNumberPred $ SProxy :: SProxy "298723958-04"
+isNumberPredExample3 = Number.isNumberPred $ SProxy :: SProxy "298723958-04"
+
+addNumberExample1 :: SProxy "10000"
+addNumberExample1 = Number.add (SProxy :: SProxy "1") (SProxy :: SProxy "9999")
+
+addNumberExample2 :: SProxy "1999998"
+addNumberExample2 = Number.add (SProxy :: SProxy "999999") (SProxy :: SProxy "999999")
+
+addNumberExample3 :: SProxy "968623218844"
+addNumberExample3 = Number.add (SProxy :: SProxy "8942758984") (SProxy :: SProxy "959680459860")
 
 main :: Effect Unit
 main = do
