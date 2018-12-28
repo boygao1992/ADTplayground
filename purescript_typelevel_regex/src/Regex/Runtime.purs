@@ -45,7 +45,7 @@ tokenize = map toToken <<< String.toCharArray
 
 data Pattern
   = Lit Char
-  | CharNumFixed Char Int
+  | CharNumFixed Char String -- Char Int
   | CharNumMaybe Char
   | CharNumPositive Char
   | CharStar Char
@@ -65,12 +65,35 @@ parse = map A.reverse <<< parseBaseCase <<< A.reverse
     parseInductionStep (LitToken c) restTokens = do
       restPatterns <- parseBaseCase restTokens
       pure $ (Lit c) `A.cons` restPatterns
-    parseInductionStep NumFixedRightToken restTokens = do
-      result <- parseCharNumFixed restTokens
-      restRestTokens <- parseBaseCase result.tokens
-      pure $ result.pattern `A.cons` restRestTokens
+    parseInductionStep NumFixedRightToken rest1 = do
+      intResult <- parseCharNumFixedInt rest1
+      charResult <- parseSingleChar intResult.rest
+      restPattern <- parseBaseCase charResult.rest -- recursive call
+      pure $ CharNumFixed charResult.char intResult.int `A.cons` restPattern
     parseInductionStep _ _ = Left ""
 
 
-    parseCharNumFixed :: Array Token -> Either Error { pattern :: Pattern, tokens :: Array Token }
-    parseCharNumFixed _ = Left ""
+    parseCharNumFixedInt :: Array Token -> Either Error { int :: String, rest :: Array Token }
+    parseCharNumFixedInt = A.uncons >>> case _ of
+      Nothing -> Left "incomplete CharNumFixed"
+      Just { head: h, tail: t } ->
+        parseCharNumFixedIntImpl h t
+
+    parseCharNumFixedIntImpl :: Token -> Array Token -> Either Error { int :: String, rest :: Array Token }
+    parseCharNumFixedIntImpl h t = case A.uncons t of
+      Nothing -> -- need another 2 chars ("{1") to complete the pattern
+        Left "incomplete CharNumFixedInt"
+      Just { head: t_h, tail: t_t } -> case h, t_h of
+        (LitToken d1), (LitToken d2) -> do -- induction step
+          result <- parseCharNumFixedIntImpl t_h t_t
+          pure $ { int : (String.singleton d1) <> result.int, rest : result.rest }
+        (LitToken d), NumFixedLeftToken -> -- base case
+          pure $ { int : (String.singleton d), rest : t_t }
+        _, _ -> Left "invalid token when parseing CharNumFixedInt"
+
+    parseSingleChar :: Array Token -> Either Error { char :: Char, rest :: Array Token}
+    parseSingleChar = A.uncons >>> case _ of
+      Nothing -> Left "EOL"
+      Just { head : h, tail : t } -> case h of
+        LitToken c -> pure { char : c, rest : t }
+        _ -> Left "invalid token when parsing a single char"
