@@ -2,8 +2,9 @@ module Main where
 
 import Prelude
 import Effect (Effect)
-import Effect.Console (log)
+import Effect.Console (logShow)
+import Regex.Runtime (tokenize)
 
 main :: Effect Unit
 main = do
-  log "Hello sailor!"
+  logShow $ tokenize "abc*d.f.*g?h"
