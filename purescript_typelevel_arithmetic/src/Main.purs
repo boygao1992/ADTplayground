@@ -7,7 +7,7 @@ import Type.Data.Boolean (BProxy, True, False)
 import Type.Data.Symbol (SProxy(..))
 import Utils (removeSpace, reverseSymbol)
 import Digit (isDigitPred)
-import Number (isNumberPred, add) as Number
+import Int (isIntPred, add) as Int
 
 removeSpaceExample1 :: SProxy ""
 removeSpaceExample1 = removeSpace $ SProxy :: SProxy ""
@@ -36,23 +36,23 @@ isDigitPredExample1 = isDigitPred $ SProxy :: SProxy ""
 isDigitPredExample2 :: BProxy True
 isDigitPredExample2 = isDigitPred $ SProxy :: SProxy "2"
 
-isNumberPredExample1 :: BProxy False
-isNumberPredExample1 = Number.isNumberPred $ SProxy :: SProxy ""
+isIntPredExample1 :: BProxy False
+isIntPredExample1 = Int.isIntPred $ SProxy :: SProxy ""
 
-isNumberPredExample2 :: BProxy True
-isNumberPredExample2 = Number.isNumberPred $ SProxy :: SProxy "123"
+isIntPredExample2 :: BProxy True
+isIntPredExample2 = Int.isIntPred $ SProxy :: SProxy "123"
 
-isNumberPredExample3 :: BProxy False
-isNumberPredExample3 = Number.isNumberPred $ SProxy :: SProxy "298723958-04"
+isIntPredExample3 :: BProxy False
+isIntPredExample3 = Int.isIntPred $ SProxy :: SProxy "298723958-04"
 
-addNumberExample1 :: SProxy "10000"
-addNumberExample1 = Number.add (SProxy :: SProxy "1") (SProxy :: SProxy "9999")
+addIntExample1 :: SProxy "10000"
+addIntExample1 = Int.add (SProxy :: SProxy "1") (SProxy :: SProxy "9999")
 
-addNumberExample2 :: SProxy "1999998"
-addNumberExample2 = Number.add (SProxy :: SProxy "999999") (SProxy :: SProxy "999999")
+addIntExample2 :: SProxy "1999998"
+addIntExample2 = Int.add (SProxy :: SProxy "999999") (SProxy :: SProxy "999999")
 
-addNumberExample3 :: SProxy "968623218844"
-addNumberExample3 = Number.add (SProxy :: SProxy "8942758984") (SProxy :: SProxy "959680459860")
+addIntExample3 :: SProxy "968623218844"
+addIntExample3 = Int.add (SProxy :: SProxy "8942758984") (SProxy :: SProxy "959680459860")
 
 main :: Effect Unit
 main = do

@@ -1,4 +1,4 @@
-module Number where
+module Int where
 
 import Prelude hiding (add)
 
@@ -11,53 +11,53 @@ import Utils (class ReverseSymbol)
 
 -- | Type-level Number
 
--- | IsNumber
-class IsNumber (n :: Symbol)
+-- | IsInt
+class IsInt (n :: Symbol)
 
-instance isNumberMultiDigits ::
+instance isIntMultiDigits ::
   ( Symbol.Cons h t n
-  , IsNumberImpl h t
-  ) => IsNumber n
+  , IsIntImpl h t
+  ) => IsInt n
 
-class IsNumberImpl (h :: Symbol) (t :: Symbol)
+class IsIntImpl (h :: Symbol) (t :: Symbol)
 
-instance isNumberImplBaseCase ::
+instance isIntImplBaseCase ::
   ( Digit.IsDigit h
-  ) => IsNumberImpl h ""
-else instance isNumberImplInductionStep ::
+  ) => IsIntImpl h ""
+else instance isIntImplInductionStep ::
   ( Digit.IsDigit h
-  , IsNumber t
-  ) => IsNumberImpl h t
+  , IsInt t
+  ) => IsIntImpl h t
 
--- | IsNumberPred
-class IsNumberPred (n :: Symbol) (b :: Boolean.Boolean) | n -> b
+-- | IsIntPred
+class IsIntPred (n :: Symbol) (b :: Boolean.Boolean) | n -> b
 
-instance isNumberPredEmpty :: IsNumberPred "" Boolean.False
-else instance isNumberPredOtherwise ::
+instance isIntPredEmpty :: IsIntPred "" Boolean.False
+else instance isIntPredOtherwise ::
   ( Symbol.Cons h t n
-  , IsNumberPredImpl h t b
-  ) => IsNumberPred n b
+  , IsIntPredImpl h t b
+  ) => IsIntPred n b
 
-class IsNumberPredImpl (h :: Symbol) (t :: Symbol) (b :: Boolean.Boolean) | h t -> b
+class IsIntPredImpl (h :: Symbol) (t :: Symbol) (b :: Boolean.Boolean) | h t -> b
 
-instance isNumberImplPredBaseCase ::
+instance isIntImplPredBaseCase ::
   ( Digit.IsDigitPred h b
-  ) => IsNumberPredImpl h "" b
-else instance isNumberImplPredInductionStep ::
+  ) => IsIntPredImpl h "" b
+else instance isIntImplPredInductionStep ::
   ( Digit.IsDigitPred h b1
-  , IsNumberPred t b2
+  , IsIntPred t b2
   , Boolean.And b1 b2 b
-  ) => IsNumberPredImpl h t b
+  ) => IsIntPredImpl h t b
 
-isNumberPred :: forall n b. IsNumberPred n b => SProxy n -> BProxy b
-isNumberPred _ = BProxy :: BProxy b
+isIntPred :: forall n b. IsIntPred n b => SProxy n -> BProxy b
+isIntPred _ = BProxy :: BProxy b
 
 -- | Type-level Arithmetic: Add
 class Add (x :: Symbol) (y :: Symbol) (z :: Symbol) | x y -> z
 
 instance addAll ::
-  ( IsNumber x
-  , IsNumber y
+  ( IsInt x
+  , IsInt y
   , ReverseSymbol x x'
   , ReverseSymbol y y'
   , AddReversed x' y' "0" z'
