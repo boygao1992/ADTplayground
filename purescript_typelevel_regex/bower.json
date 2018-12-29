@@ -12,7 +12,8 @@
     "purescript-effect": "^2.0.0",
     "purescript-typelevel-prelude": "^3.0.0",
     "purescript-generics-rep": "^6.1.0",
-    "purescript-strings": "^4.0.1"
+    "purescript-strings": "^4.0.1",
+    "purescript-globals": "^4.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"

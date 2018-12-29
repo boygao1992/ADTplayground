@@ -8,6 +8,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
 import Data.String.CodeUnits as String
+import Utils (parseInt)
 
 case1StartEndToken = "^abc$" :: String --- "abc"
 case2Number = "a{3}" :: String -- "aaa"
@@ -45,7 +46,7 @@ tokenize = map toToken <<< String.toCharArray
 
 data Pattern
   = Lit Char
-  | CharNumFixed Char String -- Char Int
+  | CharNumFixed Char Int -- TODO Char Int
   | CharNumMaybe Char
   | CharNumPositive Char
   | CharStar Char
@@ -71,7 +72,9 @@ parse = map A.reverse <<< parseBaseCase <<< A.reverse
       intResult <- parseCharNumFixedInt rest1
       charResult <- parseSingleChar intResult.rest
       restPattern <- parseBaseCase charResult.rest -- recursive call
-      pure $ CharNumFixed charResult.char intResult.int `A.cons` restPattern
+      case parseInt 10 intResult.int of
+        Nothing -> Left "invalid tokens in CharNumFixed: expect base10 digits in between `{` and `}`"
+        Just int -> Right $ CharNumFixed charResult.char int `A.cons` restPattern
     parseInductionStep MaybeToken restTokens = do
       charResult <- parseSingleChar restTokens
       restPattern <- parseBaseCase charResult.rest
@@ -120,3 +123,25 @@ parse = map A.reverse <<< parseBaseCase <<< A.reverse
       Just { head : h, tail : t } -> case h of
         LitToken c -> pure { char : c, rest : t }
         _ -> Left "invalid token when parsing a single char"
+
+-- recognize :: Array Pattern -> String -> Boolean
+-- recognize patterns str =
+--   let
+--     chars = String.toCharArray str
+--   in
+--     case (A.uncons patterns), (A.uncons chars) of
+--       Nothing, Just _ -> false
+--       Just _, Nothing -> false
+--       Nothing, Nothing -> true
+--       Just { head: p_h, tail: p_t }, Just { head: s_h, tail: s_t } ->
+--         recognizeInductionStep p_h p_t s_h s_t
+
+-- recognizeInductionStep :: Pattern -> Array Pattern -> Char -> Array Char -> Boolean
+-- recognizeInductionStep p_h p_t s_h s_t = case p_h of
+--   Lit c ->
+--     (c == s_h) && recognizeBaseCase p_t s_t
+--   CharNumFixed
+
+
+-- recognizeBaseCase :: Array Pattern -> Array Char -> Boolean
+-- recognizeBaseCase _ _ = true
