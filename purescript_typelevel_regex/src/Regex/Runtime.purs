@@ -51,7 +51,9 @@ data Pattern
   | CharStar Char
   | AnyChar
   | AnyStar
-
+derive instance genericPattern :: Generic Pattern _
+instance showPattern :: Show Pattern where
+  show = genericShow
 
 parse :: Array Token -> Either Error (Array Pattern)
 parse = map A.reverse <<< parseBaseCase <<< A.reverse
@@ -70,7 +72,28 @@ parse = map A.reverse <<< parseBaseCase <<< A.reverse
       charResult <- parseSingleChar intResult.rest
       restPattern <- parseBaseCase charResult.rest -- recursive call
       pure $ CharNumFixed charResult.char intResult.int `A.cons` restPattern
-    parseInductionStep _ _ = Left ""
+    parseInductionStep MaybeToken restTokens = do
+      charResult <- parseSingleChar restTokens
+      restPattern <- parseBaseCase charResult.rest
+      pure $ CharNumMaybe charResult.char `A.cons` restPattern
+    parseInductionStep NumPositiveToken restTokens = do
+      charResult <- parseSingleChar restTokens
+      restPattern <- parseBaseCase charResult.rest
+      pure $ CharNumPositive charResult.char `A.cons` restPattern
+    parseInductionStep AnyToken restTokens = do
+      restPattern <- parseBaseCase restTokens
+      pure $ AnyChar `A.cons` restPattern
+    parseInductionStep StarToken restTokens = case A.uncons restTokens of
+      Nothing -> Left "incomplete Star"
+      Just { head : h, tail : t } -> case h of
+        LitToken c -> do
+          restPattern <- parseBaseCase t
+          pure $ CharStar c `A.cons` restPattern
+        AnyToken -> do
+          restPattern <- parseBaseCase t
+          pure $ AnyStar `A.cons` restPattern
+        _ -> Left "invalid token, cannot be embellished by Star"
+    parseInductionStep NumFixedLeftToken _ = Left "incomplete CharNumFixed"
 
 
     parseCharNumFixedInt :: Array Token -> Either Error { int :: String, rest :: Array Token }
