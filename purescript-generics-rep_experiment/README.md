@@ -338,6 +338,17 @@ Parse `String` into `Int`/`Number` (helpful because we don't have type-level num
 - `infinity :: Number` ~ `Infinity`
 - `isFinite :: Number -> Boolean` ~ `isFinite`
 
+## Data.Typelevel.Num (bodil/purescript-typelevel)
+
+`kind Type` encoding of digits and numbers
+
+Pro
+- easier for structural folding of numbers at type level
+
+Con
+- cannot write numbers the natural way
+  - partial solution: build a large table of named types (Data.Typelevel.Num.Aliases)
+
 # Mapping Example
 
 ## Example 1: Product - Record vs Multi-Argument Constructor
