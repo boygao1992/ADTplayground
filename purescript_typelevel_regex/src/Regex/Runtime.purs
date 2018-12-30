@@ -4,7 +4,6 @@ import Prelude
 
 import Data.Array (reverse, uncons, cons) as A
 import Data.Either (Either(..))
-import Data.Enum (pred)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
@@ -146,78 +145,70 @@ recognizeBaseCase p s = case A.uncons p of
     else
       false
   Just { head: p_h, tail: p_t } ->
-    recognizeInductionStep' p_h p_t s
+    recognizeInductionStep p_h p_t s
 
-  -- Nothing, Just _ -> false
-  -- Just _, Nothing -> false
-  -- Nothing, Nothing -> true
-  -- Just { head: p_h, tail: p_t }, Just { head: s_h, tail: s_t } ->
-  --   recognizeInductionStep p_h p_t s_h s_t
-recognizeInductionStep' :: Pattern -> Array Pattern -> Array Char -> Boolean
--- TODO
-recognizeInductionStep' (CharNumMaybe c) p_t s = recognizeCharNumMaybeBaseCase c p_t s
-recognizeInductionStep' _ _ _ = false
-
-recognizeInductionStep :: Pattern -> Array Pattern -> Char -> Array Char -> Boolean
-recognizeInductionStep p_h p_t s_h s_t = case p_h of
-  CharNumFixed '.' 1 -> -- AnyCharNumFixed, Base Case
-    recognizeBaseCase p_t s_t
-  CharNumFixed '.' n -> -- AnyCharNumFixed, Induction Step
-    recognizeBaseCase (CharNumFixed '.' (n - 1) `A.cons` p_t) s_t
-  CharNumFixed c 1 -> -- Base Case
-    if c == s_h
-    then
-      recognizeBaseCase p_t s_t
-    else
-      false
-  CharNumFixed c n -> -- Induction Step
-    if c == s_h
-    then
-      recognizeBaseCase (CharNumFixed '.' (n - 1) `A.cons` p_t) s_t -- TODO use pred instead of (_ - 1)
-    else
-      false
-  CharNumMaybe c ->
-    recognizeCharNumMaybeInductionStep c p_t s_h s_t
+recognizeInductionStep :: Pattern -> Array Pattern -> Array Char -> Boolean
+recognizeInductionStep p_h p_t s = case p_h of
+  CharNumFixed c n ->
+    recognizeCharNumFixedBaseCase c n p_t s
   CharNumPositive c ->
-    recognizeCharNumPositiveInductionStep c p_t s_h s_t
+    recognizeCharNumPositiveBaseCase c p_t s
+  CharNumMaybe c ->
+    recognizeCharNumMaybeBaseCase c p_t s
   CharStar c ->
-    if recognizeBaseCase p_t (s_h `A.cons` s_t)
-    then
-      true
-    else
-      recognizeCharNumPositiveInductionStep c p_t s_h s_t
+    recognizeCharStar c p_t s
+
+recognizeCharNumFixedBaseCase :: Char -> Int -> Array Pattern -> Array Char -> Boolean
+recognizeCharNumFixedBaseCase = go
+  where
+    go :: Char -> Int -> Array Pattern -> Array Char -> Boolean
+    go c n p_t s
+      | n < 0 = false
+      | n == 0 = recognizeBaseCase p_t s
+      | otherwise = case A.uncons s of -- n > 0
+        Nothing ->
+          false
+        Just { head : s_h, tail : s_t } ->
+          recognizeCharNumFixedInductionStep c n p_t s_h s_t
+
+recognizeCharNumFixedInductionStep :: Char -> Int -> Array Pattern -> Char -> Array Char -> Boolean
+recognizeCharNumFixedInductionStep '.' n p_t _ s_t =
+  recognizeCharNumFixedBaseCase '.' (n - 1) p_t s_t
+recognizeCharNumFixedInductionStep c n p_t s_h s_t =
+  if c == s_h
+  then
+    recognizeCharNumFixedBaseCase c (n - 1) p_t s_t
+  else
+    false
 
 recognizeCharNumMaybeBaseCase :: Char -> Array Pattern -> Array Char -> Boolean
-recognizeCharNumMaybeBaseCase c p_t s = case A.uncons s of
-  Nothing ->
-    true
-  Just { head : s_h, tail : s_t } ->
-    recognizeCharNumMaybeInductionStep c p_t s_h s_t
-
-recognizeCharNumMaybeInductionStep :: Char -> Array Pattern -> Char -> Array Char -> Boolean
-recognizeCharNumMaybeInductionStep '.' p_t s_h s_t = -- AnyCharNumMaybe
-  if recognizeBaseCase p_t (s_h `A.cons` s_t)
+recognizeCharNumMaybeBaseCase c p_t s =
+  if recognizeBaseCase p_t s
   then
     true
   else
+    case A.uncons s of
+      Nothing ->
+        false
+      Just { head : s_h, tail : s_t } ->
+        recognizeCharNumMaybeInductionStep c p_t s_h s_t
+
+recognizeCharNumMaybeInductionStep :: Char -> Array Pattern -> Char -> Array Char -> Boolean
+recognizeCharNumMaybeInductionStep '.' p_t s_h s_t = -- AnyCharNumMaybe
     recognizeBaseCase p_t s_t
 recognizeCharNumMaybeInductionStep c p_t s_h s_t = -- CharNumMaybe
   if c == s_h
   then
-    if recognizeBaseCase p_t s_t
-    then
-      true
-    else
-      recognizeBaseCase p_t (s_h `A.cons` s_t)
+    recognizeBaseCase p_t s_t
   else
-    recognizeBaseCase p_t (s_h `A.cons` s_t)
+    false
 
 recognizeCharNumPositiveBaseCase :: Char -> Array Pattern -> Array Char -> Boolean
 recognizeCharNumPositiveBaseCase c p_t s = case A.uncons s of
   Nothing ->
-    false -- TODO
-  Just _ ->
-    false -- TODO
+    recognizeBaseCase p_t s
+  Just { head: s_h, tail: s_t } ->
+    recognizeCharNumPositiveInductionStep c p_t s_h s_t
 
 recognizeCharNumPositiveInductionStep :: Char -> Array Pattern -> Char -> Array Char -> Boolean
 recognizeCharNumPositiveInductionStep '.' p_t s_h s_t = -- AnyCharNumPositive
@@ -225,7 +216,7 @@ recognizeCharNumPositiveInductionStep '.' p_t s_h s_t = -- AnyCharNumPositive
   then
     true
   else
-    recognizedCharNumPositiveBaseCase '.' p_t s_t
+    recognizeCharNumPositiveBaseCase '.' p_t s_t
 recognizeCharNumPositiveInductionStep c p_t s_h s_t = -- CharNumPositive
   if c == s_h
   then
@@ -233,13 +224,15 @@ recognizeCharNumPositiveInductionStep c p_t s_h s_t = -- CharNumPositive
     then
       true
     else
-      recognizedCharNumPositiveBaseCase c p_t s_t
+      recognizeCharNumPositiveBaseCase c p_t s_t
   else
     false
 
-recognizedCharNumPositiveBaseCase :: Char -> Array Pattern -> Array Char -> Boolean
-recognizedCharNumPositiveBaseCase c p s = case A.uncons s of
-  Nothing ->
-    p == []
-  Just { head: s_h, tail: s_t } ->
-    recognizeCharNumPositiveInductionStep c p s_h s_t
+
+recognizeCharStar :: Char -> Array Pattern -> Array Char -> Boolean
+recognizeCharStar c p_t s =
+  if recognizeBaseCase p_t s
+  then
+    true
+  else
+    recognizeCharNumPositiveBaseCase c p_t s
