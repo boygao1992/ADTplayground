@@ -94,17 +94,21 @@ parse = map A.reverse <<< parseBaseCase <<< A.reverse
       charResult <- parseSingleChar restTokens
       restPattern <- parseBaseCase charResult.rest
       pure $ CharNumPositive charResult.char `A.cons` restPattern
-    parseInductionStep StarToken restTokens = case A.uncons restTokens of
-      Nothing -> Left "incomplete Star"
-      Just { head : h, tail : t } -> case h of
-        LitToken c -> do
-          restPattern <- parseBaseCase t
-          pure $ CharStar c `A.cons` restPattern
-        AnyToken -> do
-          restPattern <- parseBaseCase t
-          pure $ (CharStar '.') `A.cons` restPattern
-        _ -> Left "invalid token, cannot be embellished by Star"
-    parseInductionStep NumFixedLeftToken _ = Left "incomplete CharNumFixed"
+    parseInductionStep StarToken restTokens = do
+      charResult <- parseSingleChar restTokens
+      restPattern <- parseBaseCase charResult.rest
+      pure $ CharStar charResult.char `A.cons` restPattern
+      -- case A.uncons restTokens of
+      -- Nothing -> Left "incomplete Star"
+      -- Just { head : h, tail : t } -> case h of
+      --   LitToken c -> do
+      --     restPattern <- parseBaseCase t
+      --     pure $ CharStar c `A.cons` restPattern
+      --   AnyToken -> do
+      --     restPattern <- parseBaseCase t
+      --     pure $ (CharStar '.') `A.cons` restPattern
+      --   _ -> Left "invalid token, cannot be embellished by Star"
+    parseInductionStep NumFixedLeftToken _ = Left "incomplete CharNumFixedInt"
 
 
     parseCharNumFixedInt :: Array Token -> Either Error { int :: String, rest :: Array Token }
