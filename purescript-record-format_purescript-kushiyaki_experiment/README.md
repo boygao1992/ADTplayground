@@ -64,7 +64,6 @@ Currently, the type-level inferences are centered around Type Class abstraction 
     - `kind Type`, uncountable
       - manually add instances to the set/dictionary
       - or by `derive instance`
-        - currently cannot `derive` instances for recursive types
         - [multirec: Generic programming for families of recursive datatypes](http://hackage.haskell.org/package/multirec)
     - `kind Symbol` and other user-defined `kind` that are regular (and can be decided by FSM)
       - we can write type-level functions to algorithmically describe the mapping between them rather than laying out all possible instances

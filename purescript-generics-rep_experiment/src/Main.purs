@@ -96,6 +96,43 @@ defaultEncodingOfTestObject = """
 {"values":[{"status":{"values":["robot"],"tag":"Case3"},"name":"wenbo","id":0}],"tag":"State"}
 """
 
+-- | Recursive Type
+
+data List a
+  = Cons a (List a)
+  | Nil
+
+derive instance genericList :: GR.Generic (List a) _
+
+gList ::
+  GR.Sum (GR.Constructor "Cons" (GR.Product (GR.Argument Int)
+                                            (GR.Argument (List Int)) -- structure of a finite-sized list is not encoded at the type level
+                                )
+         )
+         (GR.Constructor "Nil" GR.NoArguments)
+gList = GR.from (Cons 1 $ Cons 2 $ Cons 3 $ Nil)
+
+data ListF a t
+  = ConsF a t
+  | NilF
+derive instance genericListF :: GR.Generic (ListF a t) _
+
+gListF ::
+  GR.Sum
+  (GR.Constructor "ConsF"
+    (GR.Product
+      (GR.Argument Int)
+      (GR.Argument
+        (ListF Int (ListF Int (ListF Int Unit))) -- this works
+      )
+    )
+  )
+  (GR.Constructor "NilF" GR.NoArguments)
+gListF = GR.from (ConsF 1 $ ConsF 2 $ ConsF 3 $ NilF :: ListF Int Unit)
+
+instance showListF :: (Show a, Show t) => Show (ListF a t) where
+  show = genericShow
+
 main :: Effect Unit
 main = do
   case (JSON.readJSON testJSON) of
@@ -114,3 +151,6 @@ main = do
   --     logShow $ (decodeJson json) :: Either String State
 
   log $ stringify $ encodeJson testObject
+
+  logShow $ ConsF 1 $ ConsF 2 $ ConsF 3 $ NilF :: ListF Int Unit
+  -- (ConsF 1 (ConsF 2 (ConsF 3 NilF)))

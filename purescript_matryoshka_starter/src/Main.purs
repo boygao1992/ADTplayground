@@ -116,6 +116,9 @@ factorial = hylo prod countDown
 
 type List a = Mu (ListF a)
 
+someList :: Mu (ListF Int)
+someList = cons 1 $ cons 2 $ cons 3 $ cons 4 $ (nil :: List Int)
+
 main :: Effect Unit
 main = do
   let someList = cons 1 $ cons 2 $ cons 3 $ cons 4 $ (nil :: List Int)
