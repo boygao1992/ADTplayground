@@ -45,31 +45,35 @@ postType =
     }
 
 data PostAction
-  = UpdateTitle { title :: String }
-  | UpdateContent { content :: String }
+  = PostUpdateTitle { title :: String }
+  | PostUpdateContent { content :: String }
 
 type PostActionObject =
   { updateTitle :: Maybe { title :: String }
   , updateContent :: Maybe { content :: String }
   }
 
+-- reducer
 updateWithPostAction :: Post -> PostAction -> Post
 updateWithPostAction post action= case action of
-  UpdateTitle { title } ->
+  PostUpdateTitle { title } ->
     post { title = title }
-  UpdateContent { content } ->
+  PostUpdateContent { content } ->
     post { content = content }
 
+-- translator: from GraphQL (Object/Product) to PS (Union)
+-- possibly dispatch multiple independent actions (by horizontal partition on state vector)
 toPostAction :: PostActionObject -> Maybe PostAction
 toPostAction { updateTitle, updateContent } = case updateTitle, updateContent of
-  Just arg, Nothing -> Just (UpdateTitle arg)
-  Nothing, Just arg -> Just (UpdateContent arg)
+  Just arg, Nothing -> Just (PostUpdateTitle arg)
+  Nothing, Just arg -> Just (PostUpdateContent arg)
   _, _ -> Nothing
 
+-- PostAction case 1: PostUpdateTitle
 postUpdateTitleType :: G.InputObjectType (Maybe { title :: String })
 postUpdateTitleType =
   G.inputObjectType
-    "PostUpdateTitle"
+    "PostPostUpdateTitle"
     (Just "Payload for updating the title of a post.")
     { title:
         G.inputField
@@ -77,10 +81,11 @@ postUpdateTitleType =
           (Just "New title")
     }
 
+-- PostAction case 2: PostUpdateContent
 postUpdateContentType :: G.InputObjectType (Maybe { content :: String })
 postUpdateContentType =
   G.inputObjectType
-    "PostUpdateContent"
+    "PostPostUpdateContent"
     (Just "Payload for updating the content of a post.")
     { content:
         G.inputField
@@ -88,6 +93,7 @@ postUpdateContentType =
           (Just "New content")
     }
 
+-- PostAction
 postActionType :: G.InputObjectType (Maybe PostActionObject)
 postActionType =
   G.inputObjectType

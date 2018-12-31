@@ -104,6 +104,9 @@ data List a
 
 derive instance genericList :: GR.Generic (List a) _
 
+instance showList :: Show a => Show (List a) where
+  show = genericShow
+
 gList ::
   GR.Sum (GR.Constructor "Cons" (GR.Product (GR.Argument Int)
                                             (GR.Argument (List Int)) -- structure of a finite-sized list is not encoded at the type level
@@ -151,6 +154,14 @@ main = do
   --     logShow $ (decodeJson json) :: Either String State
 
   log $ stringify $ encodeJson testObject
+
+  -- logShow $ Cons 1 $ Cons 2 $ Cons 3 $ Nil :: List Int
+  -- TODO infinite loop (?)
+  -- RangeError: Maximum call stack size exceeded
+  --   at new GenericShowArgs (/purescript-generics-rep_experiment/.psci_modules/node_modules/Data.Generic.Rep.Show/index.js:12:32)
+  --   at Object.genericShowArgsArgument (/purescript-generics-rep_experiment/.psci_modules/node_modules/Data.Generic.Rep.Show/index.js:19:12)
+  --   at showList (/purescript-generics-rep_experiment/.psci_modules/node_modules/Main/index.js:260:227)
+  --   at showList (/purescript-generics-rep_experiment/.psci_modules/node_modules/Main/index.js:260:308)
 
   logShow $ ConsF 1 $ ConsF 2 $ ConsF 3 $ NilF :: ListF Int Unit
   -- (ConsF 1 (ConsF 2 (ConsF 3 NilF)))

@@ -361,6 +361,7 @@ data State = State
 ```
 is equivalent to
 ```purescript
+-- | Type
 Constructor "State" (Product (Constructor "seed" (Argument Int))
                              (Product (Constructor "value" (Argument Int))
                                       (Constructor "iteration" (Argument Int))
@@ -373,6 +374,7 @@ data Position = Position Number Number Number
 ```
 is equivalent to
 ```purescript
+-- | Type
 Constructor "Position" (Product (Argument Number)
                                 (Product (Argument Number)
                                          (Argument Number)
@@ -391,13 +393,29 @@ data Query
 ```
 is equivalent to
 ```purescript
-Sum (Inl (Constructor "Init" NoArguments))
-    (Inr (Sum (Inl (Constructor "OnKeyDown" (Argument KeyboardEvent)))
-              (Inr (Constructor "SearchInput" (Product (Argument String)
-                                                       (Argument Date)
-                                              )
-                   )
-              )
+-- | Type
+Sum 
+  (Constructor (Constructor "Init" NoArguments))
+  (Sum 
+    (Constructor "OnKeyDown" (Argument KeyboardEvent))
+    (Constructor "SearchInput" (Product (Argument String)
+                                        (Argument Date)
+                               )
+    )
+  )
+
+-- | Value
+
+-- | case 1
+Inl (Constructor NoArguments)
+
+-- | case 2
+Inr (Inl (Constructor (Argument ke)))
+
+-- | case 3
+Inr (Inr (Constructor (Product (Argument str)
+                               (Argument date)
+                      )
          )
     )
 ```
@@ -410,11 +428,22 @@ data Status
 ```
 is equivalent to
 ```purescript
-Sum (Inl (Constructor "Idle" NoArguments))
-    (Inr (Sum (Inl (Constructor "Playing" NoArguments))
-              (Inr (Constructor "Paused" NoArguments))
-         )
+-- | Type
+Sum (Constructor "Idle" NoArguments)
+    (Sum (Constructor "Playing" NoArguments)
+         (Constructor "Paused" NoArguments)
     )
+
+-- | Value
+
+-- | case 1
+Inl (Constructor NoArguments)
+
+-- | case 2
+Inr (Inl (Constructor NoArguments))
+
+-- | case 3
+Inr (Inr (Constructor NoArguments))
 ```
 
 # Reference
