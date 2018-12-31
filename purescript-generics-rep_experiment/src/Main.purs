@@ -4,12 +4,12 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Data.Argonaut.Core (stringify)
-import Data.Argonaut.Decode.Class (class DecodeJson, decodeJson)
-import Data.Argonaut.Decode.Generic.Rep
-import Data.Argonaut.Encode.Class
-import Data.Argonaut.Encode.Generic.Rep
+import Data.Argonaut.Decode.Class (class DecodeJson)
+import Data.Argonaut.Decode.Generic.Rep (genericDecodeJson)
+import Data.Argonaut.Encode.Class (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode.Generic.Rep (genericEncodeJson)
 import Data.Either (Either(..))
-import Data.Generic.Rep as GR
+import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments, Product, Sum(..), from, to)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
 import Effect (Effect)
@@ -26,18 +26,18 @@ class UntaggedSumRep rep where
 instance untaggedSumRepSum ::
   ( UntaggedSumRep a
   , UntaggedSumRep b
-  ) => UntaggedSumRep (GR.Sum a b) where
+  ) => UntaggedSumRep (Sum a b) where
     untaggedSumRep f
-        = GR.Inl <$> untaggedSumRep f
-      <|> GR.Inr <$> untaggedSumRep f
+        = Inl <$> untaggedSumRep f
+      <|> Inr <$> untaggedSumRep f
 
 instance untaggedSumRepConstructor ::
-  UntaggedSumRep a => UntaggedSumRep (GR.Constructor name a) where
-    untaggedSumRep f = GR.Constructor <$> untaggedSumRep f
+  UntaggedSumRep a => UntaggedSumRep (Constructor name a) where
+    untaggedSumRep f = Constructor <$> untaggedSumRep f
 
 instance untaggedSumRepArgument ::
-  JSON.ReadForeign a => UntaggedSumRep (GR.Argument a) where
-    untaggedSumRep f = GR.Argument <$> JSON.readImpl f
+  JSON.ReadForeign a => UntaggedSumRep (Argument a) where
+    untaggedSumRep f = Argument <$> JSON.readImpl f
 
 -- | Status, sum type
 data Status
@@ -46,7 +46,7 @@ data Status
   | Case3 String
   | Case4 String
 
-derive instance genericStatus :: GR.Generic Status _
+derive instance genericStatus :: Generic Status _
 instance eqStatus :: Eq Status where
   eq = genericEq
 instance showStatus :: Show Status where
@@ -57,7 +57,7 @@ instance encodeJsonStatus :: EncodeJson Status where
   encodeJson = genericEncodeJson
 
 instance readForeignStatus :: JSON.ReadForeign Status where
-  readImpl f = GR.to <$> untaggedSumRep f
+  readImpl f = to <$> untaggedSumRep f
 
 
 -- | State, product type
@@ -67,12 +67,12 @@ newtype State = State
   , status :: Status
   }
 
-derive instance genericState :: GR.Generic State _
+derive instance genericState :: Generic State _
 instance showState :: Show State where
   show = genericShow
 
 instance readForeignState :: JSON.ReadForeign State where
-  readImpl f = GR.to <$> untaggedSumRep f
+  readImpl f = to <$> untaggedSumRep f
 
 instance decodeJsonState :: DecodeJson State where
   decodeJson = genericDecodeJson
@@ -96,45 +96,72 @@ defaultEncodingOfTestObject = """
 {"values":[{"status":{"values":["robot"],"tag":"Case3"},"name":"wenbo","id":0}],"tag":"State"}
 """
 
+-- | Record
+
+newtype Record1 = Record1
+  { space :: String
+  , monkey :: Int
+  }
+derive instance genericRecord1 :: Generic Record1 _
+
+gRecord1 :: Constructor "Record1"
+  (Argument
+     { space :: String
+     , monkey :: Int
+     }
+  )
+gRecord1 = from (Record1 { space : "", monkey : 0 })
+
 -- | Recursive Type
 
 data List a
   = Cons a (List a)
   | Nil
 
-derive instance genericList :: GR.Generic (List a) _
+derive instance genericList :: Generic (List a) _
 
 instance showList :: Show a => Show (List a) where
   show = genericShow
 
 gList ::
-  GR.Sum (GR.Constructor "Cons" (GR.Product (GR.Argument Int)
-                                            (GR.Argument (List Int)) -- structure of a finite-sized list is not encoded at the type level
+  Sum (Constructor "Cons" (Product (Argument Int)
+                                            (Argument (List Int)) -- structure of a finite-sized list is not encoded at the type level
                                 )
          )
-         (GR.Constructor "Nil" GR.NoArguments)
-gList = GR.from (Cons 1 $ Cons 2 $ Cons 3 $ Nil)
+         (Constructor "Nil" NoArguments)
+gList = from (Cons 1 $ Cons 2 $ Cons 3 $ Nil)
 
 data ListF a t
   = ConsF a t
   | NilF
-derive instance genericListF :: GR.Generic (ListF a t) _
+derive instance genericListF :: Generic (ListF a t) _
 
 gListF ::
-  GR.Sum
-  (GR.Constructor "ConsF"
-    (GR.Product
-      (GR.Argument Int)
-      (GR.Argument
+  Sum
+  (Constructor "ConsF"
+    (Product
+      (Argument Int)
+      (Argument
         (ListF Int (ListF Int (ListF Int Unit))) -- this works
       )
     )
   )
-  (GR.Constructor "NilF" GR.NoArguments)
-gListF = GR.from (ConsF 1 $ ConsF 2 $ ConsF 3 $ NilF :: ListF Int Unit)
+  (Constructor "NilF" NoArguments)
+gListF = from (ConsF 1 $ ConsF 2 $ ConsF 3 $ NilF :: ListF Int Unit)
 
 instance showListF :: (Show a, Show t) => Show (ListF a t) where
   show = genericShow
+
+-- | Derive Static Value
+class StaticValue a where
+  value :: a
+
+instance staticValueInt :: StaticValue Int where
+  value = 0
+instance staticValueUnit :: StaticValue Unit where
+  value = unit
+instance staticValueString :: StaticValue String where
+  value = "wenbo"
 
 main :: Effect Unit
 main = do

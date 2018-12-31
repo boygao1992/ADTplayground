@@ -362,12 +362,15 @@ data State = State
 is equivalent to
 ```purescript
 -- | Type
-Constructor "State" (Product (Constructor "seed" (Argument Int))
-                             (Product (Constructor "value" (Argument Int))
-                                      (Constructor "iteration" (Argument Int))
-                             )
+Constructor "State" (Argument
+                      Record
+                        ( seed :: Int
+                        , value :: Int
+                        , iteration :: Int
+                        )
                     )
 ```
+- `# Type` can be further destructured by `Prim.Row (class Cons)`
 
 ```purescript
 data Position = Position Number Number Number
