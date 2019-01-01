@@ -33,7 +33,7 @@ class ReverseSymbol (i :: Symbol) (o :: Symbol) | i -> o
 
 instance reverseSymbolEmpty :: ReverseSymbol "" ""
 else instance reverseSymbolOtherwise ::
-  (Symbol.Cons h t i -- h t <- i
+  ( Symbol.Cons h t i -- h t <- i
   , ReverseSymbolImpl h t o -- h t -> o
   ) => ReverseSymbol i o
 

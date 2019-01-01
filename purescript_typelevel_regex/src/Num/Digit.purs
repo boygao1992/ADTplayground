@@ -5,6 +5,7 @@ import Prelude
 import Type.Data.Symbol (SProxy)
 import Type.Data.Boolean (BProxy(..))
 import Type.Data.Boolean as Boolean
+import Type.Data.Ordering as Ord
 
 -- | Type-level Digit
 
@@ -38,6 +39,112 @@ else instance notDigit :: IsDigitPred d Boolean.False
 isDigitPred :: forall d b. IsDigitPred d b => SProxy d -> BProxy b
 isDigitPred _ = BProxy :: BProxy b
 
+-- | Compare
+class Compare (x :: Symbol) (y :: Symbol) (o :: Ord.Ordering) | x y -> o
+
+instance compare00 :: Compare "0" "0" Ord.EQ
+instance compare01 :: Compare "0" "1" Ord.LT
+instance compare02 :: Compare "0" "2" Ord.LT
+instance compare03 :: Compare "0" "3" Ord.LT
+instance compare04 :: Compare "0" "4" Ord.LT
+instance compare05 :: Compare "0" "5" Ord.LT
+instance compare06 :: Compare "0" "6" Ord.LT
+instance compare07 :: Compare "0" "7" Ord.LT
+instance compare08 :: Compare "0" "8" Ord.LT
+instance compare09 :: Compare "0" "9" Ord.LT
+instance compare10 :: Compare "1" "0" Ord.GT
+instance compare11 :: Compare "1" "1" Ord.EQ
+instance compare12 :: Compare "1" "2" Ord.LT
+instance compare13 :: Compare "1" "3" Ord.LT
+instance compare14 :: Compare "1" "4" Ord.LT
+instance compare15 :: Compare "1" "5" Ord.LT
+instance compare16 :: Compare "1" "6" Ord.LT
+instance compare17 :: Compare "1" "7" Ord.LT
+instance compare18 :: Compare "1" "8" Ord.LT
+instance compare19 :: Compare "1" "9" Ord.LT
+instance compare20 :: Compare "2" "0" Ord.GT
+instance compare21 :: Compare "2" "1" Ord.GT
+instance compare22 :: Compare "2" "2" Ord.EQ
+instance compare23 :: Compare "2" "3" Ord.LT
+instance compare24 :: Compare "2" "4" Ord.LT
+instance compare25 :: Compare "2" "5" Ord.LT
+instance compare26 :: Compare "2" "6" Ord.LT
+instance compare27 :: Compare "2" "7" Ord.LT
+instance compare28 :: Compare "2" "8" Ord.LT
+instance compare29 :: Compare "2" "9" Ord.LT
+instance compare30 :: Compare "3" "0" Ord.GT
+instance compare31 :: Compare "3" "1" Ord.GT
+instance compare32 :: Compare "3" "2" Ord.GT
+instance compare33 :: Compare "3" "3" Ord.EQ
+instance compare34 :: Compare "3" "4" Ord.LT
+instance compare35 :: Compare "3" "5" Ord.LT
+instance compare36 :: Compare "3" "6" Ord.LT
+instance compare37 :: Compare "3" "7" Ord.LT
+instance compare38 :: Compare "3" "8" Ord.LT
+instance compare39 :: Compare "3" "9" Ord.LT
+instance compare40 :: Compare "4" "0" Ord.GT
+instance compare41 :: Compare "4" "1" Ord.GT
+instance compare42 :: Compare "4" "2" Ord.GT
+instance compare43 :: Compare "4" "3" Ord.GT
+instance compare44 :: Compare "4" "4" Ord.EQ
+instance compare45 :: Compare "4" "5" Ord.LT
+instance compare46 :: Compare "4" "6" Ord.LT
+instance compare47 :: Compare "4" "7" Ord.LT
+instance compare48 :: Compare "4" "8" Ord.LT
+instance compare49 :: Compare "4" "9" Ord.LT
+instance compare50 :: Compare "5" "0" Ord.GT
+instance compare51 :: Compare "5" "1" Ord.GT
+instance compare52 :: Compare "5" "2" Ord.GT
+instance compare53 :: Compare "5" "3" Ord.GT
+instance compare54 :: Compare "5" "4" Ord.GT
+instance compare55 :: Compare "5" "5" Ord.EQ
+instance compare56 :: Compare "5" "6" Ord.LT
+instance compare57 :: Compare "5" "7" Ord.LT
+instance compare58 :: Compare "5" "8" Ord.LT
+instance compare59 :: Compare "5" "9" Ord.LT
+instance compare60 :: Compare "6" "0" Ord.GT
+instance compare61 :: Compare "6" "1" Ord.GT
+instance compare62 :: Compare "6" "2" Ord.GT
+instance compare63 :: Compare "6" "3" Ord.GT
+instance compare64 :: Compare "6" "4" Ord.GT
+instance compare65 :: Compare "6" "5" Ord.GT
+instance compare66 :: Compare "6" "6" Ord.EQ
+instance compare67 :: Compare "6" "7" Ord.LT
+instance compare68 :: Compare "6" "8" Ord.LT
+instance compare69 :: Compare "6" "9" Ord.LT
+instance compare70 :: Compare "7" "0" Ord.GT
+instance compare71 :: Compare "7" "1" Ord.GT
+instance compare72 :: Compare "7" "2" Ord.GT
+instance compare73 :: Compare "7" "3" Ord.GT
+instance compare74 :: Compare "7" "4" Ord.GT
+instance compare75 :: Compare "7" "5" Ord.GT
+instance compare76 :: Compare "7" "6" Ord.GT
+instance compare77 :: Compare "7" "7" Ord.EQ
+instance compare78 :: Compare "7" "8" Ord.LT
+instance compare79 :: Compare "7" "9" Ord.LT
+instance compare80 :: Compare "8" "0" Ord.GT
+instance compare81 :: Compare "8" "1" Ord.GT
+instance compare82 :: Compare "8" "2" Ord.GT
+instance compare83 :: Compare "8" "3" Ord.GT
+instance compare84 :: Compare "8" "4" Ord.GT
+instance compare85 :: Compare "8" "5" Ord.GT
+instance compare86 :: Compare "8" "6" Ord.GT
+instance compare87 :: Compare "8" "7" Ord.GT
+instance compare88 :: Compare "8" "8" Ord.EQ
+instance compare89 :: Compare "8" "9" Ord.LT
+instance compare90 :: Compare "9" "0" Ord.GT
+instance compare91 :: Compare "9" "1" Ord.GT
+instance compare92 :: Compare "9" "2" Ord.GT
+instance compare93 :: Compare "9" "3" Ord.GT
+instance compare94 :: Compare "9" "4" Ord.GT
+instance compare95 :: Compare "9" "5" Ord.GT
+instance compare96 :: Compare "9" "6" Ord.GT
+instance compare97 :: Compare "9" "7" Ord.GT
+instance compare98 :: Compare "9" "8" Ord.GT
+instance compare99 :: Compare "9" "9" Ord.EQ
+
+
+
 -- | Add
 
 class Add (x :: Symbol) (y :: Symbol) (carry :: Symbol) (z :: Symbol) | x y -> carry z
@@ -52,7 +159,6 @@ instance add06 :: Add "0" "6" "0" "6"
 instance add07 :: Add "0" "7" "0" "7"
 instance add08 :: Add "0" "8" "0" "8"
 instance add09 :: Add "0" "9" "0" "9"
-
 instance add10 :: Add "1" "0" "0" "1"
 instance add11 :: Add "1" "1" "0" "2"
 instance add12 :: Add "1" "2" "0" "3"
@@ -63,7 +169,6 @@ instance add16 :: Add "1" "6" "0" "7"
 instance add17 :: Add "1" "7" "0" "8"
 instance add18 :: Add "1" "8" "0" "9"
 instance add19 :: Add "1" "9" "1" "0"
-
 instance add20 :: Add "2" "0" "0" "2"
 instance add21 :: Add "2" "1" "0" "3"
 instance add22 :: Add "2" "2" "0" "4"
@@ -74,7 +179,6 @@ instance add26 :: Add "2" "6" "0" "8"
 instance add27 :: Add "2" "7" "0" "9"
 instance add28 :: Add "2" "8" "1" "0"
 instance add29 :: Add "2" "9" "1" "1"
-
 instance add30 :: Add "3" "0" "0" "3"
 instance add31 :: Add "3" "1" "0" "4"
 instance add32 :: Add "3" "2" "0" "5"
@@ -85,7 +189,6 @@ instance add36 :: Add "3" "6" "0" "9"
 instance add37 :: Add "3" "7" "1" "0"
 instance add38 :: Add "3" "8" "1" "1"
 instance add39 :: Add "3" "9" "1" "2"
-
 instance add40 :: Add "4" "0" "0" "4"
 instance add41 :: Add "4" "1" "0" "5"
 instance add42 :: Add "4" "2" "0" "6"
@@ -96,7 +199,6 @@ instance add46 :: Add "4" "6" "1" "0"
 instance add47 :: Add "4" "7" "1" "1"
 instance add48 :: Add "4" "8" "1" "2"
 instance add49 :: Add "4" "9" "1" "3"
-
 instance add50 :: Add "5" "0" "0" "5"
 instance add51 :: Add "5" "1" "0" "6"
 instance add52 :: Add "5" "2" "0" "7"
@@ -107,7 +209,6 @@ instance add56 :: Add "5" "6" "1" "1"
 instance add57 :: Add "5" "7" "1" "2"
 instance add58 :: Add "5" "8" "1" "3"
 instance add59 :: Add "5" "9" "1" "4"
-
 instance add60 :: Add "6" "0" "0" "6"
 instance add61 :: Add "6" "1" "0" "7"
 instance add62 :: Add "6" "2" "0" "8"
@@ -118,7 +219,6 @@ instance add66 :: Add "6" "6" "1" "2"
 instance add67 :: Add "6" "7" "1" "3"
 instance add68 :: Add "6" "8" "1" "4"
 instance add69 :: Add "6" "9" "1" "5"
-
 instance add70 :: Add "7" "0" "0" "7"
 instance add71 :: Add "7" "1" "0" "8"
 instance add72 :: Add "7" "2" "0" "9"
@@ -129,7 +229,6 @@ instance add76 :: Add "7" "6" "1" "3"
 instance add77 :: Add "7" "7" "1" "4"
 instance add78 :: Add "7" "8" "1" "5"
 instance add79 :: Add "7" "9" "1" "6"
-
 instance add80 :: Add "8" "0" "0" "8"
 instance add81 :: Add "8" "1" "0" "9"
 instance add82 :: Add "8" "2" "1" "0"
@@ -140,7 +239,6 @@ instance add86 :: Add "8" "6" "1" "4"
 instance add87 :: Add "8" "7" "1" "5"
 instance add88 :: Add "8" "8" "1" "6"
 instance add89 :: Add "8" "9" "1" "7"
-
 instance add90 :: Add "9" "0" "0" "9"
 instance add91 :: Add "9" "1" "1" "0"
 instance add92 :: Add "9" "2" "1" "1"
