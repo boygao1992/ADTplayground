@@ -1,9 +1,12 @@
 module Symbol.Regex where
 
+import Num.Digit as Digit
+import Num.Int as Int
+import Prim.TypeError (class Fail, Text)
+import Symbol.Utils (class ReverseSymbol)
+import Type.Data.Boolean as Bool
 import Type.Data.Symbol (SProxy(..))
 import Type.Data.Symbol as Symbol
-import Symbol.Utils (class ReverseSymbol)
-import Prim.TypeError (class Fail, Text)
 
 -- kind Token
 -- toToken :: Char -> Token
@@ -100,9 +103,11 @@ else instance parseCharNumFixedIntSecondCharNonEmpty ::
 class ParseCharNumFixedIntDispatch (h :: Symbol) (t_h :: Symbol) (t_t :: Symbol) (int :: Symbol) (rest :: Symbol) | h t_h t_t -> int rest
 
 instance parseCharNumFixedIntDispatchBaseCase ::
-  ParseCharNumFixedIntDispatch h "{" t_t h t_t
+  ( Digit.IsDigit h
+  ) => ParseCharNumFixedIntDispatch h "{" t_t h t_t
 else instance parseCharNumFixedIntDispatchInductionStep ::
   ( ParseCharNumFixedIntImpl t_h t_t restInt rest
+  , Digit.IsDigit h
   , Symbol.Append h restInt int
   ) => ParseCharNumFixedIntDispatch h t_h t_t int rest
 
@@ -141,5 +146,119 @@ parse :: forall i o. Parse i o => SProxy i -> PProxy o
 parse _ = PProxy :: PProxy o
 
 -- Test
--- parseExample1 :: PProxy (PCons (CharNumMaybe "d") (PCons (CharStar ".") (PCons (CharStar "c") (PCons (CharNumFixed "b" "3") (PCons (CharNumFixed "a" "1") PNil)))))
--- parseExample1 = parse (SProxy :: SProxy "ab{3}c*.*d?")
+-- parseExample1 :: PProxy (PCons (CharNumMaybe "d") (PCons (CharStar ".") (PCons (CharStar "c") (PCons (CharNumFixed "b" "321") (PCons (CharNumFixed "a" "1") PNil)))))
+-- parseExample1 = parse (SProxy :: SProxy "ab{123}c*.*d?")
+
+class Recognize (pl :: PList) (str :: Symbol) (b :: Bool.Boolean) | pl str -> b
+
+instance recoginzeImpl ::
+  ( ReverseSymbol str str'
+  , RecognizeReversed pl str' b
+  ) => Recognize pl str b
+
+class RecognizeReversed (pl :: PList) (str :: Symbol) (b :: Bool.Boolean) | pl str -> b
+
+instance recognizeReversedBaseCase1 ::
+  RecognizeReversed PNil "" Bool.True
+else instance recognizeReversedBaseCase2 ::
+  RecognizeReversed PNil str Bool.False
+else instance recognizeReversedInductionStep ::
+  ( RecognizeReversedDispatch p_h p_t str b
+  ) => RecognizeReversed (PCons p_h p_t) str b
+
+class RecognizeReversedDispatch (p_h :: Pattern) (p_t :: PList) (s :: Symbol) (b :: Bool.Boolean) | p_h p_t s -> b
+
+instance recognizeReversedDispatchCharNumFixed ::
+  ( RecognizeCharNumFixed char int p_t s b
+  ) => RecognizeReversedDispatch (CharNumFixed char int) p_t s b
+else instance recognizeReversedDispatchCharNumMaybe ::
+  ( RecognizeCharNumMaybe char p_t s b
+  ) => RecognizeReversedDispatch (CharNumMaybe char) p_t s b
+else instance recognizeReversedDispatchCharNumPositive ::
+  ( RecognizeCharNumPositive char p_t s b
+  ) => RecognizeReversedDispatch (CharNumPositive char) p_t s b
+else instance recognizeReversedDispatchCharStar ::
+  ( RecognizeCharStar char p_t s b
+  ) => RecognizeReversedDispatch (CharStar char) p_t s b
+
+class RecognizeCharNumFixed (char :: Symbol) (int_reversed :: Symbol) (p_t :: PList) (s :: Symbol) (b :: Bool.Boolean) | char int_reversed p_t s -> b
+
+instance recognizeCharNumFixedImpl ::
+  ( ReverseSymbol int_inversed int
+  , Int.Normalize int int'
+  , RecognizeCharNumFixedBaseCase char int' p_t s b
+  ) => RecognizeCharNumFixed char int_inversed p_t s b
+
+class RecognizeCharNumFixedBaseCase (char :: Symbol) (int :: Symbol) (p_t :: PList) (s :: Symbol) (b :: Bool.Boolean) | char int p_t s -> b
+
+instance recognizeCharNumFixedBaseCaseZero ::
+  ( RecognizeReversed p_t s b
+  ) => RecognizeCharNumFixedBaseCase char "0" p_t s b
+else instance recognizeCharNumFixedBaseCasePositiveEmpty ::
+  RecognizeCharNumFixedBaseCase char int p_t "" Bool.False
+else instance recognizeCharNumFixedBaseCasePositiveNonEmpty ::
+  ( Symbol.Cons s_h s_t s -- s_h s_t <- s
+  , RecognizeCharNumFixedInductionStep char int p_t s_h s_t b
+  ) =>  RecognizeCharNumFixedBaseCase char int p_t s b
+
+class RecognizeCharNumFixedInductionStep (char :: Symbol) (int :: Symbol) (p_t :: PList) (s_h :: Symbol) (s_t :: Symbol) (b :: Bool.Boolean) | char int p_t s_h s_t -> b
+
+instance recognizeCharNumFixedInductionStepAnyToken ::
+  ( Int.Pred int int_pred
+  , RecognizeCharNumFixedBaseCase "." int_pred p_t s_t b
+  ) => RecognizeCharNumFixedInductionStep "." int p_t s_h s_t b
+else instance recognizeCharNumFixedInductionStepLit ::
+  ( Symbol.Equals c s_h isEqual
+  , RecognizeCharNumFixedInductionStepLit isEqual c int p_t s_h s_t b
+  ) => RecognizeCharNumFixedInductionStep c int p_t s_h s_t b
+
+class RecognizeCharNumFixedInductionStepLit (isEqual :: Bool.Boolean) (char :: Symbol) (int :: Symbol) (p_t :: PList) (s_h :: Symbol) (s_t :: Symbol) (b :: Bool.Boolean) | isEqual char int p_t s_h s_t -> b
+
+instance recognizeCharNumFixedInductionStepLitNotEqual ::
+  RecognizeCharNumFixedInductionStepLit Bool.False char int p_t s_h s_t Bool.False
+else instance recognizeCharNumFixedInductionStepLitEqual ::
+  ( Int.Pred int int_pred
+  , RecognizeCharNumFixedBaseCase char int_pred p_t s_t b
+  ) => RecognizeCharNumFixedInductionStepLit Bool.True char int p_t s_h s_t b
+
+class RecognizeCharNumMaybe (char :: Symbol) (p_t :: PList) (s :: Symbol) (b :: Bool.Boolean) | char p_t s -> b
+
+instance recoginzeCharNumMaybeImpl ::
+  ( RecognizeReversed p_t s b1
+  , RecognizeCharNumMaybeDispatch b1 char p_t s b
+  ) => RecognizeCharNumMaybe char p_t s b
+
+class RecognizeCharNumMaybeDispatch (b1 :: Bool.Boolean) (char :: Symbol) (p_t :: PList) (s :: Symbol) (b :: Bool.Boolean) | b1 char p_t s -> b
+
+instance recognizeCharNumMaybeDispatchTrue ::
+  RecognizeCharNumMaybeDispatch Bool.True char p_t s Bool.True
+else instance recognizeCharNumMaybeDispatchFalseEmpty ::
+  RecognizeCharNumMaybeDispatch Bool.False char p_t "" Bool.False
+else instance recognizeCharNumMaybeDispatchFalseNonEmpty ::
+  ( Symbol.Cons s_h s_t s -- s_h s_t <- s
+  , RecognizeCharNumMaybeInductionStep char p_t s_h s_t b
+  ) => RecognizeCharNumMaybeDispatch Bool.False char p_t s b
+
+class RecognizeCharNumMaybeInductionStep (char :: Symbol) (p_t :: PList) (s_h :: Symbol) (s_t :: Symbol) (b :: Bool.Boolean) | char p_t s_h s_t -> b
+
+instance recognizeCharNumMaybeInductionStepAnyToken ::
+  ( RecognizeReversed p_t s_t b
+  ) => RecognizeCharNumMaybeInductionStep "." p_t s_h s_t b
+else instance recognizeCharNumMaybeInductionStepLit ::
+  ( Symbol.Equals c s_h isEqual
+  , RecognizeCharNumMaybeInductionStepLit isEqual char p_t s_h s_t b
+  ) => RecognizeCharNumMaybeInductionStep c p_t s_h s_t b
+
+class RecognizeCharNumMaybeInductionStepLit (isEqual :: Bool.Boolean) (char :: Symbol) (p_t :: PList) (s_h :: Symbol) (s_t :: Symbol) (b :: Bool.Boolean) | isEqual char p_t s_h s_t -> b
+
+instance recognizeCharNumMaybeInductionStepLitFalse ::
+  RecognizeCharNumMaybeInductionStepLit Bool.False char p_t s_h s_t Bool.False
+else instance recognizeCharNumMaybeInductionStepLitTrue ::
+  ( RecognizeReversed p_t s_t b
+  ) => RecognizeCharNumMaybeInductionStepLit Bool.True char p_t s_h s_t b
+
+class RecognizeCharNumPositive (char :: Symbol) (p_t :: PList) (s :: Symbol) (b :: Bool.Boolean) | char p_t s -> b
+
+class RecognizeCharNumPositiveInductionStep (char :: Symbol) (p_t :: PList) (s_h :: Symbol) (s_t :: Symbol) (b :: Bool.Boolean) | char p_t s_h s_t -> b
+
+class RecognizeCharStar (char :: Symbol) (p_t :: PList) (s :: Symbol) (b :: Bool.Boolean) | char p_t s -> b

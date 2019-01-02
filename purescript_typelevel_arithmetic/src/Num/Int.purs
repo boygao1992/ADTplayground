@@ -137,10 +137,10 @@ inverse _ = SProxy :: SProxy o
 class Compare (x :: Symbol) (y :: Symbol) (o :: Ord.Ordering) | x y -> o
 
 instance compareImpl ::
-  ( Normalize x x'
+  ( IsInt x
+  , IsInt y
+  , Normalize x x'
   , Normalize y y'
-  , IsInt x'
-  , IsInt y'
   , IsNegativePred x' x_isNeg
   , IsNegativePred y' y_isNeg
   , CompareDispatch x_isNeg y_isNeg x' y' o
@@ -209,10 +209,10 @@ compare _ _ = OProxy :: OProxy o
 class Add (x :: Symbol) (y :: Symbol) (z :: Symbol) | x y -> z
 
 instance addMatchSign ::
-  ( Normalize x x'
+  ( IsInt x
+  , IsInt y
+  , Normalize x x'
   , Normalize y y'
-  , IsInt x'
-  , IsInt y'
   , IsNegativePred x' x_isNeg
   , IsNegativePred y' y_isNeg
   , AddDispatch x_isNeg y_isNeg x' y' z'
@@ -254,10 +254,10 @@ add _ _ = SProxy :: SProxy z
 class Minus (x :: Symbol) (y :: Symbol) (z :: Symbol) | x y -> z
 
 instance minusMatchSign ::
-  ( Normalize x x'
+  ( IsInt x
+  , IsInt y
+  , Normalize x x'
   , Normalize y y'
-  , IsInt x'
-  , IsInt y'
   , IsNegativePred x' x_isNeg
   , IsNegativePred y' y_isNeg
   , MinusDispatch x_isNeg y_isNeg x' y' z'
@@ -429,3 +429,17 @@ normalize _ = SProxy :: SProxy o
 -- normalizeExample5 :: SProxy "1"
 -- normalizeExample5 = normalize (SProxy :: SProxy "+0000001")
 
+-- | Pred
+class Pred (num :: Symbol) (pred :: Symbol) | num -> pred
+
+instance predAll ::
+  ( IsInt num
+  , Minus num "1" pred
+  ) => Pred num pred
+
+
+pred :: forall i o. Pred i o => SProxy i -> SProxy o
+pred _ = SProxy :: SProxy o
+
+-- predExample1 :: SProxy "-1"
+-- predExample1 = pred (SProxy :: SProxy "0")
