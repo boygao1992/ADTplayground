@@ -4,6 +4,7 @@ import Num.Digit as Digit
 import Num.Int as Int
 import Prim.TypeError (class Fail, Text)
 import Symbol.Utils (class ReverseSymbol)
+import Type.Data.Boolean (BProxy(..), True, False)
 import Type.Data.Boolean as Bool
 import Type.Data.Symbol (SProxy(..))
 import Type.Data.Symbol as Symbol
@@ -259,6 +260,70 @@ else instance recognizeCharNumMaybeInductionStepLitTrue ::
 
 class RecognizeCharNumPositive (char :: Symbol) (p_t :: PList) (s :: Symbol) (b :: Bool.Boolean) | char p_t s -> b
 
-class RecognizeCharNumPositiveInductionStep (char :: Symbol) (p_t :: PList) (s_h :: Symbol) (s_t :: Symbol) (b :: Bool.Boolean) | char p_t s_h s_t -> b
+instance recognizeCharNumPositiveEmpty ::
+  ( RecognizeReversed p_t s b
+  ) => RecognizeCharNumPositive char p_t "" b
+else instance recognizeCharNumPositiveNonEmpty ::
+  ( Symbol.Cons s_h s_t s -- s_h s_t <- s
+  , RecognizeCharNumPositiveDispatch char p_t s_h s_t b
+  ) => RecognizeCharNumPositive char p_t s b
+
+class RecognizeCharNumPositiveDispatch (char :: Symbol) (p_t :: PList) (s_h :: Symbol) (s_t :: Symbol) (b :: Bool.Boolean) | char p_t s_h s_t -> b
+
+instance recognizeCharNumPositiveDispatchAnyToken ::
+  ( RecognizeReversed p_t s_t b1
+  , RecognizeCharNumPositiveAnyToken b1 p_t s_t b
+  ) => RecognizeCharNumPositiveDispatch "." p_t s_h s_t b
+else instance recognizeCharNumPositiveDispatchLit ::
+  ( Symbol.Equals c s_h b1
+  , RecognizeCharNumPositiveLit b1 c p_t s_t b
+  ) => RecognizeCharNumPositiveDispatch c p_t s_h s_t b
+
+class RecognizeCharNumPositiveAnyToken (b1 :: Bool.Boolean) (p_t :: PList) (s_t :: Symbol) (b :: Bool.Boolean) | b1 p_t s_t -> b
+
+instance recognizeCharNumPositiveAnyTokenTrue ::
+  RecognizeCharNumPositiveAnyToken Bool.True p_t s_t Bool.True
+else instance recognizeCharNumPositiveAnyTokenFalse ::
+  ( RecognizeCharNumPositive "." p_t s_t b
+  ) => RecognizeCharNumPositiveAnyToken Bool.False p_t s_t b
+
+class RecognizeCharNumPositiveLit (b1 :: Bool.Boolean) (c :: Symbol) (p_t :: PList) (s_t :: Symbol) (b :: Bool.Boolean) | b1 c p_t s_t -> b
+
+instance recognizeCharNumPositiveLitFalse ::
+  RecognizeCharNumPositiveLit Bool.False c p_t s_t Bool.False
+else instance recognizeCharNumPositiveLitTrue ::
+  ( RecognizeReversed p_t s_t b2
+  , RecognizeCharNumPositiveLitDispatch b2 c p_t s_t b
+  ) => RecognizeCharNumPositiveLit Bool.True c p_t s_t b
+
+class RecognizeCharNumPositiveLitDispatch (b2 :: Bool.Boolean) (c :: Symbol) (p_t :: PList) (s_t :: Symbol) (b :: Bool.Boolean) | b2 c p_t s_t -> b
+
+instance recognizeCharNumPositiveLitDispatchTrue ::
+  RecognizeCharNumPositiveLitDispatch Bool.True c p_t s_t Bool.True
+else instance recognizeCharNumPositiveLitDispatchFalse ::
+  ( RecognizeCharNumPositive c p_t s_t b
+  ) => RecognizeCharNumPositiveLitDispatch Bool.False c p_t s_t b
+
 
 class RecognizeCharStar (char :: Symbol) (p_t :: PList) (s :: Symbol) (b :: Bool.Boolean) | char p_t s -> b
+
+instance recognizeCharStarImpl ::
+  ( RecognizeReversed p_t s b1
+  , RecognizeCharStarDispatch b1 c p_t s b
+  ) => RecognizeCharStar c p_t s b
+
+class RecognizeCharStarDispatch (b1 :: Bool.Boolean) (c :: Symbol) (p_t :: PList) (s :: Symbol) (b :: Bool.Boolean) | b1 c p_t s -> b
+
+instance recognizeCharStarDispatchTrue ::
+  RecognizeCharStarDispatch Bool.True c p_t s Bool.True
+else instance recognizeCharStarDispatchFalse ::
+  ( RecognizeCharNumPositive c p_t s b
+  ) => RecognizeCharStarDispatch Bool.False c p_t s b
+
+recognize :: forall regex str pl b. Parse regex pl => Recognize pl str b => SProxy regex -> SProxy str -> BProxy b
+recognize _ _ = BProxy :: BProxy b
+
+recognizeExample0 :: BProxy True
+recognizeExample0 = recognize
+                    (SProxy :: SProxy "aa?bc*de{3}f.?g")
+                    (SProxy :: SProxy "abdeeefg")
