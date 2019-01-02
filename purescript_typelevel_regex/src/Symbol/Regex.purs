@@ -323,7 +323,8 @@ else instance recognizeCharStarDispatchFalse ::
 recognize :: forall regex str pl b. Parse regex pl => Recognize pl str b => SProxy regex -> SProxy str -> BProxy b
 recognize _ _ = BProxy :: BProxy b
 
-recognizeExample0 :: BProxy True
-recognizeExample0 = recognize
-                    (SProxy :: SProxy "aa?bc*de{3}f.?g")
-                    (SProxy :: SProxy "abdeeefg")
+-- Test
+-- recognizeExample0 :: BProxy True
+-- recognizeExample0 = recognize
+--                     (SProxy :: SProxy "aa?bc*de{3}f.?g")
+--                     (SProxy :: SProxy "abdeeefg")

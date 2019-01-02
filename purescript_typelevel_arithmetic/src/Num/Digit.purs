@@ -2,7 +2,7 @@ module Num.Digit where
 
 import Type.Data.Symbol (SProxy)
 import Type.Data.Boolean (BProxy(..))
-import Type.Data.Boolean as Boolean
+import Type.Data.Boolean as Bool
 import Type.Data.Ordering as Ord
 
 -- | Type-level Digit
@@ -20,19 +20,19 @@ instance numberSeven :: IsDigit "7"
 instance numberEight :: IsDigit "8"
 instance numberNine :: IsDigit "9"
 
-class IsDigitPred (d :: Symbol) (b :: Boolean.Boolean) | d -> b
+class IsDigitPred (d :: Symbol) (b :: Bool.Boolean) | d -> b
 
-instance isDigitZero :: IsDigitPred "0" Boolean.True
-else instance isDigitOne :: IsDigitPred "1" Boolean.True
-else instance isDigitTwo :: IsDigitPred "2" Boolean.True
-else instance isDigitThree :: IsDigitPred "3" Boolean.True
-else instance isDigitFour :: IsDigitPred "4" Boolean.True
-else instance isDigitFive :: IsDigitPred "5" Boolean.True
-else instance isDigitSix :: IsDigitPred "6" Boolean.True
-else instance isDigitSeven :: IsDigitPred "7" Boolean.True
-else instance isDigitEight :: IsDigitPred "8" Boolean.True
-else instance isDigitNine :: IsDigitPred "9" Boolean.True
-else instance notDigit :: IsDigitPred d Boolean.False
+instance isDigitZero :: IsDigitPred "0" Bool.True
+else instance isDigitOne :: IsDigitPred "1" Bool.True
+else instance isDigitTwo :: IsDigitPred "2" Bool.True
+else instance isDigitThree :: IsDigitPred "3" Bool.True
+else instance isDigitFour :: IsDigitPred "4" Bool.True
+else instance isDigitFive :: IsDigitPred "5" Bool.True
+else instance isDigitSix :: IsDigitPred "6" Bool.True
+else instance isDigitSeven :: IsDigitPred "7" Bool.True
+else instance isDigitEight :: IsDigitPred "8" Bool.True
+else instance isDigitNine :: IsDigitPred "9" Bool.True
+else instance notDigit :: IsDigitPred d Bool.False
 
 isDigitPred :: forall d b. IsDigitPred d b => SProxy d -> BProxy b
 isDigitPred _ = BProxy :: BProxy b

@@ -2,7 +2,7 @@ module Num.Nat where
 
 import Num.Digit (class IsDigit, class IsDigitPred, class Add) as Digit
 import Type.Data.Boolean (BProxy(..))
-import Type.Data.Boolean as Boolean
+import Type.Data.Boolean as Bool
 import Type.Data.Symbol (SProxy(..))
 import Type.Data.Symbol as Symbol
 import Symbol.Utils (class ReverseSymbol)
@@ -28,15 +28,15 @@ else instance isNatImplInductionStep ::
   ) => IsNatImpl h t
 
 -- | IsNatPred
-class IsNatPred (n :: Symbol) (b :: Boolean.Boolean) | n -> b
+class IsNatPred (n :: Symbol) (b :: Bool.Boolean) | n -> b
 
-instance isNatPredEmpty :: IsNatPred "" Boolean.False
+instance isNatPredEmpty :: IsNatPred "" Bool.False
 else instance isNatPredOtherwise ::
   ( Symbol.Cons h t n
   , IsNatPredImpl h t b
   ) => IsNatPred n b
 
-class IsNatPredImpl (h :: Symbol) (t :: Symbol) (b :: Boolean.Boolean) | h t -> b
+class IsNatPredImpl (h :: Symbol) (t :: Symbol) (b :: Bool.Boolean) | h t -> b
 
 instance isNatImplPredBaseCase ::
   ( Digit.IsDigitPred h b
@@ -44,7 +44,7 @@ instance isNatImplPredBaseCase ::
 else instance isNatImplPredInductionStep ::
   ( Digit.IsDigitPred h b1
   , IsNatPred t b2
-  , Boolean.And b1 b2 b
+  , Bool.And b1 b2 b
   ) => IsNatPredImpl h t b
 
 isNatPred :: forall n b. IsNatPred n b => SProxy n -> BProxy b
