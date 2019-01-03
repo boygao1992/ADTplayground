@@ -62,13 +62,110 @@ recognizeExample1 = recognize
 
 ## Type-level Programming Miscellanies
 
-### mapping from data-type to kind
+### Mapping from Data-Type to Kind
 
 #### Product
 
+```purescript
+-- | Value Level
+--   Pattern :: kind Type
+                                 -- Char :: kind Type
+                                         -- Int :: kind Type
+                                              --   Pattern :: kind Type
+                 -- CharNumFixed :: Char -> Int -> Pattern
+data Pattern = CharNumFixed Char Int
+```
+- `CharNumFixed` is a data constructor
+  - whose instances are unified under type `Pattern`
+- type `Pattern` is a product of type `Char` and type `Int`
+
+```purescript
+-- | Type Level
+                 -- Pattern :: kind Pattern
+foreign import kind Pattern
+                                 -- Symbol :: kind Symbol
+                                           -- Symbol :: kind Symbol
+                                                     -- Pattern :: kind Pattern
+foreign import data CharNumFixed :: Symbol -> Symbol -> Pattern
+```
+- `CharNumFixed` is a type constructor
+  - whose instances are unified under kind `Pattern`
+- kind `Pattern` is a product of kind `Symbol` and kind `Symbol`
+
 #### Sum
 
-### mapping from runtime functions to type class with functional dependency
+```purescript
+-- | Value Level
+--   Pattern :: kind Type
+data Pattern
+  = CharNumFixed Char Int -- CharNumFixed :: Char -> Int -> Pattern
+  | CharNumMaybe Char -- CharNumMaybe :: Char -> Pattern
+  | CharNumPositive Char -- CharNumPositive :: Char -> Pattern
+  | CharStar Char -- CharStar :: Char -> Pattern
+```
+- `CharNumFixed`, `CharNumMaybe`, `CharNumPositive`, `CharStar` are all data constructors
+  - whose instances are all unified under type `Pattern`
+
+```purescript
+-- | Type Level
+foreign import kind Pattern
+foreign import data CharNumFixed :: Symbol -> Symbol -> Pattern
+foreign import data CharNumMaybe :: Symbol -> Pattern
+foreign import data CharNumPositive :: Symbol -> Pattern
+foreign import data CharStar :: Symbol -> Pattern
+```
+- `CharNumFixed`, `CharNumMaybe`, `CharNumPositive`, `CharStar` are all type constructors
+  - whose instances are all unified under kind `Pattern`
+
+### Mapping from Functions to Type Class with Functional Dependency
+
+#### Definition
+
+```purescript
+recognize :: Array Pattern -> String -> Boolean
+```
+
+```purescript
+class Recognize (pl :: PList) (str :: Symbol) (b :: Bool.Boolean) | pl str -> b
+```
+
+#### Pattern Matching
+
+```purescript
+-- | Value Level
+recognizeBaseCaseDispatch :: Pattern -> Array Pattern -> String -> Boolean
+
+recognizeBaseCase :: Array Pattern -> Array Char -> Boolean
+recognizeBaseCase pl str =
+  if pl == PNil
+  then
+    if str == ""
+    then
+      true
+    else
+      false
+  else
+    recognizeReversedDispatch p_h p_t str
+-- only if recognizeReversedDispatch terminates in finite steps, can recognizeBaseCase have a Boolean as its result (otherwise, bottom)
+
+-- | Type Level
+class RecognizeReversedDispatch (p_h :: Pattern) (p_t :: PList) (s :: Symbol) (b :: Bool.Boolean) | p_h p_t s -> b
+
+class RecognizeReversed (pl :: PList) (str :: Symbol) (b :: Bool.Boolean) | pl str -> b
+instance recognizeReversedBaseCase1 ::
+  RecognizeReversed PNil "" Bool.True
+else instance recognizeReversedBaseCase2 ::
+  RecognizeReversed PNil str Bool.False
+else instance recognizeReversedInductionStep ::
+  ( RecognizeReversedDispatch p_h p_t str b
+  ) => RecognizeReversed (PCons p_h p_t) str b
+-- arrow (=>) means derivation:
+--   only if RecognizeReversedDispatch has a matching instance
+--   , can RecognizeReversed have a matching instance
+-- The functional dependency, pl str -> b
+-- , means that, given an instance of PList and an instance of Symbol
+-- , we can uniquely infer an instance of Boolean.
+```
 
 ### current issues
 

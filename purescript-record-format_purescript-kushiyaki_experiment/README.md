@@ -1,7 +1,5 @@
 # Mapping from value-level functions to type-level functions
 
-Currently, the type-level inferences are centered around Type Class abstraction which is not as expressive as value-level constructs but is powerful enough to encode FSMs.
-
 ## Type-level Constructs
 
 - `data`, type constructor
