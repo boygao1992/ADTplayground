@@ -18,6 +18,7 @@ import Foreign (Foreign)
 import Foreign as Foreign
 import Simple.JSON as JSON
 import Test.Assert (assertEqual)
+import Type.Proxy (Proxy(..))
 
 -- | Utils
 class UntaggedSumRep rep where
@@ -115,8 +116,8 @@ gRecord1 = from (Record1 { space : "", monkey : 0 })
 -- | Recursive Type
 
 data List a
-  = Cons a (List a)
-  | Nil
+  = Nil
+  | Cons a (List a)
 
 derive instance genericList :: Generic (List a) _
 
@@ -124,12 +125,34 @@ instance showList :: Show a => Show (List a) where
   show = genericShow
 
 gList ::
-  Sum (Constructor "Cons" (Product (Argument Int)
-                                            (Argument (List Int)) -- structure of a finite-sized list is not encoded at the type level
-                                )
-         )
-         (Constructor "Nil" NoArguments)
+  Sum (Constructor "Nil" NoArguments)
+      (Constructor "Cons"
+        (Product
+          (Argument Int)
+          (Argument (List Int))
+        )
+      )
 gList = from (Cons 1 $ Cons 2 $ Cons 3 $ Nil)
+
+-- data List a = Nil | Cons { head :: a, tail :: List a }
+
+-- cons :: forall a. a -> List a -> List a
+-- cons head tail = Cons { head, tail }
+
+-- derive instance genericList :: Generic (List a) _
+
+-- instance showList :: Show a => Show (List a) where
+--   show x = genericShow x
+
+-- gList :: Sum (Constructor "Nil" NoArguments)
+--   (Constructor "Cons"
+--      (Argument
+--         { head :: Int
+--         , tail :: List Int
+--         }
+--      )
+--   )
+-- gList = from $ cons 1 $ cons 2 $ cons 3 $ Nil
 
 data ListF a t
   = ConsF a t
@@ -163,6 +186,48 @@ instance staticValueUnit :: StaticValue Unit where
 instance staticValueString :: StaticValue String where
   value = "wenbo"
 
+-- | Function
+
+newtype Func = Func (Int -> String)
+
+derive instance genericFunc :: Generic Func _
+
+gFunc :: Constructor "Func" (Argument (Function Int String))
+gFunc = from $ Func (show)
+
+-- | Destructuring Function Type (used to be under `kind Arrow`)
+--   | Function :: Type -> Type -> Type
+--   | infixr 9 type Function as ->
+--   |   right-associative
+--   | type (->) :: Type -> Type -> Type
+class FirstArgument f a | f -> a
+
+instance firstArgumentFunc ::
+  FirstArgument (a -> b) a
+
+firstArgument :: forall f a. FirstArgument f a => Proxy f -> Proxy a
+firstArgument _ = Proxy :: Proxy a
+
+firstArgumentExample1 :: Proxy Int
+firstArgumentExample1 = firstArgument (Proxy :: Proxy (Int -> String))
+
+firstArgumentExample2 :: Proxy Int
+firstArgumentExample2 = firstArgument (Proxy :: Proxy (Int -> String -> Char))
+
+class SecondArgument f b | f -> b
+
+instance secondArgumentFunc ::
+  SecondArgument (a -> b) b
+
+secondArgument :: forall f a. SecondArgument f a => Proxy f -> Proxy a
+secondArgument _ = Proxy :: Proxy a
+
+secondArgumentExample1 :: Proxy String
+secondArgumentExample1 = secondArgument (Proxy :: Proxy (Int -> String))
+
+secondArgumentExample2 :: Proxy (String -> Char)
+secondArgumentExample2 = secondArgument (Proxy :: Proxy (Int -> String -> Char))
+
 main :: Effect Unit
 main = do
   case (JSON.readJSON testJSON) of
@@ -182,13 +247,15 @@ main = do
 
   log $ stringify $ encodeJson testObject
 
-  -- logShow $ Cons 1 $ Cons 2 $ Cons 3 $ Nil :: List Int
+  -- logShow $ Cons 1 $ Cons 2 $ Cons 3 $ Nil
   -- TODO infinite loop (?)
   -- RangeError: Maximum call stack size exceeded
   --   at new GenericShowArgs (/purescript-generics-rep_experiment/.psci_modules/node_modules/Data.Generic.Rep.Show/index.js:12:32)
   --   at Object.genericShowArgsArgument (/purescript-generics-rep_experiment/.psci_modules/node_modules/Data.Generic.Rep.Show/index.js:19:12)
   --   at showList (/purescript-generics-rep_experiment/.psci_modules/node_modules/Main/index.js:260:227)
   --   at showList (/purescript-generics-rep_experiment/.psci_modules/node_modules/Main/index.js:260:308)
+
+  -- logShow $ cons 1 $ cons 2 $ cons 3 $ Nil
 
   logShow $ ConsF 1 $ ConsF 2 $ ConsF 3 $ NilF :: ListF Int Unit
   -- (ConsF 1 (ConsF 2 (ConsF 3 NilF)))
