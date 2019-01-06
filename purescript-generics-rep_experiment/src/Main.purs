@@ -9,7 +9,7 @@ import Data.Argonaut.Decode.Generic.Rep (genericDecodeJson)
 import Data.Argonaut.Encode.Class (class EncodeJson, encodeJson)
 import Data.Argonaut.Encode.Generic.Rep (genericEncodeJson)
 import Data.Either (Either(..))
-import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments, Product, Sum(..), from, to)
+import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), Product(..), Sum(..), from, to)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
 import Effect (Effect)
@@ -115,24 +115,24 @@ gRecord1 = from (Record1 { space : "", monkey : 0 })
 
 -- | Recursive Type
 
-data List a
-  = Nil
-  | Cons a (List a)
+-- data List a
+--   = Nil
+--   | Cons a (List a)
 
-derive instance genericList :: Generic (List a) _
+-- derive instance genericList :: Generic (List a) _
 
-instance showList :: Show a => Show (List a) where
-  show = genericShow
+-- instance showList :: Show a => Show (List a) where
+--   show = genericShow
 
-gList ::
-  Sum (Constructor "Nil" NoArguments)
-      (Constructor "Cons"
-        (Product
-          (Argument Int)
-          (Argument (List Int))
-        )
-      )
-gList = from (Cons 1 $ Cons 2 $ Cons 3 $ Nil)
+-- gList ::
+--   Sum (Constructor "Nil" NoArguments)
+--       (Constructor "Cons"
+--         (Product
+--           (Argument Int)
+--           (Argument (List Int))
+--         )
+--       )
+-- gList = from (Cons 1 $ Cons 2 $ Cons 3 $ Nil)
 
 -- data List a = Nil | Cons { head :: a, tail :: List a }
 
@@ -154,26 +154,39 @@ gList = from (Cons 1 $ Cons 2 $ Cons 3 $ Nil)
 --   )
 -- gList = from $ cons 1 $ cons 2 $ cons 3 $ Nil
 
+data List a
+  = Nil
+  | Cons a { tail :: List a }
+
+derive instance genericList :: Generic (List a) _
+
+instance showList :: Show a => Show (List a) where
+  show = genericShow
+
 data ListF a t
   = ConsF a t
   | NilF
 derive instance genericListF :: Generic (ListF a t) _
 
 gListF ::
+  forall a.
   Sum
   (Constructor "ConsF"
     (Product
       (Argument Int)
       (Argument
-        (ListF Int (ListF Int (ListF Int Unit))) -- this works
+        (ListF Int (ListF Int (ListF Int a))) -- this works
       )
     )
   )
   (Constructor "NilF" NoArguments)
-gListF = from (ConsF 1 $ ConsF 2 $ ConsF 3 $ NilF :: ListF Int Unit)
+gListF = from (ConsF 1 $ ConsF 2 $ ConsF 3 $ NilF :: ListF Int a)
 
 instance showListF :: (Show a, Show t) => Show (ListF a t) where
   show = genericShow
+
+gListF2 :: Sum (Constructor "ConsF" (Product (Argument Int) (Argument (ListF String (ListF Char (ListF Int Unit)))))) (Constructor "NilF" NoArguments)
+gListF2 = from (ConsF 1 $ ConsF "2" $ ConsF '3' $ NilF :: ListF Int Unit)
 
 -- | Derive Static Value
 class StaticValue a where
@@ -230,14 +243,14 @@ secondArgumentExample2 = secondArgument (Proxy :: Proxy (Int -> String -> Char))
 
 main :: Effect Unit
 main = do
-  case (JSON.readJSON testJSON) of
-    Right ((State r) :: State) -> do
-      assertEqual { expected: 0, actual: r.id }
-      assertEqual { expected: "wenbo", actual: r.name }
-      assertEqual { expected: Case3 "robot", actual: r.status } -- both Case3 and Case4 has the correct Argument type, but it returns the first match
-      logShow r
-    Left e -> do
-      assertEqual { expected: "failed", actual: show e}
+  -- case (JSON.readJSON testJSON) of
+  --   Right ((State r) :: State) -> do
+  --     assertEqual { expected: 0, actual: r.id }
+  --     assertEqual { expected: "wenbo", actual: r.name }
+  --     assertEqual { expected: Case3 "robot", actual: r.status } -- both Case3 and Case4 has the correct Argument type, but it returns the first match
+  --     logShow r
+  --   Left e -> do
+  --     assertEqual { expected: "failed", actual: show e}
 
   -- case (jsonParser testJSON) of
   --   Left e ->
@@ -245,7 +258,7 @@ main = do
   --   Right json -> do
   --     logShow $ (decodeJson json) :: Either String State
 
-  log $ stringify $ encodeJson testObject
+  -- log $ stringify $ encodeJson testObject
 
   -- logShow $ Cons 1 $ Cons 2 $ Cons 3 $ Nil
   -- TODO infinite loop (?)
