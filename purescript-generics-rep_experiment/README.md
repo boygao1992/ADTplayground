@@ -449,127 +449,27 @@ Inr (Inl (Constructor NoArguments))
 Inr (Inr (Constructor NoArguments))
 ```
 
-# Bug in GenericShow for Recursive Type
+# Recursive Type
 
-### version 1
+[Improve errors for recursively-defined type class instances](https://github.com/purescript/purescript/issues/2975)
+> **Eta-expanding** is required as PS isn't lazy, so doing so delays the self-reference to eqFoo in the generated code under a function:
 ```purescript
-data List a
-  = Nil
-  | Cons a (List a)
-
-derive instance genericList :: Generic (List a) _
-
-instance showList :: Show a => Show (List a) where
-  show = genericShow
+instance eqFoo :: Eq Foo where eq x = genericEq x
 ```
-
-compiled JS code for `showList` instance of `Show` type class, which doesn't terminate
 ```javascript
-var showList = function (dictShow) {
-  return new Data_Show.Show(
-    Data_Generic_Rep_Show.genericShow(genericList)(
-      Data_Generic_Rep_Show.genericShowSum(
-        Data_Generic_Rep_Show.genericShowConstructor(
-          Data_Generic_Rep_Show.genericShowArgsNoArguments
-        )(new Data_Symbol.IsSymbol
-          ( function () {return "Nil";} )
-          )
-      )(
-        Data_Generic_Rep_Show.genericShowConstructor (
-          Data_Generic_Rep_Show.genericShowArgsProduct(
-            Data_Generic_Rep_Show.genericShowArgsArgument(dictShow)
-          )(
-            Data_Generic_Rep_Show.genericShowArgsArgument(
-              showList(dictShow)  // here eagerly substitute showList by itself which never terminates
-            )
-           )
-        )( new Data_Symbol.IsSymbol
-              ( function () {return "Cons";} )
-          )
-        )
-    )
-  );
-};
+var eqFoo = new Data_Eq.Eq(function (x) {
+    return genericEq(genericFoo)(genericEqConstructor(genericEqRec(genericEqProduct(genericEqField(Data_Maybe.eqMaybe(eqFoo)))(genericEqField(Data_Eq.eqInt)))))(x);
+});
 ```
-
-### version 2
+> Rather than it generating this:
 ```purescript
-data List a = Nil | Cons { head :: a, tail :: List a }
-
-derive instance genericList :: Generic (List a) _
-
-instance showList :: Show a => Show (List a) where
-  show x = genericShow x
+instance eqFoo :: Eq Foo where eq = genericEq
 ```
-
-compiled JS code 
 ```javascript
-var showList = function (dictShow) {
-  return new Data_Show.Show(
-    function (x) {
-      return Data_Generic_Rep_Show.genericShow(genericList)(
-        Data_Generic_Rep_Show.genericShowSum(
-          Data_Generic_Rep_Show.genericShowConstructor(Data_Generic_Rep_Show.genericShowArgsNoArguments)(new Data_Symbol.IsSymbol(function () {
-            return "Nil";
-          }))
-        )(
-          Data_Generic_Rep_Show.genericShowConstructor(
-            Data_Generic_Rep_Show.genericShowArgsArgument(
-              Data_Show.showRecord()(
-                Data_Show.showRecordFieldsCons(
-                  new Data_Symbol.IsSymbol(
-                    function () {return "head";}
-                  )
-                )(
-                  Data_Show.showRecordFieldsCons(
-                    new Data_Symbol.IsSymbol(
-                      function () {return "tail";})
-                  )(Data_Show.showRecordFieldsNil)(
-                    showList(dictShow) // 3rd arg of showRecordFieldsCons
-                  )
-                )(dictShow)
-              )
-            )
-          )(new Data_Symbol.IsSymbol(
-              function () {return "Cons";}
-            )
-            )
-          )
-      )(x);
-    });
-};
+var eqFoo = new Data_Eq.Eq(genericEq(genericFoo)(genericEqConstructor(genericEqRec(genericEqProduct(genericEqField(Data_Maybe.eqMaybe(eqFoo)))(genericEqField(Data_Eq.eqInt))))));
 ```
 
-### version 3
-```purescript
-data List a
-  = Nil
-  | Cons a { tail :: List a }
 
-derive instance genericList :: Generic (List a) _
-
-instance showList :: Show a => Show (List a) where
-  show = genericShow
-```
-
-```javascript
-var showList = function (dictShow) {
-    return new Data_Show.Show(Data_Generic_Rep_Show.genericShow(genericList)(Data_Generic_Rep_Show.genericShowSum(Data_Generic_Rep_Show.genericShowConstructor(Data_Generic_Rep_Show.genericShowArgsNoArguments)(new Data_Symbol.IsSymbol(function () {
-        return "Nil";
-    })))(Data_Generic_Rep_Show.genericShowConstructor(Data_Generic_Rep_Show.genericShowArgsProduct(Data_Generic_Rep_Show.genericShowArgsArgument(dictShow))(Data_Generic_Rep_Show.genericShowArgsArgument(Data_Show.showRecord()(Data_Show.showRecordFieldsCons(new Data_Symbol.IsSymbol(function () {
-        return "tail";
-    }))(Data_Show.showRecordFieldsNil)(showList(dictShow))))))(new Data_Symbol.IsSymbol(function () {
-        return "Cons";
-    })))));
-};
-```
-
-### conclusion
-
-- the second version using record to wrap the recursive type in its construction somewhat makes the substitution lazy
-  - it has to do with the `Show` instance for Record (`showRecordFieldsCons`)
-    - if the record only contains one field, like `{ tail :: List a }`, there won't be any `showRecordFieldsCons` and the infinite loop occurs
-  - only when it matches the correct field will it execute the provided instance
 
 # Reference
 

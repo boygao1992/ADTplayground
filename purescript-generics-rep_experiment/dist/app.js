@@ -2955,6 +2955,7 @@ var PS = {};
 (function(exports) {
     "use strict";
   var Control_Alt = PS["Control.Alt"];
+  var Control_Bind = PS["Control.Bind"];
   var Control_Monad_Except_Trans = PS["Control.Monad.Except.Trans"];
   var Data_Argonaut_Core = PS["Data.Argonaut.Core"];
   var Data_Argonaut_Decode_Class = PS["Data.Argonaut.Decode.Class"];
@@ -3034,6 +3035,31 @@ var PS = {};
   var Record1 = function (x) {
       return x;
   };
+
+  // gList ::
+  //   Sum (Constructor "Nil" NoArguments)
+  //       (Constructor "Cons"
+  //         (Product
+  //           (Argument Int)
+  //           (Argument (List Int))
+  //         )
+  //       )
+  // gList = from (Cons 1 $ Cons 2 $ Cons 3 $ Nil)
+  // data List a = Nil | Cons { head :: a, tail :: List a }
+  // cons :: forall a. a -> List a -> List a
+  // cons head tail = Cons { head, tail }
+  // derive instance genericList :: Generic (List a) _
+  // instance showList :: Show a => Show (List a) where
+  //   show x = genericShow x
+  // gList :: Sum (Constructor "Nil" NoArguments)
+  //   (Constructor "Cons"
+  //      (Argument
+  //         { head :: Int
+  //         , tail :: List Int
+  //         }
+  //      )
+  //   )
+  // gList = from $ cons 1 $ cons 2 $ cons 3 $ Nil
   var ConsF = (function () {
       function ConsF(value0, value1) {
           this.value0 = value0;
@@ -3046,6 +3072,31 @@ var PS = {};
       };
       return ConsF;
   })();
+
+  // gList ::
+  //   Sum (Constructor "Nil" NoArguments)
+  //       (Constructor "Cons"
+  //         (Product
+  //           (Argument Int)
+  //           (Argument (List Int))
+  //         )
+  //       )
+  // gList = from (Cons 1 $ Cons 2 $ Cons 3 $ Nil)
+  // data List a = Nil | Cons { head :: a, tail :: List a }
+  // cons :: forall a. a -> List a -> List a
+  // cons head tail = Cons { head, tail }
+  // derive instance genericList :: Generic (List a) _
+  // instance showList :: Show a => Show (List a) where
+  //   show x = genericShow x
+  // gList :: Sum (Constructor "Nil" NoArguments)
+  //   (Constructor "Cons"
+  //      (Argument
+  //         { head :: Int
+  //         , tail :: List Int
+  //         }
+  //      )
+  //   )
+  // gList = from $ cons 1 $ cons 2 $ cons 3 $ Nil
   var NilF = (function () {
       function NilF() {
 
@@ -3055,36 +3106,6 @@ var PS = {};
   })();
 
   // | Recursive Type
-  // data List a
-  //   = Nil
-  //   | Cons a (List a)
-  // derive instance genericList :: Generic (List a) _
-  // instance showList :: Show a => Show (List a) where
-  //   show = genericShow
-  // gList ::
-  //   Sum (Constructor "Nil" NoArguments)
-  //       (Constructor "Cons"
-  //         (Product
-  //           (Argument Int)
-  //           (Argument (List Int))
-  //         )
-  //       )
-  // gList = from (Cons 1 $ Cons 2 $ Cons 3 $ Nil)
-  // data List a = Nil | Cons { head :: a, tail :: List a }
-  // cons :: forall a. a -> List a -> List a
-  // cons head tail = Cons { head, tail }
-  // derive instance genericList :: Generic (List a) _
-  // instance showList :: Show a => Show (List a) where
-  //   show x = genericShow x
-  // gList :: Sum (Constructor "Nil" NoArguments)
-  //   (Constructor "Cons"
-  //      (Argument
-  //         { head :: Int
-  //         , tail :: List Int
-  //         }
-  //      )
-  //   )
-  // gList = from $ cons 1 $ cons 2 $ cons 3 $ Nil
   var Nil = (function () {
       function Nil() {
 
@@ -3094,36 +3115,6 @@ var PS = {};
   })();
 
   // | Recursive Type
-  // data List a
-  //   = Nil
-  //   | Cons a (List a)
-  // derive instance genericList :: Generic (List a) _
-  // instance showList :: Show a => Show (List a) where
-  //   show = genericShow
-  // gList ::
-  //   Sum (Constructor "Nil" NoArguments)
-  //       (Constructor "Cons"
-  //         (Product
-  //           (Argument Int)
-  //           (Argument (List Int))
-  //         )
-  //       )
-  // gList = from (Cons 1 $ Cons 2 $ Cons 3 $ Nil)
-  // data List a = Nil | Cons { head :: a, tail :: List a }
-  // cons :: forall a. a -> List a -> List a
-  // cons head tail = Cons { head, tail }
-  // derive instance genericList :: Generic (List a) _
-  // instance showList :: Show a => Show (List a) where
-  //   show x = genericShow x
-  // gList :: Sum (Constructor "Nil" NoArguments)
-  //   (Constructor "Cons"
-  //      (Argument
-  //         { head :: Int
-  //         , tail :: List Int
-  //         }
-  //      )
-  //   )
-  // gList = from $ cons 1 $ cons 2 $ cons 3 $ Nil
   var Cons = (function () {
       function Cons(value0, value1) {
           this.value0 = value0;
@@ -3277,7 +3268,7 @@ var PS = {};
       if (x instanceof NilF) {
           return new Data_Generic_Rep.Inr(Data_Generic_Rep.NoArguments.value);
       };
-      throw new Error("Failed pattern match at Main line 169, column 8 - line 169, column 54: " + [ x.constructor.name ]);
+      throw new Error("Failed pattern match at Main line 160, column 8 - line 160, column 54: " + [ x.constructor.name ]);
   }, function (x) {
       if (x instanceof Data_Generic_Rep.Inl) {
           return new ConsF(x.value0.value0, x.value0.value1);
@@ -3285,7 +3276,7 @@ var PS = {};
       if (x instanceof Data_Generic_Rep.Inr) {
           return NilF.value;
       };
-      throw new Error("Failed pattern match at Main line 169, column 8 - line 169, column 54: " + [ x.constructor.name ]);
+      throw new Error("Failed pattern match at Main line 160, column 8 - line 160, column 54: " + [ x.constructor.name ]);
   });
   var showListF = function (dictShow) {
       return function (dictShow1) {
@@ -3295,6 +3286,32 @@ var PS = {};
               return "NilF";
           })))));
       };
+  };
+  var genericList = new Data_Generic_Rep.Generic(function (x) {
+      if (x instanceof Nil) {
+          return new Data_Generic_Rep.Inl(Data_Generic_Rep.NoArguments.value);
+      };
+      if (x instanceof Cons) {
+          return new Data_Generic_Rep.Inr(new Data_Generic_Rep.Product(x.value0, x.value1));
+      };
+      throw new Error("Failed pattern match at Main line 122, column 8 - line 122, column 50: " + [ x.constructor.name ]);
+  }, function (x) {
+      if (x instanceof Data_Generic_Rep.Inl) {
+          return Nil.value;
+      };
+      if (x instanceof Data_Generic_Rep.Inr) {
+          return new Cons(x.value0.value0, x.value0.value1);
+      };
+      throw new Error("Failed pattern match at Main line 122, column 8 - line 122, column 50: " + [ x.constructor.name ]);
+  });
+  var showList = function (dictShow) {
+      return new Data_Show.Show(function (x) {
+          return Data_Generic_Rep_Show.genericShow(genericList)(Data_Generic_Rep_Show.genericShowSum(Data_Generic_Rep_Show.genericShowConstructor(Data_Generic_Rep_Show.genericShowArgsNoArguments)(new Data_Symbol.IsSymbol(function () {
+              return "Nil";
+          })))(Data_Generic_Rep_Show.genericShowConstructor(Data_Generic_Rep_Show.genericShowArgsProduct(Data_Generic_Rep_Show.genericShowArgsArgument(dictShow))(Data_Generic_Rep_Show.genericShowArgsArgument(showList(dictShow))))(new Data_Symbol.IsSymbol(function () {
+              return "Cons";
+          }))))(x);
+      });
   };
 
   // case (JSON.readJSON testJSON) of
@@ -3311,40 +3328,9 @@ var PS = {};
   //   Right json -> do
   //     logShow $ (decodeJson json) :: Either String State
   // log $ stringify $ encodeJson testObject
-  // logShow $ Cons 1 $ Cons 2 $ Cons 3 $ Nil
-  // TODO infinite loop (?)
-  // RangeError: Maximum call stack size exceeded
-  //   at new GenericShowArgs (/purescript-generics-rep_experiment/.psci_modules/node_modules/Data.Generic.Rep.Show/index.js:12:32)
-  //   at Object.genericShowArgsArgument (/purescript-generics-rep_experiment/.psci_modules/node_modules/Data.Generic.Rep.Show/index.js:19:12)
-  //   at showList (/purescript-generics-rep_experiment/.psci_modules/node_modules/Main/index.js:260:227)
-  //   at showList (/purescript-generics-rep_experiment/.psci_modules/node_modules/Main/index.js:260:308)
-  // logShow $ cons 1 $ cons 2 $ cons 3 $ Nil
-  var main = Effect_Console.logShow(showListF(Data_Show.showInt)(showListF(Data_Show.showInt)(showListF(Data_Show.showInt)(showListF(Data_Show.showInt)(Data_Unit.showUnit)))))(ConsF.create(1)(ConsF.create(2)(ConsF.create(3)(NilF.value))));
-  var genericList = new Data_Generic_Rep.Generic(function (x) {
-      if (x instanceof Nil) {
-          return new Data_Generic_Rep.Inl(Data_Generic_Rep.NoArguments.value);
-      };
-      if (x instanceof Cons) {
-          return new Data_Generic_Rep.Inr(new Data_Generic_Rep.Product(x.value0, x.value1));
-      };
-      throw new Error("Failed pattern match at Main line 161, column 8 - line 161, column 50: " + [ x.constructor.name ]);
-  }, function (x) {
-      if (x instanceof Data_Generic_Rep.Inl) {
-          return Nil.value;
-      };
-      if (x instanceof Data_Generic_Rep.Inr) {
-          return new Cons(x.value0.value0, x.value0.value1);
-      };
-      throw new Error("Failed pattern match at Main line 161, column 8 - line 161, column 50: " + [ x.constructor.name ]);
-  });
-  var showList = function (dictShow) {
-      return new Data_Show.Show(Data_Generic_Rep_Show.genericShow(genericList)(Data_Generic_Rep_Show.genericShowSum(Data_Generic_Rep_Show.genericShowConstructor(Data_Generic_Rep_Show.genericShowArgsNoArguments)(new Data_Symbol.IsSymbol(function () {
-          return "Nil";
-      })))(Data_Generic_Rep_Show.genericShowConstructor(Data_Generic_Rep_Show.genericShowArgsProduct(Data_Generic_Rep_Show.genericShowArgsArgument(dictShow))(Data_Generic_Rep_Show.genericShowArgsArgument(Data_Show.showRecord()(Data_Show.showRecordFieldsCons(new Data_Symbol.IsSymbol(function () {
-          return "tail";
-      }))(Data_Show.showRecordFieldsNil)(showList(dictShow))))))(new Data_Symbol.IsSymbol(function () {
-          return "Cons";
-      })))));
+  var main = function __do() {
+      Effect_Console.logShow(showList(Data_Show.showInt))(Cons.create(1)(Cons.create(2)(Cons.create(3)(Nil.value))))();
+      return Effect_Console.logShow(showListF(Data_Show.showInt)(showListF(Data_Show.showInt)(showListF(Data_Show.showInt)(showListF(Data_Show.showInt)(Data_Unit.showUnit)))))(ConsF.create(1)(ConsF.create(2)(ConsF.create(3)(NilF.value))))();
   };
   var genericFunc = new Data_Generic_Rep.Generic(function (x) {
       return x;

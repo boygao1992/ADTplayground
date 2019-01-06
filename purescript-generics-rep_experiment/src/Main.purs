@@ -115,14 +115,14 @@ gRecord1 = from (Record1 { space : "", monkey : 0 })
 
 -- | Recursive Type
 
--- data List a
---   = Nil
---   | Cons a (List a)
+data List a
+  = Nil
+  | Cons a (List a)
 
--- derive instance genericList :: Generic (List a) _
+derive instance genericList :: Generic (List a) _
 
--- instance showList :: Show a => Show (List a) where
---   show = genericShow
+instance showList :: Show a => Show (List a) where
+  show x = genericShow x
 
 -- gList ::
 --   Sum (Constructor "Nil" NoArguments)
@@ -153,15 +153,6 @@ gRecord1 = from (Record1 { space : "", monkey : 0 })
 --      )
 --   )
 -- gList = from $ cons 1 $ cons 2 $ cons 3 $ Nil
-
-data List a
-  = Nil
-  | Cons a { tail :: List a }
-
-derive instance genericList :: Generic (List a) _
-
-instance showList :: Show a => Show (List a) where
-  show = genericShow
 
 data ListF a t
   = ConsF a t
@@ -260,7 +251,7 @@ main = do
 
   -- log $ stringify $ encodeJson testObject
 
-  -- logShow $ Cons 1 $ Cons 2 $ Cons 3 $ Nil
+  logShow $ Cons 1 $ Cons 2 $ Cons 3 $ Nil
   -- TODO infinite loop (?)
   -- RangeError: Maximum call stack size exceeded
   --   at new GenericShowArgs (/purescript-generics-rep_experiment/.psci_modules/node_modules/Data.Generic.Rep.Show/index.js:12:32)
