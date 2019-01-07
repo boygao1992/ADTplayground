@@ -29,3 +29,9 @@ else instance typeToDescriptionRowIsRecord :: -- TODO may add Union
 
 -- class GraphQLDescription a where
 --   description :: forall rep row. Generic a rep => RecordToDescriptionRow rep row => Record row
+
+data InputObjectType a
+
+type InputObjectTypeConstructor = forall a rep desRow. Generic a rep => TypeToDescriptionRow rep desRow => Proxy a -> Record desRow -> InputObjectType (Maybe a)
+
+type InputObjectTypeNoDescriptionConstructor = forall a rep. Generic a rep => Proxy a -> InputObjectType (Maybe a)

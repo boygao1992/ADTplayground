@@ -232,6 +232,47 @@ secondArgumentExample1 = secondArgument (Proxy :: Proxy (Int -> String))
 secondArgumentExample2 :: Proxy (String -> Char)
 secondArgumentExample2 = secondArgument (Proxy :: Proxy (Int -> String -> Char))
 
+-- | Universal Type to one static Type
+class TypeDescription a where
+  description :: Proxy a -> String
+
+instance typeDescriptionInt :: TypeDescription Int where
+  description _ = "Int"
+
+instance typeDescriptionString :: TypeDescription String where
+  description _ = "String"
+
+-- | Universal Type to type class inferred Type
+class MapType a b | a -> b
+
+instance mapTypeInt2String :: MapType Int String
+instance mapTypeString2Int :: MapType String Int
+
+class WithMapType a where
+  withMapType :: forall b. MapType a b => b
+
+-- instance withMapTypeInt :: WithMapType Int where
+--   withMapType = "" -- TypeError: could not match type String with type b0
+-- NOTE Compiler doesn't utilize MapType to uniquely infer type b when defining a type class instance for WithMapType.
+-- I guess it's reasonable since compiler doesn't know which type class inference to prioritize without hierarchical relations specified
+
+class MapType a b <= WithMapType2 a b | a -> b where
+  withMapType' :: MapType a b => b
+
+-- NOTE Compiler will guard against instances like WithMapType2 Int Int because of the type class inheritance from MayType.
+-- but we need to explicitly state the inferred type which makes this unusable
+instance withMapType2Int :: WithMapType2 Int String where
+  withMapType' = ""
+
+-- | Encode Description as Type-level Literal
+
+class IsField (row :: # Type) (name :: Symbol)
+
+class IsField row name <= InjectDescription (row :: # Type) (name :: Symbol) (des :: Symbol) | row name -> des -- multiple distinct descriptions for the same field under the same row are not allowed
+
+-- e.g.
+-- InjectDescription (id :: String) "id" "This is a unique identifier for ..."
+
 main :: Effect Unit
 main = do
   -- case (JSON.readJSON testJSON) of
