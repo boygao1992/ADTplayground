@@ -5,7 +5,7 @@ module B2CExample.Model where
 -- 1. derived GraphQLType Definition
 --   - default to NotNullAble unless Maybe
 --   - use Generic instance for Sum type
---     - class IsEnumPred, to check whether a data-type is Enum
+--     - DONE class IsEnumPred, to check whether a data-type is Enum
 --       - if so, map it to GraphQLEnumType
 -- 2. Description
 --   - default = Nothing
@@ -23,10 +23,12 @@ class GraphQLType a
 
 -- | Description
 class GraphQLDescription a
-class FromRowToDescriptionRow (i :: # Type) (o :: # Type)
+-- DONE class EnumToDescriptionRow
+-- DONE class RecordToDescriptionRow
 -- e.g. Cardholder
 -- i :: ( id :: String , cards :: Array Card, banks :: Array Bank )
 -- o :: ( id :: Maybe String, cards :: Maybe String, banks :: Maybe String )
+
 -- TODO purescript-typelevel-eval
 -- type MapToMaybeString =  ToRow <<< May (Const (Maybe String)) <<< FromRow
 -- Eval (MayToMaybeString (RProxy i)) (RProxy o) =>

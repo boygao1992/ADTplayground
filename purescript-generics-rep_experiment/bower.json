@@ -14,7 +14,8 @@
     "purescript-simple-json": "^4.4.0",
     "purescript-assert": "^4.0.0",
     "purescript-argonaut-generic": "^3.0.0",
-    "purescript-proxy": "^3.0.0"
+    "purescript-proxy": "^3.0.0",
+    "purescript-typelevel-prelude": "^3.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
