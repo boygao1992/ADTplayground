@@ -1,15 +1,15 @@
 module Test.Main where
 
-import Generic.GraphQL
-import Prelude
-
-import Data.Generic.Rep (class Generic)
-import Data.Maybe (Maybe(..))
-import Effect (Effect)
-import Effect.Console (log)
 import Generic.EnumToDescriptionRow (class EnumToDescriptionRow)
 import Generic.IsEnum (class IsEnumPred)
 import Generic.RecordToDescriptionRow (class RecordToDescriptionRow)
+import RowToFunc (rowToCons)
+import Prelude
+
+import Data.Generic.Rep (class Generic)
+import Data.Maybe (Maybe)
+import Effect (Effect)
+import Effect.Console (logShow)
 import Type.Data.Boolean as Bool
 import Type.Proxy (Proxy(..))
 import Type.Row (RProxy(..))
@@ -73,7 +73,17 @@ recordToDescriptionRowExample1 = recordToDescriptionRow (Proxy :: Proxy Cardhold
 
 -- | GraphQLDescription
 
+-- | RowToFunc
+userCons :: Int
+-> String
+   -> String
+      -> { name :: String
+         , id :: String
+         , age :: Int
+         }
+userCons = rowToCons (RProxy :: RProxy (id :: String, name :: String, age :: Int))
+
 
 main :: Effect Unit
 main = do
-  log "You should add some tests."
+  logShow $ userCons 14 "wenbo" "robot00"
