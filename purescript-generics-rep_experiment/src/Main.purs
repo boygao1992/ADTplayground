@@ -248,6 +248,12 @@ class MapType a b | a -> b
 instance mapTypeInt2String :: MapType Int String
 instance mapTypeString2Int :: MapType String Int
 
+class MapTypeWithProxy a b | a -> b where
+  mapTypeWithProxy :: Proxy a -> Proxy b
+
+instance mapTypeWithProxyInt :: MapTypeWithProxy Int String where
+  mapTypeWithProxy _ = Proxy :: Proxy String
+
 class WithMapType a where
   withMapType :: forall b. MapType a b => b
 
