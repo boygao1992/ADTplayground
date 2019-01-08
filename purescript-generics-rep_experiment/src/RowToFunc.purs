@@ -17,7 +17,7 @@ class RowToConstructor (row :: # Type) func | row -> func
     rowToCons :: RProxy row -> func
 
 instance rowToConstructorImpl ::
-  ( RowList.RowToList row rl -- TODO reverse RowList
+  ( RowList.RowToList row rl
   , RowListToConstructorInit rl func
   ) => RowToConstructor row func
   where

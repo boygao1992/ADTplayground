@@ -3,6 +3,7 @@ module Test.Main where
 import Generic.EnumToDescriptionRow (class EnumToDescriptionRow)
 import Generic.IsEnum (class IsEnumPred)
 import Generic.RecordToDescriptionRow (class RecordToDescriptionRow)
+import RowList.Utils (class ReverseRowList)
 import RowToFunc (rowToCons)
 import Prelude
 
@@ -13,6 +14,8 @@ import Effect.Console (logShow)
 import Type.Data.Boolean as Bool
 import Type.Proxy (Proxy(..))
 import Type.Row (RProxy(..))
+import Prim.RowList (kind RowList, Nil, Cons) as RowList
+import Type.Data.RowList (RLProxy(..))
 
 -- | IsEnumPred
 
@@ -74,16 +77,23 @@ recordToDescriptionRowExample1 = recordToDescriptionRow (Proxy :: Proxy Cardhold
 -- | GraphQLDescription
 
 -- | RowToFunc
-userCons :: Int
--> String
-   -> String
+user :: Int -> String -> String -- NOTE RowToList sorts fields in alphabet order
       -> { name :: String
          , id :: String
          , age :: Int
          }
-userCons = rowToCons (RProxy :: RProxy (id :: String, name :: String, age :: Int))
+user = rowToCons (RProxy :: RProxy (id :: String, name :: String, age :: Int))
+
+-- | ReverseRowList
+
+reverseRowList :: forall i o. ReverseRowList i o => RLProxy i -> RLProxy o
+reverseRowList _ = RLProxy :: RLProxy o
+
+reverseRowListExample :: RLProxy (RowList.Cons "id" String (RowList.Cons "name" String (RowList.Cons "age" Int RowList.Nil)))
+reverseRowListExample = reverseRowList (RLProxy :: RLProxy (RowList.Cons "age" Int (RowList.Cons "name" String (RowList.Cons "id" String RowList.Nil))))
+
 
 
 main :: Effect Unit
 main = do
-  logShow $ userCons 14 "wenbo" "robot00"
+  logShow $ user 14 "robot00" "wenbo" -- { age: 14, id: "robot00", name: "wenbo" }
