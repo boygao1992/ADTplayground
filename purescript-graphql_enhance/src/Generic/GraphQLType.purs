@@ -6,6 +6,8 @@ import Generic.EnumToArray
 import GraphQL.Type as G
 import Type.Proxy (Proxy)
 import Data.Newtype (class Newtype, unwrap)
+import Type.Data.Symbol (SProxy(..))
+import Type.Data.Symbol as Symbol
 
 class G.GraphQLType gl <= ToGraphQLType ps gl | ps -> gl where
   toGraphQLType :: Proxy ps -> gl
@@ -47,14 +49,13 @@ instance toGraphQLTypeMaybeBoolean :: ToGraphQLType (Maybe Boolean) (G.ScalarTyp
   where
     toGraphQLType _ = G.boolean
 
--- | Name
-newtype Name a = Name String
-derive instance newtypeName :: Newtype (Name a) _
-
-class TypeName a where
-  typeName :: Name a
+-- for Sum type whose outer layer is not a constructor thus doesn't have a accessible symbol
+class Symbol.IsSymbol name <= TypeName a (name :: Symbol) | a -> name
 
 -- | Generic
-enumToGraphQLType :: forall a rep. TypeName a => Generic a rep => GenericEnumToArray rep => G.EnumType (Maybe a)
-enumToGraphQLType = G.enumType (unwrap (typeName :: Name a)) Nothing enumToEnumValueArray
+enumToGraphQLType :: forall a rep name. TypeName a name => Generic a rep => GenericEnumToArray rep => G.EnumType (Maybe a)
+enumToGraphQLType = G.enumType name Nothing enumToEnumValueArray
+  where
+    name = (Symbol.reflectSymbol (SProxy :: SProxy name))
 
+-- recordToGraphQLType :: forall a rep. Generic a rep => G.ObjectType (Maybe a)

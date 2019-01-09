@@ -1,5 +1,9 @@
 module B2CExample.Model where
 
+import Prelude
+
+import Generic.GraphQLType (class TypeName)
+
 -- PLAN
 -- distributed interface through type classes
 -- 1. derived GraphQLType Definition
@@ -19,10 +23,10 @@ module B2CExample.Model where
 
 
 -- | GraphQLType Definition
-class GraphQLType a
+-- class GraphQLType a
 
 -- | Description
-class GraphQLDescription a
+-- class GraphQLDescription a
 -- DONE class EnumToDescriptionRow
 -- DONE class RecordToDescriptionRow
 -- e.g. Cardholder
@@ -34,7 +38,10 @@ class GraphQLDescription a
 -- Eval (MayToMaybeString (RProxy i)) (RProxy o) =>
 
 -- | Resolver
-class GraphQLResolver a
+-- class GraphQLResolver a
+-- TODO purescript-heterogenous
+-- pattern match on the shape of resolvers
+-- { source?, args?, context?, info }
 
 newtype Cardholder = Cardholder
   { id :: String
@@ -72,7 +79,11 @@ data CardType
   | MasterCard
   | Visa
 
+instance typeNameCardType :: TypeName CardType "CardType"
+
 data CurrencyCode
   = USD
   | CNY
   | GBP
+
+instance typeNameCurrencyCode :: TypeName CurrencyCode "CurrencyCode"

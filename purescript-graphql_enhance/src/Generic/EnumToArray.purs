@@ -56,35 +56,3 @@ else instance genericEnumToArrayInductionStep ::
       <> ((map Inr) <$> (genericEnumToArray :: Array (EnumVal r)))
 
 
-
-enumReadSymbol :: forall a rep
-   . Generic a rep
-  => EnumReadSymbol rep
-  => String
-  -> Either String a
-enumReadSymbol = map to <<< genericEnumReadSymbol
-
-class EnumReadSymbol rep where
-  genericEnumReadSymbol :: String -> Either String rep
-
-instance enumReadSymbolBaseCase ::
-  ( Symbol.IsSymbol name2
-  ) => EnumReadSymbol (Constructor name2 NoArguments)
-  where
-    genericEnumReadSymbol name1 =
-      if (name1 == name2)
-      then
-        Right $ Constructor NoArguments
-      else
-        Left $ name1 <> " doesn't match " <> name2
-
-      where
-        name2 = (Symbol.reflectSymbol (SProxy :: SProxy name2))
-else instance enumReadSymbolInductionStep ::
-  ( EnumReadSymbol a
-  , EnumReadSymbol b
-  ) => EnumReadSymbol (Sum a b)
-  where
-    genericEnumReadSymbol name = Inl <$> genericEnumReadSymbol name
-                          <|> Inr <$> genericEnumReadSymbol name
-

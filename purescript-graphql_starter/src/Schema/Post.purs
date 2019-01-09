@@ -73,7 +73,7 @@ toPostAction { updateTitle, updateContent } = case updateTitle, updateContent of
 postUpdateTitleType :: G.InputObjectType (Maybe { title :: String })
 postUpdateTitleType =
   G.inputObjectType
-    "PostPostUpdateTitle"
+    "PostUpdateTitle"
     (Just "Payload for updating the title of a post.")
     { title:
         G.inputField
@@ -85,7 +85,7 @@ postUpdateTitleType =
 postUpdateContentType :: G.InputObjectType (Maybe { content :: String })
 postUpdateContentType =
   G.inputObjectType
-    "PostPostUpdateContent"
+    "PostUpdateContent"
     (Just "Payload for updating the content of a post.")
     { content:
         G.inputField
