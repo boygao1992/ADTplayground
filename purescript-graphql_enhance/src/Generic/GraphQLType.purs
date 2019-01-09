@@ -1,12 +1,11 @@
 module Generic.GraphQLType where
 
-import Data.Generic.Rep
-import Prelude
-
-import Data.Maybe (Maybe)
-import Generic.IsEnum (class IsEnum)
+import Data.Generic.Rep (class Generic)
+import Data.Maybe (Maybe(..))
+import Generic.EnumToArray
 import GraphQL.Type as G
 import Type.Proxy (Proxy)
+import Data.Newtype (class Newtype, unwrap)
 
 class G.GraphQLType gl <= ToGraphQLType ps gl | ps -> gl where
   toGraphQLType :: Proxy ps -> gl
@@ -48,7 +47,14 @@ instance toGraphQLTypeMaybeBoolean :: ToGraphQLType (Maybe Boolean) (G.ScalarTyp
   where
     toGraphQLType _ = G.boolean
 
+-- | Name
+newtype Name a = Name String
+derive instance newtypeName :: Newtype (Name a) _
+
+class TypeName a where
+  typeName :: Name a
+
 -- | Generic
-class GenericToGraphQLType rep gl where
-  genericToGraphQLType' :: rep -> gl
+enumToGraphQLType :: forall a rep. TypeName a => Generic a rep => GenericEnumToArray rep => G.EnumType (Maybe a)
+enumToGraphQLType = G.enumType (unwrap (typeName :: Name a)) Nothing enumToEnumValueArray
 
