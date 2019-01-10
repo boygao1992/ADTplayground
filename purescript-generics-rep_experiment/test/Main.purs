@@ -110,7 +110,7 @@ instance showPostAction :: Show PostAction where
 
 shouldEqual :: forall a . Eq a => Show a => a -> a -> Effect Unit
 shouldEqual a b =
-  assertEqual { actual: a, expected: b}
+  assertEqual { actual : a, expected : b }
 
 main :: Effect Unit
 main = do
@@ -123,18 +123,22 @@ main = do
       (SProxy :: SProxy "PostUpdateTitle")
       { title : "hello world" } :: Either String PostAction
     )
-    (Right $ PostUpdateTitle { title : "hello world"})
+    (Right $ PostUpdateTitle { title : "hello world" })
 
   shouldEqual
     ( toConstructor
       { "PostUpdateTitle" : Nothing
-      , "PostUpdateContent" : Just { content : "first todo"}
+      , "PostUpdateContent" : Just { content : "first todo" }
       } :: Either String PostAction
     )
     (Right $ PostUpdateContent { content : "first todo" })
 
   shouldEqual
-    (toConstructor { "PostUpdateTitle" : Just { title : "hello world" }, "PostUpdateContent" : Just { content : "first todo"}} :: Either String PostAction)
+    ( toConstructor
+      { "PostUpdateTitle" : Just { title : "hello world" }
+      , "PostUpdateContent" : Just { content : "first todo" }
+      } :: Either String PostAction
+    )
     (Left "More than one fields have payloads")
 
   shouldEqual
@@ -144,3 +148,4 @@ main = do
       } :: Either String PostAction
     )
     (Left "None of the fields has payload")
+
