@@ -6,10 +6,18 @@ import Type.IsEqual as Type
 import Control.Alt ((<|>))
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), Sum(..), to)
-import Type.Data.Symbol (SProxy)
-import Type.Data.Symbol as Symbol
+import Data.Maybe (Maybe(..))
+import Prim.RowList (kind RowList)
+import Prim.RowList as RowList
 import Type.Data.Boolean (BProxy(..))
 import Type.Data.Boolean as Bool
+import Type.Row (RProxy(..))
+import Type.Row as Row
+import Type.Data.RowList (RLProxy(..))
+import Type.Data.Symbol (SProxy(..))
+import Type.Data.Symbol as Symbol
+import Type.Proxy (Proxy(..))
+import Record as Record
 
 
 -- data PostAction
@@ -45,6 +53,61 @@ import Type.Data.Boolean as Bool
       Just payload ->
         Right $ SumReadPayload name value
 -}
+
+
+toConstructor :: forall a rep record. Generic a rep => GenericToConstructor record rep => record -> Either String a
+toConstructor rec = to <$> genericToConstructor rec
+
+class GenericToConstructor record rep where
+  genericToConstructor :: record -> Either String rep
+
+instance genericToConstructorFirstJustBaseCase ::
+  ( Symbol.IsSymbol name
+  , Row.Cons name (Maybe typ) restRow row
+  ) => GenericToConstructor (Record row) (Constructor name (Argument typ))
+  where
+    genericToConstructor rec = case Record.get (SProxy :: SProxy name) rec of
+      Nothing ->
+        Left "None of the fields has payload"
+      Just arg ->
+        Right $ Constructor (Argument arg)
+else instance genericToConstructorFirstJustInductionStep ::
+  ( Symbol.IsSymbol name
+  , Row.Cons name (Maybe typ) restRow row
+  , GenericToConstructor (Record row) r
+  , GenericToConstructorRestNoJust (Record row) r
+  ) => GenericToConstructor (Record row) (Sum (Constructor name (Argument typ)) r)
+  where
+    genericToConstructor rec = case Record.get (SProxy :: SProxy name) rec of
+      Nothing ->
+        Inr <$> genericToConstructor rec
+      Just arg ->
+        if genericToConstructorRestNoJust rec (Proxy :: Proxy r)
+        then
+          Right $ Inl $ Constructor $ Argument arg
+        else
+          Left "More than one fields have payloads"
+
+class GenericToConstructorRestNoJust record rep where
+  genericToConstructorRestNoJust :: record -> Proxy rep -> Boolean
+
+instance genericToConstructorRestNoJustBaseCase ::
+  ( Symbol.IsSymbol name
+  , Row.Cons name (Maybe typ) restRow row
+  ) => GenericToConstructorRestNoJust (Record row) (Constructor name (Argument typ))
+  where
+    genericToConstructorRestNoJust rec _ = case Record.get (SProxy :: SProxy name) rec of
+      Nothing -> true
+      Just _ -> false
+else instance genericToConstructorRestNoJustInductionStep ::
+  ( GenericToConstructorRestNoJust record l
+  , GenericToConstructorRestNoJust record r
+  ) => GenericToConstructorRestNoJust record (Sum l r)
+  where
+    genericToConstructorRestNoJust rec _
+        = genericToConstructorRestNoJust rec (Proxy :: Proxy l)
+       && genericToConstructorRestNoJust rec (Proxy :: Proxy r)
+
 
 sumReadPayload :: forall a rep name payload. Generic a rep => GenericSumReadPayload name payload rep => SProxy name -> payload -> Either String a
 sumReadPayload pname rec = to <$> genericSumReadPayload pname rec

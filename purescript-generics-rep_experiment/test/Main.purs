@@ -1,12 +1,13 @@
 module Test.Main where
 
+import Data.Either
 import Generic.SumReadPayload
 import Prelude
 
-import Data.Either
 import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Console (logShow)
 import Generic.EnumToDescriptionRow (class EnumToDescriptionRow)
@@ -15,6 +16,7 @@ import Generic.RecordToDescriptionRow (class RecordToDescriptionRow)
 import Prim.RowList (kind RowList, Nil, Cons) as RowList
 import RowList.Utils (class ReverseRowList)
 import RowToFunc (rowToCons)
+import Test.Assert (assertEqual)
 import Type.Data.Boolean as Bool
 import Type.Data.RowList (RLProxy(..))
 import Type.Data.Symbol (SProxy(..))
@@ -101,12 +103,44 @@ data PostAction
   = PostUpdateTitle { title :: String }
   | PostUpdateContent { content :: String }
 derive instance genericPostAction :: Generic PostAction _
+instance eqPostAction :: Eq PostAction where
+  eq = genericEq
 instance showPostAction :: Show PostAction where
   show = genericShow
 
+shouldEqual :: forall a . Eq a => Show a => a -> a -> Effect Unit
+shouldEqual a b =
+  assertEqual { actual: a, expected: b}
 
 main :: Effect Unit
 main = do
-  logShow $ user 14 "robot00" "wenbo" -- { age: 14, id: "robot00", name: "wenbo" }
+  shouldEqual
+    (user 14 "robot00" "wenbo")
+    { age: 14, id: "robot00", name: "wenbo" }
 
-  logShow $ sumReadPayload (SProxy :: SProxy "PostUpdateTitle") { title : "hello world" } :: Either String PostAction
+  shouldEqual
+    ( sumReadPayload
+      (SProxy :: SProxy "PostUpdateTitle")
+      { title : "hello world" } :: Either String PostAction
+    )
+    (Right $ PostUpdateTitle { title : "hello world"})
+
+  shouldEqual
+    ( toConstructor
+      { "PostUpdateTitle" : Nothing
+      , "PostUpdateContent" : Just { content : "first todo"}
+      } :: Either String PostAction
+    )
+    (Right $ PostUpdateContent { content : "first todo" })
+
+  shouldEqual
+    (toConstructor { "PostUpdateTitle" : Just { title : "hello world" }, "PostUpdateContent" : Just { content : "first todo"}} :: Either String PostAction)
+    (Left "More than one fields have payloads")
+
+  shouldEqual
+    ( toConstructor
+      { "PostUpdateTitle" : Nothing
+      , "PostUpdateContent" : Nothing
+      } :: Either String PostAction
+    )
+    (Left "None of the fields has payload")
