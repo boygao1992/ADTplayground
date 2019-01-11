@@ -43,6 +43,21 @@ post1 = defer \_ -> Post
   , author : wenbo
   }
 
+-- | Regular Language
+newtype Simple = Simple
+  { value :: Int
+  , self :: Lazy Simple
+  }
+derive instance newtypeSimple :: Newtype Simple _
+instance showSimple :: Show Simple where
+  show (Simple r) = "Simple { value: " <> show r.value <> ", self: ABYSS }"
+
+simple :: Lazy Simple
+simple = defer \_ -> Simple
+  { value : 0
+  , self : simple
+  }
+
 main :: Effect Unit
 main = do
   logShow $ L.take 3 $ incrementalSequence 0
@@ -50,8 +65,14 @@ main = do
   logShow $ roundTrip =<< roundTrip =<< roundTrip wenbo
   -- (Just (defer \_ -> User { name: "wenbo", posts }))
 
+  logShow $ selfLoop <<< selfLoop <<< selfLoop $ simple
+
+
   where
-    roundTrip :: (Lazy User) -> Maybe (Lazy User)
+    roundTrip :: Lazy User -> Maybe (Lazy User)
     roundTrip user = do
       head <- A.head <<< force <<< _.posts <<< unwrap <<< force $ user
       pure <<< _.author <<< unwrap <<< force $ head
+
+    selfLoop :: Lazy Simple -> Lazy Simple
+    selfLoop s = _.self <<< unwrap <<< force $ s
