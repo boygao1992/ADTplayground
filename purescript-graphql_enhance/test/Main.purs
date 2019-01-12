@@ -1,29 +1,45 @@
 module Test.Main where
 
 import Prelude
-
-import Data.Either (Either)
-import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Show (genericShow)
+import Data.Maybe (Maybe)
 import Effect (Effect)
-import Effect.Console (logShow)
-import Generic.EnumToArray (EnumVal, enumReadSymbol, enumToArray, enumToEnumValueArray)
-import GraphQL.Type as G
+import Type.Row (RProxy(..))
+import Generic.PartitionRow (class PartitionRow)
+import B2CExample.Model (Bank, Card)
 
--- | Test
-data Action
-  = Create
-  | Read
-  | Update
-  | Delete
-derive instance genericAction :: Generic Action _
-instance showAction :: Show Action where
-  show = genericShow
+partitionRow
+  :: forall row scalars relations
+   . PartitionRow row scalars relations
+  => RProxy row
+  -> { scalars :: RProxy scalars
+     , relations :: RProxy relations
+     }
+partitionRow _ =
+  { scalars : RProxy :: RProxy scalars
+  , relations : RProxy :: RProxy relations
+  }
 
-example1 = (enumReadSymbol "Create") :: Either String Action
-
-enumValueArrayExample = enumToEnumValueArray :: Array (G.EnumValue Action)
+partitionRowExample ::
+  { scalars :: RProxy
+               ( id :: String
+               , name :: Maybe String
+               , age :: Maybe Int
+               )
+  , relations :: RProxy
+                 ( banks :: Array Bank
+                 , cards :: Array Card
+                 )
+  }
+partitionRowExample =
+  partitionRow
+  $ RProxy :: RProxy
+    ( id :: String
+    , name :: Maybe String
+    , age :: Maybe Int
+    , cards :: Array Card
+    , banks :: Array Bank
+    )
 
 main :: Effect Unit
 main = do
-  logShow $ enumToArray :: Array (EnumVal Action)
+  pure unit

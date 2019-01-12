@@ -11,7 +11,8 @@
     "purescript-console": "^4.2.0",
     "purescript-effect": "^2.0.0",
     "purescript-refs": "^4.1.0",
-    "purescript-maybe": "^4.0.1"
+    "purescript-maybe": "^4.0.1",
+    "purescript-functions": "^4.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
