@@ -22,9 +22,9 @@ instance showPost :: Show Post where
 
 -- | without class Lazy
 newtype A = A
-            { b :: B }
+  { b :: B }
 newtype B = B
-            { a :: A }
+  { a :: A }
 
 type Lazy a = Unit -> a
 
@@ -40,11 +40,34 @@ b0 = \_ -> B
   { a : step a0 }
 
 
-foreign import _processRef :: forall a. Fn1 (Ref a) a
+foreign import _unRef :: forall a. Fn1 (Ref a) a
+-- NOTE Ref.modify doesn't mutate the referred object in place but creates a new one and points the contained reference to the new object, so this won't work as expected.
+-- TODO have to unwrap the Ref object in JS
+-- or build my own Ref implementation
+unRef :: forall a. Ref a -> a
+unRef = runFn1 _unRef
 
--- HACK
-processRef :: forall a. Ref a -> a
-processRef = runFn1 _processRef
+{- TODO
+
+derive a GenericGraphQLType constructor for each user-defined type
+- which takes a Record of GenericGraphQLType as dependency
+
+e.g.
+type User_Paritioned =
+  { scalars :: { ... }
+  , relations :: { posts :: Array Post }
+  }
+
+userTypeConstructor :: Ref (ObjectType ctx (Array Post)) -> ObjectType ctx (Maybe User)
+
+type Post_Partitioned =
+  { scalars :: { ... }
+  , relations :: { author :: User }
+  }
+
+postTypeConstructor :: Ref (ObjectType ctx User) -> ObjectType ctx (Maybe Post)
+
+-}
 
 -- | TODO
 data GraphQLObjectType ctx a
@@ -67,14 +90,23 @@ class ManyToMany a b where
 
 main :: Effect Unit
 main = do
-  posts <- Ref.new []
-  author <- Ref.new Nothing
+  -- posts <- Ref.new []
+  -- author <- Ref.new Nothing
 
-  let wenbo = User { name : "wenbo", posts }
-      post1 = Post { id : "001", author }
-  Ref.modify_ (const $ Just wenbo) author
-  Ref.modify_ (const $ [ post1 ]) posts
+  -- let wenbo = User { name : "wenbo", posts }
+  --     post1 = Post { id : "001", author }
+  --     wenbo2 = case wenbo of
+  --       User r -> User r { name = "wenbo2"}
+  -- Ref.modify_ (const $ Just wenbo) author
+  -- Ref.modify_ (const $ [ post1 ]) posts
 
-  logShow $ processRef posts
+  -- logShow $ case wenbo2 of
+  --   User r -> unRef r.posts
+
+  objectRef <- Ref.new { a : { b : "wenbo" }, c : "robot" }
+  let x = _.a $ unRef objectRef
+  Ref.modify_ (_ { a { b = "wenbo1" } }) objectRef
+  logShow x -- { b : "wenbo" }
+
   pure unit
 
