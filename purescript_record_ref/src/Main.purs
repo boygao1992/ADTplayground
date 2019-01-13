@@ -4,19 +4,19 @@ import Prelude
 
 import Effect (Effect)
 import Effect.Console (logShow)
-import RecordRef (PCons, PNil, PLProxy(..))
+import Type.Data.Symbol (SProxy(..))
 import RecordRef as RecordRef
 
 main :: Effect Unit
 main = do
   rec <- RecordRef.new { a: { b: "wenbo" } }
   RecordRef.pathWrite
-    (PLProxy :: PLProxy PNil)
-    {a : { b : "webot"}}
+    (SProxy :: SProxy "")
+    {a : { b : "webot" } }
     rec
   RecordRef.pathModify_
-    (PLProxy :: PLProxy (PCons "a" (PCons "b" PNil)))
+    (SProxy :: SProxy "a.b")
     (const "robot")
     rec
-  b <- RecordRef.pathRead (PLProxy :: PLProxy (PCons "a" PNil)) rec
+  b <- RecordRef.pathRead (SProxy :: SProxy "a") rec
   logShow b
