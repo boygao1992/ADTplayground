@@ -1,21 +1,22 @@
 module Main where
 
-import Prelude
+import Data.Function.Uncurried (Fn1, runFn1)
 import Data.Maybe (Maybe(..))
+import Data.Nullable (Nullable, null, notNull)
 import Effect (Effect)
 import Effect.Console (logShow)
 import Effect.Ref (Ref)
 import Effect.Ref as Ref
-import Data.Function.Uncurried (Fn1, runFn1)
+import Prelude
 
 newtype User = User
   { name :: String
-  , posts :: Ref (Array Post)
+  , posts :: Array (Ref (Nullable Post))
   }
 
 newtype Post = Post
   { id :: String
-  , author :: Ref (Maybe User)
+  , author :: Ref (Nullable User)
   }
 instance showPost :: Show Post where
   show (Post p) = "Post { " <> show p.id <> " }"
@@ -88,10 +89,14 @@ class ManyToMany a b where
                 }
 
 
+
 main :: Effect Unit
 main = do
-  -- posts <- Ref.new []
-  -- author <- Ref.new Nothing
+  wenbo <- Ref.new null
+  post1 <- Ref.new null
+
+  Ref.modify_ (const $ notNull $ User { name : "wenbo", posts : [post1]}) wenbo
+  Ref.modify_ (const $ notNull $ Post { id : "001", author : wenbo }) post1
 
   -- let wenbo = User { name : "wenbo", posts }
   --     post1 = Post { id : "001", author }
@@ -103,10 +108,11 @@ main = do
   -- logShow $ case wenbo2 of
   --   User r -> unRef r.posts
 
-  objectRef <- Ref.new { a : { b : "wenbo" }, c : "robot" }
-  let x = _.a $ unRef objectRef
-  Ref.modify_ (_ { a { b = "wenbo1" } }) objectRef
-  logShow x -- { b : "wenbo" }
+  -- objectRef <- Ref.new { a : { b : "wenbo" }, c : "robot" }
+  -- let x = _.a $ unRef objectRef
+  -- Ref.modify_ (_ { a { b = "wenbo1" } }) objectRef
+  -- logShow x -- { b : "wenbo" }
+
 
   pure unit
 
