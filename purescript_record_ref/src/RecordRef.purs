@@ -33,12 +33,10 @@ modify
    . (Record row -> Record row)
   -> RecordRef row
   -> Effect (Record row)
-modify f = modify'
-             \rec ->
-               let
-                 rec' = f rec
-               in
-                 { state : rec', value : rec' }
+modify f = modify' reducer
+  where
+    reducer :: Record row -> { state :: Record row, value :: Record row }
+    reducer rec = let rec' = f rec in { state : rec', value : rec' }
 
 modify_
   :: forall row
@@ -99,13 +97,10 @@ pathModify
   -> (typ -> typ)
   -> RecordRef row
   -> Effect typ
-pathModify path f = pathModify'
-                      path
-                      \rec ->
-                        let
-                          rec' = f rec
-                        in
-                          { state : rec', value : rec'}
+pathModify path f = pathModify' path reducer
+  where
+    reducer :: typ -> { state :: typ, value :: typ }
+    reducer rec = let rec' = f rec in { state : rec', value : rec' }
 
 pathModify_
   :: forall row path pl typ
