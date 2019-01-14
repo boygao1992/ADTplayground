@@ -18,6 +18,24 @@ var a = refA.value // { b : { a : [Circular] } }
 var b = refB.value // { a : { b : [Circular] } }
 -}
 
+{- annihilate Ref in place (JS plan)
+var unRef = ref => ref.value
+var x = function (postRef) {
+  return function () {
+    return
+      { name: "wenbo"
+      , post: unRef(postRef)
+      }
+  }
+}
+var y = { value : null }
+var z = x(y)
+z() // => { name: 'wenbo', post: null }
+
+y.value = { a : 1 }
+z() // => { name: 'wenbo', post: { a: 1 } }
+-}
+
 main :: Effect Unit
 main = do
   -- rec <- RecordRef.new { a: { b: "wenbo" } }
