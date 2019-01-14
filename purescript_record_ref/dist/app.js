@@ -467,18 +467,26 @@ var PS = {};
     }
   }
 
-  exports._pathRead = function (path, ref) {
+  exports.read = function (ref) {
+    return function () {
+      return ref.value
+    }
+  }
+
+  exports._pathReadRef = function (path, ref) {
     return function () {
       var pointer = ref.value
       path.forEach(function (node) {
         pointer = pointer[node]
       })
-      return pointer
+      return { value: pointer }
     }
   }
 
   exports["_pathModify'"] = function (path, f, ref) {
     return function () {
+      console.log(path)
+      console.log(ref)
       if (path.length === 0) {
         var t = f(ref.value)
         ref.value = t.state
@@ -489,25 +497,10 @@ var PS = {};
         pointer = pointer[node]
       })
       var field = path.slice(-1)[0]
+      console.log(field)
       t = f(pointer[field])
       pointer[field] = t.state
       return t.value
-    }
-  }
-
-  exports["_pathWrite"] = function (path, val, ref) {
-    return function () {
-      if (path.length === 0) {
-        ref.value = val
-        return ref
-      }
-      var pointer = ref.value
-      path.slice(0, -1).forEach(function (node) {
-        pointer = pointer[node]
-      })
-      var field = path.slice(-1)[0]
-      pointer[field] = val
-      return {}
     }
   }
 })(PS["RecordRef"] = PS["RecordRef"] || {});
@@ -521,6 +514,7 @@ var PS = {};
   var Data_Functor = PS["Data.Functor"];
   var Data_Symbol = PS["Data.Symbol"];
   var Effect = PS["Effect"];
+  var Effect_Ref = PS["Effect.Ref"];
   var Prelude = PS["Prelude"];
   var Type_Data_Boolean = PS["Type.Data.Boolean"];
   var Type_Data_Symbol = PS["Type.Data.Symbol"];
@@ -533,19 +527,49 @@ var PS = {};
       PLProxy.value = new PLProxy();
       return PLProxy;
   })();                  
-  var RowPathAccess = {};
+  var RowPListAccess = {};
+  var ReversePList = {};
+  var ReversePListImpl = {};
   var PListToArray = function (pListToArray) {
       this.pListToArray = pListToArray;
-  };                                   
-  var rowPathAccessInductionStep = function (dictCons) {
-      return function (dictRowPathAccess) {
-          return RowPathAccess;
+  };
+  var ParsePath = {};
+  var ParsePathImpl = {};
+  var ParsePathDispatch = {};          
+  var rowPListAccessInductionStep = function (dictCons) {
+      return function (dictRowPListAccess) {
+          return RowPListAccess;
       };
   };
-  var rowPathAccessBaseCase2 = function (dictCons) {
-      return RowPathAccess;
-  };                                                                                                                                     
-  var rowPathAccesBaseCase1 = RowPathAccess;
+  var rowPListAccessBaseCase2 = function (dictCons) {
+      return RowPListAccess;
+  };                                          
+  var reversePListImplInductionStep = function (dictReversePListImpl) {
+      return ReversePListImpl;
+  };
+  var reversePListImplBaseCase = ReversePListImpl;
+  var reversePListImpl = function (dictReversePListImpl) {
+      return ReversePList;
+  };                                         
+  var pathParseImplBaseCase2 = ParsePathImpl;
+  var parsePathImplDispatch = function (dictCons) {
+      return function (dictParsePathDispatch) {
+          return ParsePathImpl;
+      };
+  };
+  var parsePathImpl = function (dictParsePathImpl) {
+      return function (dictReversePList) {
+          return ParsePath;
+      };
+  };
+  var parsePathDispatchInductionStep = function (dictAppend) {
+      return function (dictParsePathImpl) {
+          return ParsePathDispatch;
+      };
+  };
+  var parsePathDispatchBaseCase2 = function (dictParsePathImpl) {
+      return ParsePathDispatch;
+  };                                                                                                                                                                                                                                                                                      
   var pListToArrayBaseCase = new PListToArray(function (v) {
       return [  ];
   });
@@ -559,101 +583,122 @@ var PS = {};
           });
       };
   };
-  var pathModify$prime = function (dictRowPathAccess) {
-      return function (dictPListToArray) {
-          return function (plist) {
-              return Data_Function_Uncurried.runFn3($foreign["_pathModify'"])(pListToArray(dictPListToArray)(plist));
-          };
-      };
-  };
-  var pathModify = function (dictRowPathAccess) {
-      return function (dictPListToArray) {
-          return function (plist) {
-              return function (f) {
-                  return pathModify$prime(dictRowPathAccess)(dictPListToArray)(plist)(function (rec) {
-                      var rec$prime = f(rec);
-                      return {
-                          state: rec$prime,
-                          value: rec$prime
-                      };
-                  });
+  var pathModify$prime = function (dictParsePath) {
+      return function (dictRowPListAccess) {
+          return function (dictPListToArray) {
+              return function (v) {
+                  return Data_Function_Uncurried.runFn3($foreign["_pathModify'"])(pListToArray(dictPListToArray)(PLProxy.value));
               };
           };
       };
   };
-  var pathModify_ = function (dictRowPathAccess) {
-      return function (dictPListToArray) {
-          return function (plist) {
-              return function (f) {
-                  return function (ref) {
-                      return Data_Functor["void"](Effect.functorEffect)(pathModify(dictRowPathAccess)(dictPListToArray)(plist)(f)(ref));
+  var pathModify = function (dictParsePath) {
+      return function (dictRowPListAccess) {
+          return function (dictPListToArray) {
+              return function (path) {
+                  return function (f) {
+                      var reducer = function (rec) {
+                          var rec$prime = f(rec);
+                          return {
+                              state: rec$prime,
+                              value: rec$prime
+                          };
+                      };
+                      return pathModify$prime(dictParsePath)(dictRowPListAccess)(dictPListToArray)(path)(reducer);
                   };
               };
           };
       };
   };
-  var pathRead = function (dictRowPathAccess) {
-      return function (dictPListToArray) {
-          return function (plist) {
-              return Data_Function_Uncurried.runFn2($foreign._pathRead)(pListToArray(dictPListToArray)(plist));
+  var pathModify_ = function (dictParsePath) {
+      return function (dictRowPListAccess) {
+          return function (dictPListToArray) {
+              return function (path) {
+                  return function (f) {
+                      return function (ref) {
+                          return Data_Functor["void"](Effect.functorEffect)(pathModify(dictParsePath)(dictRowPListAccess)(dictPListToArray)(path)(f)(ref));
+                      };
+                  };
+              };
           };
       };
   };
-  var pathWrite = function (dictRowPathAccess) {
-      return function (dictPListToArray) {
-          return function (plist) {
-              return Data_Function_Uncurried.runFn3($foreign._pathWrite)(pListToArray(dictPListToArray)(plist));
+  var pathReadRef = function (dictParsePath) {
+      return function (dictRowPListAccess) {
+          return function (dictPListToArray) {
+              return function (v) {
+                  return Data_Function_Uncurried.runFn2($foreign._pathReadRef)(pListToArray(dictPListToArray)(PLProxy.value));
+              };
           };
       };
   };
   exports["pListToArray"] = pListToArray;
-  exports["pathRead"] = pathRead;
+  exports["pathReadRef"] = pathReadRef;
   exports["pathModify"] = pathModify;
   exports["pathModify_"] = pathModify_;
-  exports["pathWrite"] = pathWrite;
-  exports["RowPathAccess"] = RowPathAccess;
+  exports["RowPListAccess"] = RowPListAccess;
+  exports["ReversePList"] = ReversePList;
+  exports["ReversePListImpl"] = ReversePListImpl;
   exports["PListToArray"] = PListToArray;
+  exports["ParsePath"] = ParsePath;
+  exports["ParsePathImpl"] = ParsePathImpl;
+  exports["ParsePathDispatch"] = ParsePathDispatch;
   exports["PLProxy"] = PLProxy;
-  exports["rowPathAccesBaseCase1"] = rowPathAccesBaseCase1;
-  exports["rowPathAccessBaseCase2"] = rowPathAccessBaseCase2;
-  exports["rowPathAccessInductionStep"] = rowPathAccessInductionStep;
+  exports["rowPListAccessBaseCase2"] = rowPListAccessBaseCase2;
+  exports["rowPListAccessInductionStep"] = rowPListAccessInductionStep;
+  exports["reversePListImpl"] = reversePListImpl;
+  exports["reversePListImplBaseCase"] = reversePListImplBaseCase;
+  exports["reversePListImplInductionStep"] = reversePListImplInductionStep;
   exports["pListToArrayBaseCase"] = pListToArrayBaseCase;
   exports["pListToArrayInductionStep"] = pListToArrayInductionStep;
+  exports["parsePathImpl"] = parsePathImpl;
+  exports["pathParseImplBaseCase2"] = pathParseImplBaseCase2;
+  exports["parsePathImplDispatch"] = parsePathImplDispatch;
+  exports["parsePathDispatchBaseCase2"] = parsePathDispatchBaseCase2;
+  exports["parsePathDispatchInductionStep"] = parsePathDispatchInductionStep;
   exports["new"] = $foreign["new"];
+  exports["read"] = $foreign.read;
 })(PS["RecordRef"] = PS["RecordRef"] || {});
 (function(exports) {
   // Generated by purs version 0.12.1
   "use strict";
   var Control_Bind = PS["Control.Bind"];
   var Data_Function = PS["Data.Function"];
+  var Data_Nullable = PS["Data.Nullable"];
   var Data_Show = PS["Data.Show"];
   var Data_Symbol = PS["Data.Symbol"];
   var Effect = PS["Effect"];
   var Effect_Console = PS["Effect.Console"];
+  var Effect_Ref = PS["Effect.Ref"];
   var Prelude = PS["Prelude"];
-  var RecordRef = PS["RecordRef"];                 
+  var RecordRef = PS["RecordRef"];
+  var Type_Data_Symbol = PS["Type.Data.Symbol"];                 
   var main = function __do() {
       var v = RecordRef["new"]({
-          a: {
-              b: "wenbo"
+          x: {
+              y: "wenbo"
           }
       })();
-      RecordRef.pathWrite(RecordRef.rowPathAccesBaseCase1)(RecordRef.pListToArrayBaseCase)(RecordRef.PLProxy.value)({
-          a: {
-              b: "webot"
-          }
-      })(v)();
-      RecordRef.pathModify_(RecordRef.rowPathAccessInductionStep()(RecordRef.rowPathAccessBaseCase2()))(RecordRef.pListToArrayInductionStep(new Data_Symbol.IsSymbol(function () {
-          return "a";
+      var v1 = RecordRef.pathReadRef(RecordRef.parsePathImpl(RecordRef.parsePathImplDispatch()(RecordRef.parsePathDispatchInductionStep()(RecordRef.pathParseImplBaseCase2)))(RecordRef.reversePListImpl(RecordRef.reversePListImplInductionStep(RecordRef.reversePListImplBaseCase))))(RecordRef.rowPListAccessBaseCase2())(RecordRef.pListToArrayInductionStep(new Data_Symbol.IsSymbol(function () {
+          return "x";
+      }))(RecordRef.pListToArrayBaseCase))(Data_Symbol.SProxy.value)(v)();
+      RecordRef.pathModify_(RecordRef.parsePathImpl(RecordRef.parsePathImplDispatch()(RecordRef.parsePathDispatchInductionStep()(RecordRef.parsePathImplDispatch()(RecordRef.parsePathDispatchInductionStep()(RecordRef.parsePathImplDispatch()(RecordRef.parsePathDispatchInductionStep()(RecordRef.parsePathImplDispatch()(RecordRef.parsePathDispatchInductionStep()(RecordRef.parsePathImplDispatch()(RecordRef.parsePathDispatchInductionStep()(RecordRef.parsePathImplDispatch()(RecordRef.parsePathDispatchBaseCase2(RecordRef.parsePathImplDispatch()(RecordRef.parsePathDispatchInductionStep()(RecordRef.pathParseImplBaseCase2)))))))))))))))(RecordRef.reversePListImpl(RecordRef.reversePListImplInductionStep(RecordRef.reversePListImplInductionStep(RecordRef.reversePListImplBaseCase)))))(RecordRef.rowPListAccessInductionStep()(RecordRef.rowPListAccessBaseCase2()))(RecordRef.pListToArrayInductionStep(new Data_Symbol.IsSymbol(function () {
+          return "value";
       }))(RecordRef.pListToArrayInductionStep(new Data_Symbol.IsSymbol(function () {
-          return "b";
-      }))(RecordRef.pListToArrayBaseCase)))(RecordRef.PLProxy.value)(Data_Function["const"]("robot"))(v)();
-      var v1 = RecordRef.pathRead(RecordRef.rowPathAccessBaseCase2())(RecordRef.pListToArrayInductionStep(new Data_Symbol.IsSymbol(function () {
-          return "a";
-      }))(RecordRef.pListToArrayBaseCase))(RecordRef.PLProxy.value)(v)();
+          return "y";
+      }))(RecordRef.pListToArrayBaseCase)))(Data_Symbol.SProxy.value)(Data_Function["const"]("robot"))(v1)();
+      var v2 = RecordRef.read(v)();
+      var v3 = RecordRef.read(v1)();
+      Effect_Console.logShow(Data_Show.showRecord()(Data_Show.showRecordFieldsCons(new Data_Symbol.IsSymbol(function () {
+          return "x";
+      }))(Data_Show.showRecordFieldsNil)(Data_Show.showRecord()(Data_Show.showRecordFieldsCons(new Data_Symbol.IsSymbol(function () {
+          return "y";
+      }))(Data_Show.showRecordFieldsNil)(Data_Show.showString)))))(v2)();
       return Effect_Console.logShow(Data_Show.showRecord()(Data_Show.showRecordFieldsCons(new Data_Symbol.IsSymbol(function () {
-          return "b";
-      }))(Data_Show.showRecordFieldsNil)(Data_Show.showString)))(v1)();
+          return "value";
+      }))(Data_Show.showRecordFieldsNil)(Data_Show.showRecord()(Data_Show.showRecordFieldsCons(new Data_Symbol.IsSymbol(function () {
+          return "y";
+      }))(Data_Show.showRecordFieldsNil)(Data_Show.showString)))))(v3)();
   };
   exports["main"] = main;
 })(PS["Main"] = PS["Main"] || {});

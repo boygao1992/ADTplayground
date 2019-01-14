@@ -37,6 +37,16 @@ exports._pathRead = function (path, ref) {
   }
 }
 
+exports._pathReadRef = function (path, ref) {
+  return function () {
+    var pointer = ref.value
+    path.forEach(function (node) {
+      pointer = pointer[node]
+    })
+    return { value: pointer }
+  }
+}
+
 exports["_pathModify'"] = function (path, f, ref) {
   return function () {
     if (path.length === 0) {

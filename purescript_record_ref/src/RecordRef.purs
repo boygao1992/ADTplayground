@@ -5,6 +5,7 @@ import Prelude
 import Data.Array ((:))
 import Data.Function.Uncurried (Fn2, runFn2, Fn3, runFn3)
 import Effect (Effect)
+import Effect.Ref (Ref)
 import Prim.Row as Row
 import Type.Data.Boolean as Bool
 import Type.Data.Symbol (SProxy(..))
@@ -68,6 +69,27 @@ pathRead
   -> RecordRef row
   -> Effect typ
 pathRead _ = runFn2 _pathRead (pListToArray (PLProxy :: PLProxy pl))
+
+-- HACK dangerous, entangle the input RecordRef and the output RecordRef
+-- TODO restrict path to leave the leaf nodes untouched
+-- TODO add extra type parameters to denote such an entanglement
+foreign import _pathReadRef
+  :: forall row typ
+   . Fn2
+      (Array String)
+      (RecordRef row)
+      (Effect (RecordRef typ))
+
+pathReadRef
+  :: forall row path pl row'
+   . ParsePath path pl
+  => RowPListAccess row pl (Record row')
+  => PListToArray pl
+  => SProxy path
+  -> RecordRef row
+  -> Effect (RecordRef row')
+pathReadRef _ = runFn2 _pathReadRef (pListToArray (PLProxy :: PLProxy pl))
+
 
 foreign import _pathModify'
   :: forall row typ b

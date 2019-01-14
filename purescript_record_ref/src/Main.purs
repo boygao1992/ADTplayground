@@ -2,11 +2,12 @@ module Main where
 
 import Prelude
 
+import Data.Nullable (Nullable, null, notNull)
 import Effect (Effect)
 import Effect.Console (logShow)
-import Type.Data.Symbol (SProxy(..))
+import Effect.Ref as Ref
 import RecordRef as RecordRef
-import Data.Nullable (Nullable, null, notNull)
+import Type.Data.Symbol (SProxy(..))
 
 {- tying the knot in JS
 var refA = { value : { b : null } }
@@ -19,21 +20,33 @@ var b = refB.value // { a : { b : [Circular] } }
 
 main :: Effect Unit
 main = do
-  rec <- RecordRef.new { a: { b: "wenbo" } }
-  RecordRef.pathWrite
-    (SProxy :: SProxy "")
-    {a : { b : "webot" } }
-    rec
-  RecordRef.pathModify_
-    (SProxy :: SProxy "a")
-    (const $ { b : "wenbo" })
-    rec
-  RecordRef.pathModify_
-    (SProxy :: SProxy "a.b")
-    (const "robot")
-    rec
-  b <- RecordRef.pathRead (SProxy :: SProxy "a") rec
-  logShow b
+  -- rec <- RecordRef.new { a: { b: "wenbo" } }
+  -- RecordRef.pathWrite
+  --   (SProxy :: SProxy "")
+  --   {a : { b : "webot" } }
+  --   rec
+  -- RecordRef.pathModify_
+  --   (SProxy :: SProxy "a")
+  --   (const $ { b : "wenbo" })
+  --   rec
+  -- RecordRef.pathModify_
+  --   (SProxy :: SProxy "a.b")
+  --   (const "robot")
+  --   rec
+  -- b <- RecordRef.pathRead (SProxy :: SProxy "a") rec
+  -- logShow b
+
+  -- | Entanglement
+  x <- RecordRef.new { x : { y : "wenbo" } }
+  y <- RecordRef.pathReadRef (SProxy :: SProxy "x") x
+  -- modify common fields of x and y from either will affect both
+  RecordRef.pathModify_ (SProxy :: SProxy "y") (const "robot") y
+  robot <- RecordRef.read x
+  logShow robot
+  RecordRef.pathModify_ (SProxy :: SProxy "x.y") (const "wenbo") x
+  wenbo <- RecordRef.read y
+  logShow wenbo
+
 
   -- x <- RecordRef.new { y : null }
   -- y <- RecordRef.new { x : null }
