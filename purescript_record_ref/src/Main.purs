@@ -8,6 +8,9 @@ import Effect.Console (logShow)
 import Effect.Ref as Ref
 import RecordRef as RecordRef
 import Type.Data.Symbol (SProxy(..))
+import Control.Monad.ST (run) as ST
+import Record.ST as RST
+import Record.ST.Nested as RST
 
 {- tying the knot in JS
 var refA = { value : { b : null } }
@@ -36,74 +39,87 @@ y.value = { a : 1 }
 z() // => { name: 'wenbo', post: { a: 1 } }
 -}
 
+{-
+/*
+    ST ::
+      { a :: Nullable A
+      , b :: Nullable B
+      , c :: Nullable C
+      }
+newtype A = A
+  { name :: String
+  , toB :: Unit -> B
+  , toC :: Unit -> C
+  }
+
+newtype B = B
+  { name :: String
+  , toA :: Unit -> A
+  , toC :: Unit -> C
+  }
+
+newtype C = C
+  { name :: String
+  , toA :: Unit -> A
+  , toB :: Unit -> B
+  }
+*/
+var ST = { a: null, b: null, c: null }
+
+/*
+    aConstructor
+      :: forall h r.
+       . STRecord h
+          ( b :: Nullable B
+          , c :: Nullable C
+          | r
+          )
+      -> ST h A
+    aConstructor st = do
+      b <- RST.pathPeekSTRef (SProxy :: SProxy "b") st
+      c <- RST.pathPeekSTRef (SProxy :: SProxy "c") st
+      pure ( A
+        { name : "A"
+        , toB : \_ -> RST.unsafeReadSTRef b
+        , toC : \_ -> RST.unsafeReadSTRef c
+        }
+      )
+*/
+var aConstructor = ST =>
+  ({ name : "a"
+   , toB : () => ST.b
+   , toC : () => ST.c
+   })
+var bConstructor = ST =>
+  ({ name : "b"
+   , toA : () => ST.a
+   , toC : () => ST.c
+   })
+var cConstructor = ST =>
+  ({ name : "c"
+   , toA : () => ST.a
+   , toB : () => ST.b
+   })
+ST.a = aConstructor(ST)
+ST.b = bConstructor(ST)
+ST.c = cConstructor(ST)
+
+const { a, b, c } = ST
+-}
+
 main :: Effect Unit
 main = do
-  -- rec <- RecordRef.new { a: { b: "wenbo" } }
-  -- RecordRef.pathWrite
-  --   (SProxy :: SProxy "")
-  --   {a : { b : "webot" } }
-  --   rec
-  -- RecordRef.pathModify_
-  --   (SProxy :: SProxy "a")
-  --   (const $ { b : "wenbo" })
-  --   rec
-  -- RecordRef.pathModify_
-  --   (SProxy :: SProxy "a.b")
-  --   (const "robot")
-  --   rec
-  -- b <- RecordRef.pathRead (SProxy :: SProxy "a") rec
-  -- logShow b
+  logShow $ ST.run do
+    a <- RST.thaw { a : { b : { c : "wenbo" } } }
+    c <- RST.pathPeek (SProxy :: SProxy "a.b") a
+    RST.pathModify (SProxy :: SProxy "a.b.c") (const "robot") a
+    pure c
 
-  -- | Entanglement
-  x <- RecordRef.new { x : { y : "wenbo" } }
-  y <- RecordRef.pathReadRef (SProxy :: SProxy "x") x
-  -- modify common fields of x and y from either will affect both
-  RecordRef.pathModify_ (SProxy :: SProxy "y") (const "robot") y
-  robot <- RecordRef.read x
-  logShow robot
-  RecordRef.pathModify_ (SProxy :: SProxy "x.y") (const "wenbo") x
-  wenbo <- RecordRef.read y
-  logShow wenbo
-
-
-  -- x <- RecordRef.new { y : null }
-  -- y <- RecordRef.new { x : null }
-  -- RecordRef.pathModify_
-  --   (SProxy :: SProxy "y")
-  --   (const $ notNull y)
-  --   x
-
-  -- currently only support Record which will blow the type inference if circular
-  -- TODO introduce newtype wrapping for circular record
-
-{-
- No type class instance was found for
-
-  Prim.Row.Cons "y"
-                (Nullable
-                  (RecordRef
-                      ( x :: forall a. Nullable a
-                      )
-                  )
-                )
-                t4
-                ( y :: forall a. Nullable a
-                )
-
-The instance head contains unknown type variables. Consider adding a type annotation.
-
-while applying a function pathModify_
-of type ParsePath t0 t1 => RowPListAccess t2 t1 t3 => PListToArray t1 => SProxy t0 -> (t3 -> t3) -> RecordRef t2 -> Effect Unit
-to argument SProxy
-while inferring the type of pathModify_ SProxy
-in value declaration main
-
-where t3 is an unknown type
-    t1 is an unknown type
-    t0 is an unknown type
-    t2 is an unknown type
-    t4 is an unknown type
- (psc-ide)
-
--}
+  logShow $ ST.run do
+    -- | Entanglement
+    a <- RST.thaw { a : { b : { c : "wenbo" } } }
+    c <- RST.pathPeekSTRecord (SProxy :: SProxy "a.b") a
+    -- modify common fields of a and c from either will affect both
+    RST.pathModify (SProxy :: SProxy "c") (const "robot") c
+    RST.pathPeek (SProxy :: SProxy "a.b") a
 

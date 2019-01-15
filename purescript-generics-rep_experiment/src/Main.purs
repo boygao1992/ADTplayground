@@ -281,6 +281,7 @@ class IsField row name <= InjectDescription (row :: # Type) (name :: Symbol) (de
 
 main :: Effect Unit
 main = do
+
   -- case (JSON.readJSON testJSON) of
   --   Right ((State r) :: State) -> do
   --     assertEqual { expected: 0, actual: r.id }

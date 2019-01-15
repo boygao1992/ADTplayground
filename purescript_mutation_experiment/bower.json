@@ -1,5 +1,5 @@
 {
-  "name": "purescript_record_ref",
+  "name": "purescript_mutation_experiment",
   "ignore": [
     "**/.*",
     "node_modules",
@@ -10,12 +10,11 @@
     "purescript-prelude": "^4.1.0",
     "purescript-console": "^4.2.0",
     "purescript-effect": "^2.0.0",
-    "purescript-typelevel-prelude": "^3.0.0",
-    "purescript-functions": "^4.0.0",
-    "purescript-arrays": "^5.2.0",
-    "purescript-nullable": "^4.1.1",
+    "purescript-foreign-object": "^1.1.0",
     "purescript-refs": "^4.1.0",
-    "purescript-record": "^1.0.0"
+    "purescript-record": "^1.0.0",
+    "purescript-st": "^4.0.0",
+    "purescript-nullable": "^4.1.1"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"

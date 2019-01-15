@@ -1,11 +1,10 @@
-module RecordRef where
+module Deprecated.RecordRef where
 
 import Prelude
 
 import Data.Array ((:))
 import Data.Function.Uncurried (Fn2, runFn2, Fn3, runFn3)
 import Effect (Effect)
-import Effect.Ref (Ref)
 import Prim.Row as Row
 import Type.Data.Boolean as Bool
 import Type.Data.Symbol (SProxy(..))
@@ -72,7 +71,7 @@ pathRead _ = runFn2 _pathRead (pListToArray (PLProxy :: PLProxy pl))
 
 -- HACK dangerous, entangle the input RecordRef and the output RecordRef
 -- TODO restrict path to leave the leaf nodes untouched
--- TODO add extra type parameters to denote such an entanglement
+-- TODO move to separate ST module for local mutation only
 foreign import _pathReadRef
   :: forall row typ
    . Fn2
