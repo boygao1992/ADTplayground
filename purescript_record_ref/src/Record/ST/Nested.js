@@ -8,9 +8,11 @@ exports.unsafePathPeek = function (path, ref) {
   }
 }
 
-exports.unsafePeekSTRef = function (l, ref) {
+exports.unsafePeekLazyRef = function (l, ref) {
   return function () {
-    return { value: ref[l] }
+    return function () {
+      return ref[l]
+    }
   }
 }
 
@@ -24,13 +26,15 @@ exports.unsafePathPeekSTRecord = function (path, ref) {
   }
 }
 
-exports.unsafePathPeekSTRef = function (path, ref) {
+exports.unsafePathPeekLazyRef = function (path, ref) {
   return function () {
     var pointer = ref
     path.forEach(function (node) {
       pointer = pointer[node]
     })
-    return { value: pointer }
+    return function () {
+      return pointer
+    }
   }
 }
 

@@ -3,7 +3,6 @@ module Record.ST.Nested where
 import Prelude
 
 import Control.Monad.ST (ST)
-import Control.Monad.ST.Ref (STRef)
 import Data.Array ((:))
 import Data.Function.Uncurried (Fn2, Fn3, runFn2, runFn3)
 import Prim.Row as Row
@@ -181,38 +180,38 @@ pathPeekSTRecord
   -> ST h (STRecord h childRow)
 pathPeekSTRecord _ = runFn2 unsafePathPeekSTRecord (pListToArray (PLProxy :: PLProxy pl))
 
-foreign import unsafePeekSTRef
+foreign import unsafePeekLazyRef
   :: forall h row typ
    . Fn2
        String
        (STRecord h row)
-       (ST h (STRef h typ))
+       (ST h (Unit -> typ))
 
-peekSTRef
+peekLazyRef
   :: forall h label row restRow typ
    . Row.Cons label typ restRow row
   => Symbol.IsSymbol label
   => SProxy label
   -> STRecord h row
-  -> ST h (STRef h typ)
-peekSTRef l = runFn2 unsafePeekSTRef (Symbol.reflectSymbol l)
+  -> ST h (Unit -> typ)
+peekLazyRef l = runFn2 unsafePeekLazyRef (Symbol.reflectSymbol l)
 
-foreign import unsafePathPeekSTRef
+foreign import unsafePathPeekLazyRef
   :: forall h row childRow
    . Fn2
       (Array String)
       (STRecord h row)
-      (ST h (STRef h (Record childRow)))
+      (ST h (Unit -> Record childRow))
 
-pathPeekSTRef
+pathPeekLazyRef
   :: forall h row path pl childRow
    . ParsePath path pl
   => RowPListAccessRecord row pl childRow
   => PListToArray pl
   => SProxy path
   -> STRecord h row
-  -> ST h (STRef h (Record childRow))
-pathPeekSTRef _ = runFn2 unsafePathPeekSTRef (pListToArray (PLProxy :: PLProxy pl))
+  -> ST h (Unit -> Record childRow)
+pathPeekLazyRef _ = runFn2 unsafePathPeekLazyRef (pListToArray (PLProxy :: PLProxy pl))
 
 foreign import unsafePathPoke
   :: forall h row typ
