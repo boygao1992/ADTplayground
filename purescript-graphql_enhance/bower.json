@@ -14,7 +14,8 @@
     "purescript-generics-rep": "^6.1.0",
     "purescript-typelevel-prelude": "^3.0.0",
     "purescript-lazy": "^4.0.0",
-    "purescript-lists": "^5.3.0"
+    "purescript-lists": "^5.3.0",
+    "purescript-type-isequal": "^0.1.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"

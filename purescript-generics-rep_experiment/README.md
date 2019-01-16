@@ -349,6 +349,9 @@ Con
 - cannot write numbers the natural way
   - partial solution: build a large table of named types (Data.Typelevel.Num.Aliases)
 
+## Type.Map
+[LiamGoodacre/purescript-type-map](https://github.com/LiamGoodacre/purescript-type-map)
+
 # Mapping Example
 
 ## Example 1: Product - Record vs Multi-Argument Constructor

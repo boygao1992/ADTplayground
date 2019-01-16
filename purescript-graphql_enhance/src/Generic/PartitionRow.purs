@@ -8,6 +8,11 @@ import Prim.Row as Row
 import Type.Data.Boolean as Bool
 import Generic.GraphQLType (Id)
 
+class IsUnit a (b :: Bool.Boolean) | a -> b
+
+instance isUnitYes :: IsUnit Unit Bool.True
+else instance isUnitNo :: IsUnit a Bool.False
+
 class IsScalar a (b :: Bool.Boolean) | a -> b
 
 instance isScalarInt :: IsScalar Int Bool.True
