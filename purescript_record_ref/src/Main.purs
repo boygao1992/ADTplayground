@@ -2,15 +2,15 @@ module Main where
 
 import Prelude
 
+import Control.Monad.ST (run) as ST
+import Control.Monad.ST.Unsafe (unsafeReadSTRef)
 import Data.Nullable (Nullable, null, notNull)
 import Effect (Effect)
 import Effect.Console (logShow)
 import Effect.Ref as Ref
-import RecordRef as RecordRef
-import Type.Data.Symbol (SProxy(..))
-import Control.Monad.ST (run) as ST
 import Record.ST as RST
 import Record.ST.Nested as RST
+import Type.Data.Symbol (SProxy(..))
 
 {- tying the knot in JS
 var refA = { value : { b : null } }
@@ -109,17 +109,25 @@ const { a, b, c } = ST
 
 main :: Effect Unit
 main = do
-  logShow $ ST.run do
-    a <- RST.thaw { a : { b : { c : "wenbo" } } }
-    c <- RST.pathPeek (SProxy :: SProxy "a.b") a
-    RST.pathModify (SProxy :: SProxy "a.b.c") (const "robot") a
-    pure c
+  -- logShow $ ST.run do
+  --   a <- RST.thaw { a : { b : { c : "wenbo" } } }
+  --   c <- RST.pathPeek (SProxy :: SProxy "a.b") a
+  --   RST.pathModify (SProxy :: SProxy "a.b.c") (const "robot") a
+  --   pure c
+
+  -- logShow $ ST.run do
+  --   -- | Entanglement
+  --   a <- RST.thaw { a : { b : { c : "wenbo" } } }
+  --   c <- RST.pathPeekSTRecord (SProxy :: SProxy "a.b") a
+  --   -- modify common fields of a and c from either will affect both
+  --   RST.pathModify (SProxy :: SProxy "c") (const "robot") c
+  --   RST.pathPeek (SProxy :: SProxy "a.b") a
 
   logShow $ ST.run do
-    -- | Entanglement
-    a <- RST.thaw { a : { b : { c : "wenbo" } } }
-    c <- RST.pathPeekSTRecord (SProxy :: SProxy "a.b") a
-    -- modify common fields of a and c from either will affect both
-    RST.pathModify (SProxy :: SProxy "c") (const "robot") c
-    RST.pathPeek (SProxy :: SProxy "a.b") a
+    x <- RST.thaw { a : { b : { c : "wenbo" } } }
+    y <- RST.thaw { b : { c : "robot" } }
+    cSTRef <- RST.pathPeekSTRef (SProxy :: SProxy "a.b") x
+    RST.pathModify (SProxy :: SProxy "b") (const (unsafeReadSTRef cSTRef)) y
+    RST.pathModify (SProxy :: SProxy "a.b.c") (const "webot") x
+    RST.pathPeek (SProxy :: SProxy "b.c") y
 

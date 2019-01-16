@@ -8,6 +8,12 @@ exports.unsafePathPeek = function (path, ref) {
   }
 }
 
+exports.unsafePeekSTRef = function (l, ref) {
+  return function () {
+    return { value: ref[l] }
+  }
+}
+
 exports.unsafePathPeekSTRecord = function (path, ref) {
   return function () {
     var pointer = ref
@@ -25,12 +31,6 @@ exports.unsafePathPeekSTRef = function (path, ref) {
       pointer = pointer[node]
     })
     return { value: pointer }
-  }
-}
-
-exports.unsafeReadSTRef = function (ref) {
-  return function () {
-    return ref.value
   }
 }
 

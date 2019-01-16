@@ -181,6 +181,22 @@ pathPeekSTRecord
   -> ST h (STRecord h childRow)
 pathPeekSTRecord _ = runFn2 unsafePathPeekSTRecord (pListToArray (PLProxy :: PLProxy pl))
 
+foreign import unsafePeekSTRef
+  :: forall h row typ
+   . Fn2
+       String
+       (STRecord h row)
+       (ST h (STRef h typ))
+
+peekSTRef
+  :: forall h label row restRow typ
+   . Row.Cons label typ restRow row
+  => Symbol.IsSymbol label
+  => SProxy label
+  -> STRecord h row
+  -> ST h (STRef h typ)
+peekSTRef l = runFn2 unsafePeekSTRef (Symbol.reflectSymbol l)
+
 foreign import unsafePathPeekSTRef
   :: forall h row childRow
    . Fn2
@@ -197,10 +213,6 @@ pathPeekSTRef
   -> STRecord h row
   -> ST h (STRef h (Record childRow))
 pathPeekSTRef _ = runFn2 unsafePathPeekSTRef (pListToArray (PLProxy :: PLProxy pl))
-
-foreign import unsafeReadSTRef
-  :: forall h a
-   . STRef h a -> a
 
 foreign import unsafePathPoke
   :: forall h row typ
