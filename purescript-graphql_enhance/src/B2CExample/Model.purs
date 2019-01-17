@@ -1,9 +1,5 @@
 module B2CExample.Model where
 
-import Prelude
-
-import Generic.GraphQLType (class TypeName)
-
 -- PLAN
 -- distributed interface through type classes
 -- 1. derived GraphQLType Definition
@@ -72,6 +68,8 @@ newtype Transaction = Transaction
   , merchant :: Merchant -- one-one edge
   , currencyCode :: CurrencyCode -- one-one edge
   }
+
+class TypeName typ (name :: Symbol)
 
 data CardType
   = AmericanExpress

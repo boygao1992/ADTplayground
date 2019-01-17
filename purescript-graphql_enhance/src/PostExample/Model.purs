@@ -1,7 +1,8 @@
 module PostExample.Model where
 
 import Data.Maybe (Maybe(..))
-import Generic.GraphQLType (Id)
+
+newtype Id = Id String
 
 newtype PostDraft = PostDraft -- InputObjectType
   { title :: String

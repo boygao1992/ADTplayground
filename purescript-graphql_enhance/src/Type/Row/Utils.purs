@@ -1,13 +1,12 @@
 module Type.Row.Utils where
 
-import Type.IsEqual
 
 import Prim.Row as Row
 import Prim.RowList (kind RowList)
 import Prim.RowList as RowList
 import Type.Data.Boolean as Bool
-import Type.Data.Boolean.Utils
-
+import Type.Data.Boolean.Utils (class IsTrue)
+import Type.Utils (class IsEqualPred)
 
 -- | HasFieldPred
 class HasFieldPred (row :: # Type) (name :: Symbol) (b :: Bool.Boolean) | row name -> b
@@ -51,7 +50,7 @@ instance isSubsetPredRowListDispatchFalse ::
   IsSubsetPredRowListDispatch Bool.False name typ hypoRl hyper Bool.False
 else instance isSubsetPredRowListDispatchTrue ::
   ( Row.Cons name typ0 restHyper hyper
-  , IsEqual typ0 typ b1
+  , IsEqualPred typ0 typ b1
   , IsSubsetPredRowListSecondDispatch b1 hypoRl hyper b
   ) => IsSubsetPredRowListDispatch Bool.True name typ hypoRl hyper b
 

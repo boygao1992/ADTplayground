@@ -1,6 +1,13 @@
 module GraphQL.TypeToField where
 
+
+-- NOTE
+-- assumptions to simplify API
+-- 1. output of resolver will fulfill all scalars of childType
+
+
 import Prelude (Void)
+
 import Type.Data.Boolean as Bool
 import Type.Row.Utils (class HasFieldPred)
 
@@ -24,13 +31,22 @@ else instance parseFieldTypeNotFunction ::
 class GraphQLObjectField i o (missing :: # Type)
 
 {-
+from parent
+- sourceType (parent's outputType) NOTE removed by assumption1
+- context (carried all the way down from root node)
+
+input variables
+- scalars
+- relations
+- args
+
 type variables
 - fieldName :: Symbol
   - e.g. "id"
 - fieldType
   -> argsType outputType
 - fieldRow :: # Type
-  - 
+  - "description"
 
 resolveFnType ::
   { source? :: sourceType
@@ -47,6 +63,9 @@ missing fields =
     }
   }
 }
+
+
+class ToGraphQLObjectTypeMissingField psType source ctx output (missing :: # Type) | psType source ctx output -> missing
 
 -}
 
