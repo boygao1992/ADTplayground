@@ -6,7 +6,7 @@ import Prim.Row as Row
 import Prim.RowList (kind RowList)
 import Prim.RowList as RowList
 import Type.Data.Boolean as Bool
-
+import Type.Data.Boolean.Utils
 
 
 -- | HasFieldPred
@@ -62,3 +62,13 @@ instance isSubsetPredRowListSecondDispatchFalse ::
 else instance isSubsetPredRowListSecondDispatchTrue ::
   ( IsSubsetPredRowList hypoRl hyper b
   ) => IsSubsetPredRowListSecondDispatch Bool.True hypoRl hyper b
+
+-- | IsSubset
+
+class IsSubset (hyper :: # Type) (hypo :: # Type)
+
+instance isSubsetImpl ::
+  ( IsSubsetPred hyper hypo b
+  , IsTrue b
+  ) => IsSubset hyper hypo
+

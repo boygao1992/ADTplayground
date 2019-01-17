@@ -21,6 +21,53 @@ instance parseFieldTypeIsFunction ::
 else instance parseFieldTypeNotFunction ::
   ParseFieldType o Void o
 
+class GraphQLObjectField i o (missing :: # Type)
+
+{-
+type variables
+- fieldName :: Symbol
+  - e.g. "id"
+- fieldType
+  -> argsType outputType
+- fieldRow :: # Type
+  - 
+
+resolveFnType ::
+  { source? :: sourceType
+  , args? :: argsType
+  , context? :: contextType
+  } -> Aff outputType
+
+missing fields =
+{ description? :: String
+, fields :
+  { posts :
+    { description? :: String
+    , resolve :: resolveFnType
+    }
+  }
+}
+
+-}
+
+-- | IsObjectLabel
+class IsObjectLabel (label :: Symbol)
+instance isObjectLabelDescription :: IsObjectLabel "description"
+instance isObjectLabelFields :: IsObjectLabel "fields"
+
+-- | IsObjectFieldLabel
+class IsObjectFieldLabel (label :: Symbol)
+instance isObjectFieldLabelDescription :: IsObjectFieldLabel "description"
+instance isObjectFieldLabelArgs :: IsObjectFieldLabel "args"
+instance isObjectFieldLabelResolve :: IsObjectFieldLabel "resolve"
+
+-- | Description
+class HasDescription (row :: # Type) (b :: Bool.Boolean) | row -> b
+
+instance hasDescriptionImpl ::
+  ( HasFieldPred row "description" b
+  ) => HasDescription row b
+
 -- | Resolver
 
 -- | Source
