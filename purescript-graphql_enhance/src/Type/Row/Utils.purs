@@ -71,3 +71,24 @@ instance isSubsetImpl ::
   , IsTrue b
   ) => IsSubset hyper hypo
 
+
+-- | FetchField
+
+foreign import kind FetchResult
+foreign import data FetchFailure :: FetchResult
+foreign import data FetchSuccess :: Type -> FetchResult
+
+class FetchField (name :: Symbol) (i :: # Type) (o :: FetchResult) | name i -> o
+
+instance fetchFieldHasField ::
+  ( HasFieldPred i name b
+  , FetchFieldDispatch b name i o
+  ) => FetchField name i o
+
+class FetchFieldDispatch (b :: Bool.Boolean) (name :: Symbol) (i :: # Type) (o :: FetchResult) | b name i -> o
+
+instance fetchFieldFailure ::
+  FetchFieldDispatch Bool.False name i FetchFailure
+else instance fetchFieldSuccess ::
+  ( Row.Cons name typ restI i
+  ) => FetchFieldDispatch Bool.True name i (FetchSuccess typ)

@@ -1,45 +1,46 @@
-module GraphQL.RowListToAList where
+module GraphQL.RowListToFieldList where
 
-import GraphQL.Type (class IsScalarPred, class ParseType, kind Relation)
+import GraphQL.Type (class IsScalarPred, class ParseRelation, kind Relation)
 import Prim.RowList (kind RowList)
 import Prim.RowList as RowList
 import Type.Data.Boolean as Bool
 
-foreign import kind AList
-foreign import data Nil :: AList
+foreign import kind FieldList -- Field List
+foreign import data Nil :: FieldList
 -- (name :: Symbol) (args :: # Type) (rela :: Relation) (a :: Type)
-foreign import data Cons :: Symbol -> # Type -> Relation -> Type -> AList -> AList
+foreign import data Cons :: Symbol -> # Type -> Relation -> Type -> FieldList -> FieldList
 
 
--- | RowListToAList
-class RowListToAList (rl :: RowList) (al :: AList) | rl -> al
+-- | RowListToFieldList
+class RowListToFieldList (rl :: RowList) (fl :: FieldList) | rl -> fl
 
-instance rowListToAListBaseCase ::
-  RowListToAList RowList.Nil Nil
-else instance rowListToAListInductionStepArgs ::
-  ( RowListToAList restRl restAl
-  , ParseType typ relation a
-  ) => RowListToAList (RowList.Cons name (Record row -> typ) restRl) (Cons name row relation a restAl)
-else instance rowListToAListIndcutionStepNoArgs ::
-  ( RowListToAList restRl restAl
-  , ParseType typ relation a
-  ) => RowListToAList (RowList.Cons name typ restRl) (Cons name () relation a restAl)
+instance rowListToFieldListBaseCase ::
+  RowListToFieldList RowList.Nil Nil
+else instance rowListToFieldListInductionStepArgs ::
+  ( RowListToFieldList restRl restAl
+  , ParseRelation typ relation a
+  ) => RowListToFieldList (RowList.Cons name (Record row -> typ) restRl) (Cons name row relation a restAl)
+else instance rowListToFieldListIndcutionStepNoArgs ::
+  ( RowListToFieldList restRl restAl
+  , ParseRelation typ relation a
+  ) => RowListToFieldList (RowList.Cons name typ restRl) (Cons name () relation a restAl)
 
--- | PartitionAList
-class PartitionAList (al :: AList) (scalarAl :: AList) (relationAl :: AList) | al -> scalarAl relationAl
+-- | PartitionFieldList
+class PartitionFieldList (fl :: FieldList) (scalarFl :: FieldList) (relationFl :: FieldList) | fl -> scalarFl relationFl
 
-instance partitionAListBaseCase ::
-  PartitionAList Nil Nil Nil
-else instance parititionAListIsScalarDispatch ::
+instance partitionFieldListBaseCase ::
+  PartitionFieldList Nil Nil Nil
+else instance parititionFieldListIsScalarDispatch ::
   ( IsScalarPred a isScalar
-  , PartitionAListDispatch isScalar name args rela a restAl scalarAl relationAl
-  ) => PartitionAList (Cons name args rela a restAl) scalarAl relationAl
+  , PartitionFieldListDispatch isScalar name args rela a restAl scalarFl relationFl
+  ) => PartitionFieldList (Cons name args rela a restAl) scalarFl relationFl
 
-class PartitionAListDispatch (isScalar :: Bool.Boolean) (name :: Symbol) (args :: # Type) (rela :: Relation) a (restAl :: AList) (scalarAl :: AList) (relationAl :: AList) | isScalar name args rela a restAl -> scalarAl relationAl
+class PartitionFieldListDispatch (isScalar :: Bool.Boolean) (name :: Symbol) (args :: # Type) (rela :: Relation) a (restAl :: FieldList) (scalarFl :: FieldList) (relationFl :: FieldList) | isScalar name args rela a restAl -> scalarFl relationFl
 
-instance partitionAListIsScalar ::
-  ( PartitionAList restAl restScalarAl relationAl
-  ) => PartitionAListDispatch Bool.True name args rela a restAl (Cons name args rela a restScalarAl) relationAl
-else instance partitionAListNotScalar ::
-  ( PartitionAList restAl scalarAl restRelationAl
-  ) => PartitionAListDispatch Bool.True name args rela a restAl scalarAl (Cons name args rela a restRelationAl)
+instance partitionFieldListIsScalar ::
+  ( PartitionFieldList restAl restScalarFl relationFl
+  ) => PartitionFieldListDispatch Bool.True name args rela a restAl (Cons name args rela a restScalarFl) relationFl
+else instance partitionFieldListNotScalar ::
+  ( PartitionFieldList restAl scalarFl restRelationFl
+  ) => PartitionFieldListDispatch Bool.True name args rela a restAl scalarFl (Cons name args rela a restRelationFl)
+

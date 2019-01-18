@@ -38,10 +38,11 @@ foreign import data ZeroOrOne :: Relation -- Maybe a
 foreign import data ZeroOrMore :: Relation -- Array a
 foreign import data OneOrMore :: Relation -- NonEmpty Array a
 
--- | ParseType
-class ParseType typ (rela :: Relation) a
+-- | ParseRelation
+class ParseRelation typ (rela :: Relation) a
 
-instance parseTypeOneOrMore :: ParseType (NonEmpty Array a) OneOrMore a
-else instance parseTypeZeroOrMore :: ParseType (Array a) ZeroOrMore a
-else instance parseTypeZeroOrOne :: ParseType (Maybe a) ZeroOrOne a
-else instance parseTypeExactOne :: ParseType a ExactOne a
+instance parseTypeOneOrMore :: ParseRelation (NonEmpty Array a) OneOrMore a
+else instance parseTypeZeroOrMore :: ParseRelation (Array a) ZeroOrMore a
+else instance parseTypeZeroOrOne :: ParseRelation (Maybe a) ZeroOrOne a
+else instance parseTypeExactOne :: ParseRelation a ExactOne a
+
