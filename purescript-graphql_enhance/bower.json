@@ -18,7 +18,8 @@
     "purescript-type-equality": "^3.0.0",
     "purescript-nullable": "^4.1.1",
     "purescript-promises": "^3.0.0",
-    "purescript-aff-promise": "^2.0.1"
+    "purescript-aff-promise": "^2.0.1",
+    "purescript-nonempty": "^5.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
