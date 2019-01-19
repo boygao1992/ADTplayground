@@ -9,3 +9,9 @@ Union
 
 Interface
 - TODO
+
+# Type-level
+
+cannot directly pattern match empty row (`()`)
+- need to convert row to rowList by `Prim.RowList.RowToList`
+- then pattern match empty rowList (`Prim.RowList.Nil`)

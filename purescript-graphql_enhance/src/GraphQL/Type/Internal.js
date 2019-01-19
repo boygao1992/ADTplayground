@@ -13,15 +13,11 @@ exports.id = G.GraphQLID
 exports.boolean = G.GraphQLBoolean
 
 exports.nonNull = function (type) {
-  return function () {
-    return new G.GraphQLNonNull(type)
-  }
+  return new G.GraphQLNonNull(type)
 }
 
 exports.list = function (type) {
-  return function () {
-    return new G.GraphQLList(type)
-  }
+  return new G.GraphQLList(type)
 }
 
 // { name :: String, description :: Maybe String, fields :: Record fieldsRow }
@@ -29,29 +25,29 @@ exports._objectType = function (objectRecord) {
   return new G.GraphQLObjectType(objectRecord)
 }
 
-exports._objectTypeField = function (type, args, resolve, description) {
-  return { type, args, resolve, description }
+// exports._objectTypeField = function (type, args, resolve, description) {
+//   return { type, args, resolve, description }
+// }
+
+exports._inputObjectType = function (inputObjectRecord) {
+  return new G.GraphQLInputObjectType(inputObjectRecord)
 }
 
-exports._inputObjectType = function (name, fields, description) {
-  return new G.GraphQLInputObjectType({ name, fields, description })
-}
-
-exports._inputObjectTypeField = function (type, description) {
-  return { type, description }
-}
+// exports._inputObjectTypeField = function (type, description) {
+//   return { type, description }
+// }
 
 // name :: String
 // description :: Maybe String
 // values :: Array { name :: String, value :: EnumValue }
 exports._enumType = function (name, values, description) {
-  let valueMap = {}
-  for (let value of values) {
+  var valueMap = {}
+  values.forEach(function (value) {
     valueMap[value.name] = value.value
-  }
-  return new G.GraphQLEnumType({ name, values: valueMap, description })
+  })
+  return new G.GraphQLEnumType({ name: name, values: valueMap, description: description })
 }
 
 exports._enumValue = function (value, description) {
-  return { value, description }
+  return { value: value, description: description }
 }

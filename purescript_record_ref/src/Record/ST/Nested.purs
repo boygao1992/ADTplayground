@@ -160,7 +160,7 @@ pathPeek
   => SProxy path
   -> STRecord h row
   -> ST h typ
-pathPeek _ = runFn2 unsafePathPeek (pListToArray (PLProxy :: PLProxy pl))
+pathPeek _ stRecord = runFn2 unsafePathPeek (pListToArray (PLProxy :: PLProxy pl)) stRecord
 
 
 foreign import unsafePathPeekSTRecord
@@ -178,7 +178,7 @@ pathPeekSTRecord
   => SProxy path
   -> STRecord h row
   -> ST h (STRecord h childRow)
-pathPeekSTRecord _ = runFn2 unsafePathPeekSTRecord (pListToArray (PLProxy :: PLProxy pl))
+pathPeekSTRecord _ stRecord = runFn2 unsafePathPeekSTRecord (pListToArray (PLProxy :: PLProxy pl)) stRecord
 
 foreign import unsafePeekLazyRef
   :: forall h row typ
@@ -194,7 +194,7 @@ peekLazyRef
   => SProxy label
   -> STRecord h row
   -> ST h (Unit -> typ)
-peekLazyRef l = runFn2 unsafePeekLazyRef (Symbol.reflectSymbol l)
+peekLazyRef l stRecord = runFn2 unsafePeekLazyRef (Symbol.reflectSymbol l) stRecord
 
 foreign import unsafePathPeekLazyRef
   :: forall h row childRow
@@ -211,7 +211,7 @@ pathPeekLazyRef
   => SProxy path
   -> STRecord h row
   -> ST h (Unit -> Record childRow)
-pathPeekLazyRef _ = runFn2 unsafePathPeekLazyRef (pListToArray (PLProxy :: PLProxy pl))
+pathPeekLazyRef _ stRecord = runFn2 unsafePathPeekLazyRef (pListToArray (PLProxy :: PLProxy pl)) stRecord
 
 foreign import unsafePathPoke
   :: forall h row typ
@@ -230,7 +230,7 @@ pathPoke
   -> typ
   -> STRecord h row
   -> ST h Unit
-pathPoke _ = runFn3 unsafePathPoke (pListToArray (PLProxy :: PLProxy pl))
+pathPoke _ x stRecord = runFn3 unsafePathPoke (pListToArray (PLProxy :: PLProxy pl)) x stRecord
 
 foreign import unsafePathModify
   :: forall h row typ
@@ -249,4 +249,4 @@ pathModify
   -> (typ -> typ)
   -> STRecord h row
   -> ST h Unit
-pathModify _ = runFn3 unsafePathModify (pListToArray (PLProxy :: PLProxy pl))
+pathModify _ f stRecord = runFn3 unsafePathModify (pListToArray (PLProxy :: PLProxy pl)) f stRecord

@@ -5,11 +5,15 @@ import Prelude
 import B2CExample.Model (Bank, Card)
 import Data.Maybe (Maybe)
 import Effect (Effect)
+import ForumExample.Model (Comment, Post)
 import Generic.PartitionRow (class PartitionRow)
+import GraphQL.Data.FieldList as FieldList
+import GraphQL.Type (ExactOne, ZeroOrMore)
+import Prim.RowList as RowList
 import Type.Data.Boolean (BProxy(..), True, False)
 import Type.Data.Symbol (SProxy(..))
-import Type.Proxy (Proxy(..))
 import Type.Row (RProxy(..))
+import Type.Row as Row
 import Type.Row.Utils (class HasFieldPred, class IsSubsetPred)
 
 -- | PartitionRow
@@ -90,14 +94,75 @@ isSubsetExample4 = isSubset
                     (RProxy :: RProxy (id :: String))
                     (RProxy :: RProxy ())
 
--- | experiment for open record
--- e.g. forall r. { id :: String | r}
---   -> { id :: String }
+-- | FieldList
 
-type Func1 r = { id :: String | r } -> String
+data FLProxy (fl :: FieldList.FieldList) = FLProxy
 
-func1 :: forall r. Func1 r
-func1 = _.id
+rowToFieldList
+  :: forall row rl fl
+   . RowList.RowToList row rl
+  => FieldList.FromRowList rl fl
+  => RProxy row
+  -> FLProxy fl
+rowToFieldList _ = FLProxy :: FLProxy fl
+
+rowToFieldListExample1 :: FLProxy
+  (FieldList.Cons
+     "comments"
+     ( limit :: Int )
+     ZeroOrMore Comment
+     (FieldList.Cons
+        "id"
+        ()
+        ExactOne String
+        (FieldList.Cons
+           "posts"
+           ( date :: String )
+           ZeroOrMore Post
+           FieldList.Nil
+        )
+     )
+  )
+rowToFieldListExample1 = rowToFieldList
+                         (RProxy :: RProxy
+                                    ( id :: String
+                                    , posts :: { date :: String } -> Array Post
+                                    , comments :: { limit :: Int } -> Array Comment
+                                    )
+                         )
+
+fieldListToRow
+  :: forall fl rl row
+   . FieldList.ToRowList fl rl
+  => Row.ListToRow rl row
+  => FLProxy fl
+  -> RProxy row
+fieldListToRow _ = RProxy :: RProxy row
+
+fieldListToRowExample1 :: RProxy
+  ( comments :: { limit :: Int } -> Array Comment
+  , id :: String
+  , posts :: { date :: String } -> Array Post
+  )
+fieldListToRowExample1 = fieldListToRow
+                         (FLProxy :: FLProxy
+                                     (FieldList.Cons
+                                      "comments"
+                                      ( limit :: Int )
+                                      ZeroOrMore Comment
+                                      (FieldList.Cons
+                                       "id"
+                                       ()
+                                       ExactOne String
+                                       (FieldList.Cons
+                                        "posts"
+                                        ( date :: String )
+                                        ZeroOrMore Post
+                                        FieldList.Nil
+                                       )
+                                      )
+                                     )
+                         )
 
 main :: Effect Unit
 main = do
