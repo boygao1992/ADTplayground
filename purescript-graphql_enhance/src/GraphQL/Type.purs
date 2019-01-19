@@ -45,4 +45,42 @@ instance parseTypeOneOrMore :: ParseRelation (NonEmpty Array a) OneOrMore a
 else instance parseTypeZeroOrMore :: ParseRelation (Array a) ZeroOrMore a
 else instance parseTypeZeroOrOne :: ParseRelation (Maybe a) ZeroOrOne a
 else instance parseTypeExactOne :: ParseRelation a ExactOne a
-
+{-
+given = ctx
+input = Record objectRow
+Geneirc psType (Constructor typeName (Argument (Record psTypeRow)))
+RowListToFieldList (psTypeRow :: # Type) (psFl :: FieldList)
+PartitionFieldList (psFl :: FieldList) (psScalarFl :: FieldList) (psRelationFl :: FieldList)
+FieldListToRow (psScalarFl :: FieldList) (psScalarRow :: # Type)
+Validate ( name :: Required String, description :: Optional String) objectRow Success
+FetchField "fields" objectRow (Record objectFieldsRow)
+ValidateFields (psFl :: FieldList) (objectFieldsRow :: # Type)
+  FieldList.Cons (fieldName :: Symbol) (args :: # Type) (rela :: Relation) (typ :: Type) restPsFl psFl
+  Row.Cons fieldName (Record fieldRow) restObjectFieldsRow objectFieldsRow
+  IsScalarType (typ :: Type) (isScalar :: Bool.Boolean)
+  if isScalar == Bool.True
+  then
+    RelationToPsType (rela :: Relation) (typ :: Type) (o :: Type)
+    Validate (description :: Optional String) fieldRow
+    FetchField "resolve" fieldRow (result :: FetchResult)
+    if FetchFailure then pass
+    if (FetchSuccess ((Record resolveInputRow) -> Aff o)) then
+      Validate ( source :: Optional psScalarRow
+               , args :: Required args
+               , ctx :: Optional ctx
+               )
+               resolveInputRow
+  else
+    Generic a (Constructor name (Argument (Record typRow)))
+    PartitionRow typRow typScalarRow typRelationRow
+    RelationToPsType (rela :: Relation) (Record typeScalarRow) (o :: Type)
+    Validate (description :: Optional String) fieldRow
+    FetchField "resolve" fieldRow (result :: FetchResult)
+    if FetchFailure then pass
+    if (FetchSuccess ((Record resolveInputRow) -> Aff o)) then
+      Validate ( source :: Optional psScalarRow
+               , args :: Required args
+               , ctx :: Optional ctx
+               )
+               resolveInputRow
+-}

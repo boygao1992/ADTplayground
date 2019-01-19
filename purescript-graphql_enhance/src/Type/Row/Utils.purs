@@ -1,6 +1,5 @@
 module Type.Row.Utils where
 
-
 import Prim.Row as Row
 import Prim.RowList (kind RowList)
 import Prim.RowList as RowList

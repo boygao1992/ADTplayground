@@ -24,8 +24,9 @@ exports.list = function (type) {
   }
 }
 
-exports._objectType = function (name, fields, description) {
-  return new G.GraphQLObjectType({ name, fields, description })
+// { name :: String, description :: Maybe String, fields :: Record fieldsRow }
+exports._objectType = function (objectRecord) {
+  return new G.GraphQLObjectType(objectRecord)
 }
 
 exports._objectTypeField = function (type, args, resolve, description) {
