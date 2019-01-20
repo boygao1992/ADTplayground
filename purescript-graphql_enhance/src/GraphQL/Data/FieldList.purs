@@ -6,58 +6,43 @@ import Type.Row as Row
 import Prim.RowList as RowList
 import Type.Data.Boolean as Bool
 
+foreign import kind Arguments
+foreign import data Args :: # Type -> Arguments
+foreign import data NoArgs :: Arguments
+
+
 foreign import kind FieldList -- Field List
 foreign import data Nil :: FieldList
 -- (name :: Symbol) (args :: # Type) (rela :: Relation) (a :: Type)
-foreign import data Cons :: Symbol -> # Type -> Relation -> Type -> FieldList -> FieldList
+foreign import data Cons :: Symbol -> Arguments -> Relation -> Type -> FieldList -> FieldList
 
--- | FromRowList
-class FromRowList (rl :: RowList) (fl :: FieldList) | rl -> fl
+-- | FromRowList (isomorphic, bidirectional)
+class FromRowList (rl :: RowList) (fl :: FieldList) | rl -> fl, fl -> rl
 
 instance fromRowListBaseCase ::
   FromRowList RowList.Nil Nil
 else instance fromRowListInductionStepArgs ::
   ( FromRowList restRl restFl
   , ParseRelation typ relation a -- typ -> relation a
-  ) => FromRowList (RowList.Cons name (Record args -> typ) restRl) (Cons name args relation a restFl)
+  ) => FromRowList (RowList.Cons name (Record args -> typ) restRl) (Cons name (Args args) relation a restFl)
 else instance fromRowListIndcutionStepNoArgs ::
   ( FromRowList restRl restFl
   , ParseRelation typ relation a
-  ) => FromRowList (RowList.Cons name typ restRl) (Cons name () relation a restFl)
+  ) => FromRowList (RowList.Cons name typ restRl) (Cons name NoArgs relation a restFl)
 
--- | FromRow
+-- -- | FromRow
 class FromRow (row :: # Type) (fl :: FieldList) | row -> fl
 
 instance fromRowImpl ::
   ( RowList.RowToList row rl
-  , FromRowList rl fl
+  , FromRowList rl fl -- rl -> fl
   ) => FromRow row fl
 
--- | ToRowList
-class ToRowList (fl :: FieldList) (rl :: RowList) | fl -> rl
-
-instance toRowListBaseCase ::
-  ToRowList Nil RowList.Nil
-else instance toRowListInductionStepArgsRl ::
-  ( RowList.RowToList args argsRl
-  , ParseRelation typ relation a -- typ <- relation a
-  , ToRowListDispatch argsRl name args typ restFl rl
-  ) => ToRowList (Cons name args relation a restFl) rl
-
-class ToRowListDispatch (argsRl :: RowList) (name :: Symbol) (args :: # Type) typ (restFl :: FieldList) (rl :: RowList) | argsRl name args typ restFl -> rl
-
-instance toRowListNoArgs ::
-  ( ToRowList restFl restRl
-  ) => ToRowListDispatch RowList.Nil name args typ restFl (RowList.Cons name typ restRl)
-else instance toRowListArgs ::
-  ( ToRowList restFl restRl
-  ) => ToRowListDispatch argsRl name args typ restFl (RowList.Cons name (Record args -> typ) restRl)
-
--- | ToRow
+-- -- | ToRow
 class ToRow (fl :: FieldList) (row :: # Type) | fl -> row
 
 instance toRowImpl ::
-  ( ToRowList fl rl
+  ( FromRowList rl fl -- rl <- fl
   , Row.ListToRow rl row
   ) => ToRow fl row
 
@@ -71,7 +56,7 @@ else instance parititionFieldListIsScalarDispatch ::
   , PartitionFieldListDispatch isScalar name args rela a restFl scalarFl relationFl
   ) => PartitionFieldList (Cons name args rela a restFl) scalarFl relationFl
 
-class PartitionFieldListDispatch (isScalar :: Bool.Boolean) (name :: Symbol) (args :: # Type) (rela :: Relation) a (restFl :: FieldList) (scalarFl :: FieldList) (relationFl :: FieldList) | isScalar name args rela a restFl -> scalarFl relationFl
+class PartitionFieldListDispatch (isScalar :: Bool.Boolean) (name :: Symbol) (args :: Arguments) (rela :: Relation) a (restFl :: FieldList) (scalarFl :: FieldList) (relationFl :: FieldList) | isScalar name args rela a restFl -> scalarFl relationFl
 
 instance partitionFieldListIsScalar ::
   ( PartitionFieldList restFl restScalarFl relationFl
@@ -85,7 +70,10 @@ class RemoveArgs (i :: FieldList) (o :: FieldList) | i -> o
 
 instance removeArgsBaseCase ::
   RemoveArgs Nil Nil
-else instance removeArgsInductionStep ::
+else instance removeArgsInductionStepArgs ::
   ( RemoveArgs restI restO
-  ) => RemoveArgs (Cons name args rela a restI) (Cons name () rela a restO)
+  ) => RemoveArgs (Cons name (Args args) rela a restI) (Cons name NoArgs rela a restO)
+else instance removeArgsInductionStepNoArgs ::
+  ( RemoveArgs restI restO
+  ) => RemoveArgs (Cons name NoArgs rela a restI) (Cons name NoArgs rela a restO)
 

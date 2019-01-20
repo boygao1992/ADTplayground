@@ -107,17 +107,14 @@ rowToFieldList
 rowToFieldList _ = FLProxy :: FLProxy fl
 
 rowToFieldListExample1 :: FLProxy
-  (FieldList.Cons
-     "comments"
-     ( limit :: Int )
+  (FieldList.Cons "comments"
+     (FieldList.Args ( limit :: Int ))
      ZeroOrMore Comment
-     (FieldList.Cons
-        "id"
-        ()
-        ExactOne String
-        (FieldList.Cons
-           "posts"
-           ( date :: String )
+     (FieldList.Cons "id"
+      FieldList.NoArgs
+      ExactOne String
+        (FieldList.Cons "posts"
+           (FieldList.Args ( date :: String ))
            ZeroOrMore Post
            FieldList.Nil
         )
@@ -133,7 +130,7 @@ rowToFieldListExample1 = rowToFieldList
 
 fieldListToRow
   :: forall fl rl row
-   . FieldList.ToRowList fl rl
+   . FieldList.FromRowList rl fl
   => Row.ListToRow rl row
   => FLProxy fl
   -> RProxy row
@@ -146,17 +143,14 @@ fieldListToRowExample1 :: RProxy
   )
 fieldListToRowExample1 = fieldListToRow
                          (FLProxy :: FLProxy
-                                     (FieldList.Cons
-                                      "comments"
-                                      ( limit :: Int )
+                                     (FieldList.Cons "comments"
+                                      (FieldList.Args ( limit :: Int))
                                       ZeroOrMore Comment
-                                      (FieldList.Cons
-                                       "id"
-                                       ()
+                                      (FieldList.Cons "id"
+                                       FieldList.NoArgs
                                        ExactOne String
-                                       (FieldList.Cons
-                                        "posts"
-                                        ( date :: String )
+                                       (FieldList.Cons "posts"
+                                        (FieldList.Args ( date :: String))
                                         ZeroOrMore Post
                                         FieldList.Nil
                                        )

@@ -1,16 +1,17 @@
 module GraphQL.Type.Internal where
 
-import Prelude
-
-import Type.Row.Validation (class Validate, Required, Optional, Success)
-import Type.Row.Utils as Row
-import GraphQL.Data.FieldList as FieldList
 import Data.Function.Uncurried (Fn1)
-import Data.Generic.Rep (class Generic, Constructor, Argument)
-import GraphQL.Type (ObjectType)
-import Prim.RowList as RowList
-import Type.Row as Row
+import Data.Generic.Rep (class Generic, Argument, Constructor)
+import Effect.Aff (Aff)
+import GraphQL.Data.FieldList as FieldList
+import GraphQL.Type (class IsScalarPred, class ParseRelation, ObjectType, kind Relation)
+import Prelude (Unit, unit)
+import Type.Data.Boolean as Bool
+import Type.Row (class Cons) as Row
+import Type.Row.Utils (class FetchField, FetchFailure, FetchSuccess, kind FetchResult) as Row
+import Type.Row.Validation (class Validate, Optional, Repelled, Required, Success)
 
+-- TODO add Context (ctx)
 foreign import _objectType :: forall objectRow a. Fn1 (Record objectRow) (ObjectType a)
 
 {-
@@ -57,27 +58,103 @@ ValidateFields (psFl :: FieldList) (objectFieldsRow :: # Type) =
 
 type ObjectTypeConstructor deps psType = Record deps -> ObjectType psType
 
-class ToScalarTypeRow (psFnRow :: # Type) (psScalarTypeRow :: # Type) | psFnRow -> psScalarTypeRow
+-- | ToScalarTypeRow
+class ToScalarTypeRow (fnFl :: FieldList.FieldList) (scalarTypeRow :: # Type) | fnFl -> scalarTypeRow
 
 instance toScalarTypeRowImpl ::
-  ( RowList.RowToList psFnRow psFnRl
-  , FieldList.FromRowList psFnRl psFnFl
-  , FieldList.PartitionFieldList psFnFl psScalarFnFl psRelationFnFl
-  , FieldList.RemoveArgs psScalarFnFl psScalarTypeFl
-  , FieldList.ToRowList psScalarTypeFl psScalarTypeRl
-  , Row.ListToRow psScalarTypeRl psScalarTypeRow
-  ) => ToScalarTypeRow psFnRow psScalarTypeRow
+  ( FieldList.PartitionFieldList fnFl scalarFnFl relationFnFl
+  , FieldList.RemoveArgs scalarFnFl scalarTypeFl
+  , FieldList.ToRow scalarTypeFl scalarTypeRow
+  ) => ToScalarTypeRow fnFl scalarTypeRow
+
+class GenericToScalarTypeRow a (scalarTypeRow :: # Type) | a -> scalarTypeRow
+
+instance genericToScalarTypeRowImpl ::
+  ( Generic a (Constructor name (Argument (Record fnRow)))
+  , FieldList.FromRow fnRow fnFl
+  , FieldList.PartitionFieldList fnFl scalarFnFl relationFnFl
+  , FieldList.RemoveArgs scalarFnFl scalarTypeFl
+  , FieldList.ToRow scalarTypeFl scalarTypeRow
+  ) => GenericToScalarTypeRow a scalarTypeRow
+
+-- | ValidateObjectFields
+class ValidateObjectFields (source :: # Type) (psFnFl :: FieldList.FieldList) (objectFieldsRow :: # Type)
+
+instance validateObjectFieldsNil ::
+  ValidateObjectFields source FieldList.Nil objectFieldsRow
+instance validateObjectFieldsConsDispatch ::
+  ( IsScalarPred a isScalar
+  , Row.Cons name (Record objectFieldRow) restObjectFieldsRow objectFieldsRow
+  , ValidateObjectField isScalar name args rela a source objectFieldRow
+  , ValidateObjectFields source restPsFnFl objectFieldsRow
+  ) => ValidateObjectFields source (FieldList.Cons name args rela a restPsFnFl) objectFieldsRow
+
+-- | ValidateObjectField
+class ValidateObjectField (isScalar :: Bool.Boolean) (name :: Symbol) (args :: FieldList.Arguments) (rela :: Relation) a  (source :: # Type) (objectFieldRow :: # Type)
+
+instance validateObjectFieldNoArgs ::
+  ( ParseRelation typ rela a -- typ <- rela a
+  , Validate ( description :: Optional String ) objectFieldRow Success
+  , Row.FetchField "resolve" objectFieldRow resolveFn
+  , ValidateObjectFieldNoArgs resolveFn source typ
+  ) => ValidateObjectField Bool.True name FieldList.NoArgs rela a source objectFieldRow
+else instance validateObjectFieldWithArgs ::
+  ( ParseRelation typ rela a -- typ <- rela a
+  , Validate ( description :: Optional String ) objectFieldRow Success
+  , Row.FetchField "resolve" objectFieldRow resolveFn
+  , ValidateObjectFieldWithArgs resolveFn args source typ
+  ) => ValidateObjectField Bool.True name (FieldList.Args args) rela a source objectFieldRow
+else instance validateObjectFieldNotScalarNoArgs ::
+  ( GenericToScalarTypeRow a aScalarRow
+  , ParseRelation typ rela (Record aScalarRow) -- typ <- rela (Record aScalarRow)
+  , Validate ( description :: Optional String ) objectFieldRow Success
+  , Row.FetchField "resolve" objectFieldRow resolveFn
+  , ValidateObjectFieldNoArgs resolveFn source typ
+  ) => ValidateObjectField Bool.False name FieldList.NoArgs rela a source objectFieldRow
+else instance validateObjectFieldNotScalarWithArgs ::
+  ( GenericToScalarTypeRow a aScalarRow
+  , ParseRelation typ rela (Record aScalarRow) -- typ <- rela (Record aScalarRow)
+  , Validate ( description :: Optional String ) objectFieldRow Success
+  , Row.FetchField "resolve" objectFieldRow resolveFn
+  , ValidateObjectFieldWithArgs resolveFn args source typ
+  ) => ValidateObjectField Bool.False name (FieldList.Args args) rela a source objectFieldRow
+
+class ValidateObjectFieldNoArgs (resolveFn :: Row.FetchResult) (source :: # Type) typ
+
+instance validateObjectFieldNoArgsNoResolve ::
+  ValidateObjectFieldNoArgs Row.FetchFailure source typ
+else instance validateObjectFieldNoArgsWithResolve ::
+  ( Validate
+    (source :: Optional (Record source)
+    , args :: Repelled
+    ) i Success
+  ) => ValidateObjectFieldNoArgs (Row.FetchSuccess ((Record i) -> (Aff typ))) source typ
+
+class ValidateObjectFieldWithArgs (resolveFn :: Row.FetchResult) (args :: # Type) (source :: # Type) typ
+
+instance validateObjectFieldWithArgsNoResolve ::
+  ValidateObjectFieldWithArgs Row.FetchFailure args source typ
+else instance validateObjectFieldWithArgsWithResolve ::
+  ( Validate
+    ( source :: Optional (Record source)
+    , args :: Required (Record args)
+    ) i Success
+  ) => ValidateObjectFieldWithArgs (Row.FetchSuccess ((Record i) -> (Aff typ))) args source typ
+
+-- | objectType
 
 objectType
-  :: forall objectRow deps psType psTypeName psFnRow psScalarTypeRow
+  :: forall objectRow deps psType psTypeName psFnRow psFnFl psScalarTypeRow
      objectFieldsRow
    . Generic psType (Constructor psTypeName (Argument (Record psFnRow)))
-  => ToScalarTypeRow psFnRow psScalarTypeRow
-  => Validate (description :: Optional String) objectRow Success -- TODO direct error message instead of Failure data type
-  => Row.FetchField "fields" objectRow (Row.FetchSuccess (Record objectFieldsRow)) -- TODO direct error message instead of FetchFailure data type
+  => FieldList.FromRow psFnRow psFnFl
+  => ToScalarTypeRow psFnFl psScalarTypeRow -- psScalarTypeRow ~ source
+  => Validate (description :: Optional String) objectRow Success
+  => Row.FetchField "fields" objectRow (Row.FetchSuccess (Record objectFieldsRow))
+  => ValidateObjectFields psScalarTypeRow psFnFl objectFieldsRow
   => Record objectRow
   -> ObjectTypeConstructor deps psType
-  -> Unit
+  -> Unit -- TODO class InjectName, class InjectType, class ToGraphQLType
 objectType _ _ = unit
 
 --   => Record objectRow

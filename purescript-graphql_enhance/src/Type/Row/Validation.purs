@@ -16,11 +16,19 @@ foreign import data Success :: Result
 
 data RSProxy (result :: Result) = RSProxy
 
--- foreign import kind Pattern
--- foreign import data Required :: Type -> Pattern
--- foreign import data Optional :: Type -> Pattern
 data Required a
 data Optional a
+data Repelled
+{- TODO
+foreign import kind Pattern
+foreign import data _Required :: Type -> Pattern
+foreign import data _Optional :: Type -> Pattern
+
+data PProxy (pattern :: Pattern)
+
+type Required a = PProxy (_Required a)
+type Optional a = PProxy (_Optional a)
+-}
 
 -- | AppendResult
 class Append (r1 :: Result) (r2 :: Result) (r :: Result) | r1 r2 -> r
@@ -49,6 +57,8 @@ else instance validatePatternFetchFailureRequired ::
   ( Symbol.Append "Required field `" name err0
   , Symbol.Append err0 "` is not provided." err
   ) => ValidatePatternDispatch Row.FetchFailure name (Required typ) (Failure err)
+else instance validatePatternFetchFailureRepelled ::
+  ValidatePatternDispatch Row.FetchFailure name Repelled Success
 else instance validatePatternFetchSuccessOptional ::
   ( Type.IsEqualPred typ1 typ2 isEqual
   , ValidatePatternFetchSuccessDispatch isEqual name o
@@ -57,6 +67,10 @@ else instance validatePatternFetchSuccessRequired ::
   ( Type.IsEqualPred typ1 typ2 isEqual
   , ValidatePatternFetchSuccessDispatch isEqual name o
   ) => ValidatePatternDispatch (Row.FetchSuccess typ1) name (Required typ2) o
+else instance validatePatternFetchSuccessRepelled ::
+  ( Symbol.Append "Repelled field `" name err0
+  , Symbol.Append err0 "` is provided." err
+  ) => ValidatePatternDispatch Row.FetchFailure name Repelled (Failure err)
 
 class ValidatePatternFetchSuccessDispatch (isEqual :: Bool.Boolean) (name :: Symbol) (o :: Result) | isEqual name -> o
 
