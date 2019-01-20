@@ -1,12 +1,14 @@
 module GraphQL.Type.Internal where
 
+import Prelude
+
 import Data.Function.Uncurried (Fn1)
 import Data.Generic.Rep (class Generic, Argument, Constructor)
 import Effect.Aff (Aff)
 import GraphQL.Data.FieldList as FieldList
 import GraphQL.Type (class IsScalarPred, class ParseRelation, ObjectType, kind Relation)
-import Prelude (Unit, unit)
 import Type.Data.Boolean as Bool
+import Type.Proxy (Proxy)
 import Type.Row (class Cons) as Row
 import Type.Row.Utils (class FetchField, FetchFailure, FetchSuccess, kind FetchResult) as Row
 import Type.Row.Validation (class Validate, Optional, Repelled, Required, Success)
@@ -59,22 +61,12 @@ ValidateFields (psFl :: FieldList) (objectFieldsRow :: # Type) =
 type ObjectTypeConstructor deps psType = Record deps -> ObjectType psType
 
 -- | ToScalarTypeRow
-class ToScalarTypeRow (fnFl :: FieldList.FieldList) (scalarTypeRow :: # Type) | fnFl -> scalarTypeRow
-
-instance toScalarTypeRowImpl ::
-  ( FieldList.PartitionFieldList fnFl scalarFnFl relationFnFl
-  , FieldList.RemoveArgs scalarFnFl scalarTypeFl
-  , FieldList.ToRow scalarTypeFl scalarTypeRow
-  ) => ToScalarTypeRow fnFl scalarTypeRow
-
 class GenericToScalarTypeRow a (scalarTypeRow :: # Type) | a -> scalarTypeRow
 
 instance genericToScalarTypeRowImpl ::
   ( Generic a (Constructor name (Argument (Record fnRow)))
   , FieldList.FromRow fnRow fnFl
-  , FieldList.PartitionFieldList fnFl scalarFnFl relationFnFl
-  , FieldList.RemoveArgs scalarFnFl scalarTypeFl
-  , FieldList.ToRow scalarTypeFl scalarTypeRow
+  , FieldList.ToScalarTypeRow fnFl scalarTypeRow
   ) => GenericToScalarTypeRow a scalarTypeRow
 
 -- | ValidateObjectFields
@@ -128,7 +120,7 @@ else instance validateObjectFieldNoArgsWithResolve ::
     (source :: Optional (Record source)
     , args :: Repelled
     ) i Success
-  ) => ValidateObjectFieldNoArgs (Row.FetchSuccess ((Record i) -> (Aff typ))) source typ
+  ) => ValidateObjectFieldNoArgs (Row.FetchSuccess ((Record i) -> (Aff typ)) rest) source typ
 
 class ValidateObjectFieldWithArgs (resolveFn :: Row.FetchResult) (args :: # Type) (source :: # Type) typ
 
@@ -139,18 +131,19 @@ else instance validateObjectFieldWithArgsWithResolve ::
     ( source :: Optional (Record source)
     , args :: Required (Record args)
     ) i Success
-  ) => ValidateObjectFieldWithArgs (Row.FetchSuccess ((Record i) -> (Aff typ))) args source typ
+  ) => ValidateObjectFieldWithArgs (Row.FetchSuccess ((Record i) -> (Aff typ)) rest) args source typ
 
 -- | objectType
 
 objectType
   :: forall objectRow deps psType psTypeName psFnRow psFnFl psScalarTypeRow
      objectFieldsRow
+     rest
    . Generic psType (Constructor psTypeName (Argument (Record psFnRow)))
   => FieldList.FromRow psFnRow psFnFl
-  => ToScalarTypeRow psFnFl psScalarTypeRow -- psScalarTypeRow ~ source
+  => FieldList.ToScalarTypeRow psFnFl psScalarTypeRow -- psScalarTypeRow ~ source
   => Validate (description :: Optional String) objectRow Success
-  => Row.FetchField "fields" objectRow (Row.FetchSuccess (Record objectFieldsRow))
+  => Row.FetchField "fields" objectRow (Row.FetchSuccess (Record objectFieldsRow) rest)
   => ValidateObjectFields psScalarTypeRow psFnFl objectFieldsRow
   => Record objectRow
   -> ObjectTypeConstructor deps psType
@@ -159,3 +152,37 @@ objectType _ _ = unit
 
 --   => Record objectRow
 --   -> ObjectTypeConstructor deps psType
+
+-- Test
+
+objectTypeTest
+  :: forall objectRow psType psTypeName psFnRow psFnFl psScalarTypeRow
+     objectFieldsRow
+     rest
+   . Generic psType (Constructor psTypeName (Argument (Record psFnRow)))
+  => FieldList.FromRow psFnRow psFnFl
+  => FieldList.ToScalarTypeRow psFnFl psScalarTypeRow -- psScalarTypeRow ~ source
+  => Validate (description :: Optional String) objectRow Success
+  => Row.FetchField "fields" objectRow (Row.FetchSuccess (Record objectFieldsRow) rest)
+  => ValidateObjectFields psScalarTypeRow psFnFl objectFieldsRow
+  => Proxy psType
+  -> Record objectRow
+  -> Unit -- TODO class InjectName, class InjectType, class ToGraphQLType
+objectTypeTest _ _ = unit
+
+
+newtype User = User
+  { id :: String
+  }
+derive instance genericUser :: Generic User _
+
+-- objectTypeTestExample = objectTypeTest
+--                         (Proxy :: Proxy User)
+--                         { fields:
+--                           { id: { description : ""
+--                                 , resolve:
+--                                   \({ args: { id } } :: Record _) -> pure {id : "1"} :: Aff _
+--                                 }
+--                           }
+--                         }
+

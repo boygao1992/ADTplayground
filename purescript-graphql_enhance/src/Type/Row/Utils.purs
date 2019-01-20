@@ -2,10 +2,11 @@ module Type.Row.Utils where
 
 import Prim.Row as Row
 import Prim.RowList (kind RowList)
-import Prim.RowList as RowList
+import Prim.RowList (class RowToList, Cons, Nil) as RowList
 import Type.Data.Boolean as Bool
 import Type.Data.Boolean.Utils (class IsTrue)
 import Type.Utils (class IsEqualPred)
+import Type.Data.RowList.Utils (class IsEmptyPred) as RowList
 
 -- | HasFieldPred
 class HasFieldPred (row :: # Type) (name :: Symbol) (b :: Bool.Boolean) | row name -> b
@@ -75,7 +76,7 @@ instance isSubsetImpl ::
 
 foreign import kind FetchResult
 foreign import data FetchFailure :: FetchResult
-foreign import data FetchSuccess :: Type -> FetchResult
+foreign import data FetchSuccess :: Type -> # Type -> FetchResult
 
 class FetchField (name :: Symbol) (i :: # Type) (o :: FetchResult) | name i -> o
 
@@ -90,4 +91,13 @@ instance fetchFieldFailure ::
   FetchFieldDispatch Bool.False name i FetchFailure
 else instance fetchFieldSuccess ::
   ( Row.Cons name typ restI i
-  ) => FetchFieldDispatch Bool.True name i (FetchSuccess typ)
+  ) => FetchFieldDispatch Bool.True name i (FetchSuccess typ restI)
+
+-- | IsEmptyPred
+
+class IsEmptyPred (row :: # Type) (b :: Bool.Boolean) | row -> b
+
+instance isEmptyPredToRowList ::
+  ( RowList.RowToList row rl
+  , RowList.IsEmptyPred rl b
+  ) => IsEmptyPred row b

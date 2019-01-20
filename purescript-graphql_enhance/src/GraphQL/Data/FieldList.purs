@@ -77,3 +77,12 @@ else instance removeArgsInductionStepNoArgs ::
   ( RemoveArgs restI restO
   ) => RemoveArgs (Cons name NoArgs rela a restI) (Cons name NoArgs rela a restO)
 
+
+-- | ToScalarTypeRow
+class ToScalarTypeRow (fnFl :: FieldList) (scalarTypeRow :: # Type) | fnFl -> scalarTypeRow
+
+instance toScalarTypeRowImpl ::
+  ( PartitionFieldList fnFl scalarFnFl relationFnFl
+  , RemoveArgs scalarFnFl scalarTypeFl
+  , ToRow scalarTypeFl scalarTypeRow
+  ) => ToScalarTypeRow fnFl scalarTypeRow
