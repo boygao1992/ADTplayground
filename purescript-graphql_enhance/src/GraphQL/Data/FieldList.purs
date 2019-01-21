@@ -63,7 +63,7 @@ instance partitionFieldListIsScalar ::
   ) => PartitionFieldListDispatch Bool.True name args rela a restFl (Cons name args rela a restScalarFl) relationFl
 else instance partitionFieldListNotScalar ::
   ( PartitionFieldList restFl scalarFl restRelationFl
-  ) => PartitionFieldListDispatch Bool.True name args rela a restFl scalarFl (Cons name args rela a restRelationFl)
+  ) => PartitionFieldListDispatch Bool.False name args rela a restFl scalarFl (Cons name args rela a restRelationFl)
 
 -- | RemoveArgs
 class RemoveArgs (i :: FieldList) (o :: FieldList) | i -> o

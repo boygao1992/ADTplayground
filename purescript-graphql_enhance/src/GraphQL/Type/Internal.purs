@@ -1,5 +1,8 @@
 module GraphQL.Type.Internal where
 
+-- TODO fields in source are all scalars
+-- TODO add Context (ctx)
+
 import Prelude
 
 import Data.Function.Uncurried (Fn1)
@@ -7,13 +10,14 @@ import Data.Generic.Rep (class Generic, Argument, Constructor)
 import Effect.Aff (Aff)
 import GraphQL.Data.FieldList as FieldList
 import GraphQL.Type (class IsScalarPred, class ParseRelation, ObjectType, kind Relation)
+import Prim.TypeError (class Fail, Text, Quote, Above, Beside)
 import Type.Data.Boolean as Bool
-import Type.Proxy (Proxy)
+import Type.Proxy (Proxy(..))
+import Type.Row (RProxy(..))
 import Type.Row (class Cons) as Row
 import Type.Row.Utils (class FetchField, FetchFailure, FetchSuccess, kind FetchResult) as Row
 import Type.Row.Validation (class Validate, Optional, Repelled, Required, Success)
 
--- TODO add Context (ctx)
 foreign import _objectType :: forall objectRow a. Fn1 (Record objectRow) (ObjectType a)
 
 {-
@@ -94,7 +98,7 @@ else instance validateObjectFieldWithArgs ::
   ( ParseRelation typ rela a -- typ <- rela a
   , Validate ( description :: Optional String ) objectFieldRow Success
   , Row.FetchField "resolve" objectFieldRow resolveFn
-  , ValidateObjectFieldWithArgs resolveFn args source typ
+  , ValidateObjectFieldWithArgs name resolveFn args source typ
   ) => ValidateObjectField Bool.True name (FieldList.Args args) rela a source objectFieldRow
 else instance validateObjectFieldNotScalarNoArgs ::
   ( GenericToScalarTypeRow a aScalarRow
@@ -108,7 +112,7 @@ else instance validateObjectFieldNotScalarWithArgs ::
   , ParseRelation typ rela (Record aScalarRow) -- typ <- rela (Record aScalarRow)
   , Validate ( description :: Optional String ) objectFieldRow Success
   , Row.FetchField "resolve" objectFieldRow resolveFn
-  , ValidateObjectFieldWithArgs resolveFn args source typ
+  , ValidateObjectFieldWithArgs name resolveFn args source typ
   ) => ValidateObjectField Bool.False name (FieldList.Args args) rela a source objectFieldRow
 
 class ValidateObjectFieldNoArgs (resolveFn :: Row.FetchResult) (source :: # Type) typ
@@ -116,22 +120,39 @@ class ValidateObjectFieldNoArgs (resolveFn :: Row.FetchResult) (source :: # Type
 instance validateObjectFieldNoArgsNoResolve ::
   ValidateObjectFieldNoArgs Row.FetchFailure source typ
 else instance validateObjectFieldNoArgsWithResolve ::
-  ( Validate
-    (source :: Optional (Record source)
-    , args :: Repelled
-    ) i Success
-  ) => ValidateObjectFieldNoArgs (Row.FetchSuccess ((Record i) -> (Aff typ)) rest) source typ
+  ( ValidateObjectFieldNoArgsSuccess resolve source typ
+  ) => ValidateObjectFieldNoArgs (Row.FetchSuccess (resolve) rest) source typ
 
-class ValidateObjectFieldWithArgs (resolveFn :: Row.FetchResult) (args :: # Type) (source :: # Type) typ
+class ValidateObjectFieldNoArgsSuccess (resolve :: Type) (source :: # Type) typ | resolve -> source typ, source typ -> resolve
+
+instance validateObjectFieldNoArgsSuccess ::
+  ( Row.Cons "source" (Record source) () i
+  ) => ValidateObjectFieldNoArgsSuccess (Record i -> Aff typ) source typ
+
+class ValidateObjectFieldWithArgs (name :: Symbol) (resolveFn :: Row.FetchResult) (args :: # Type) (source :: # Type) typ
 
 instance validateObjectFieldWithArgsNoResolve ::
-  ValidateObjectFieldWithArgs Row.FetchFailure args source typ
+  Fail
+  ( Above
+    (Beside (Text "Missing resolve function for field `") (Beside (Text name) (Text "`:")))
+    (Quote ({source :: Record source, args :: Record args} -> Aff typ))
+  )
+  => ValidateObjectFieldWithArgs name Row.FetchFailure args source typ
 else instance validateObjectFieldWithArgsWithResolve ::
-  ( Validate
-    ( source :: Optional (Record source)
-    , args :: Required (Record args)
-    ) i Success
-  ) => ValidateObjectFieldWithArgs (Row.FetchSuccess ((Record i) -> (Aff typ)) rest) args source typ
+  ( ValidateObjectFieldWithArgsSuccess resolve args source typ
+  ) => ValidateObjectFieldWithArgs name (Row.FetchSuccess resolve rest) args source typ
+
+class ValidateObjectFieldWithArgsSuccess (resolve :: Type) (args :: # Type) (source :: # Type) typ | resolve -> args source typ, args source typ -> resolve
+
+instance validateObjectFieldWithArgsSuccess ::
+  -- Fail
+  -- ( Quote typ)
+  -- => ValidateObjectFieldWithArgsSuccess (Record i -> Aff tye) args source typ
+  ( Row.Cons "source" (Record source) i0 i
+  , Row.Cons "args" (Record args) i1 i
+  ) => ValidateObjectFieldWithArgsSuccess (Record i -> Aff typ) args source typ
+
+
 
 -- | objectType
 
@@ -173,16 +194,45 @@ objectTypeTest _ _ = unit
 
 newtype User = User
   { id :: String
+  , posts :: { limit :: Int } -> Array Post
   }
 derive instance genericUser :: Generic User _
 
--- objectTypeTestExample = objectTypeTest
---                         (Proxy :: Proxy User)
---                         { fields:
---                           { id: { description : ""
---                                 , resolve:
---                                   \({ args: { id } } :: Record _) -> pure {id : "1"} :: Aff _
---                                 }
---                           }
---                         }
+newtype Post = Post
+  { id :: String
+  }
+derive instance genericPost :: Generic Post _
 
+objectTypeTestExample = objectTypeTest
+                        (Proxy :: Proxy User)
+                        { fields:
+                          { id:
+                              { description : ""
+                              , resolve:
+                                \({source: { id }}) -> pure id
+                              }
+                          , posts:
+                              { description : ""
+                              , resolve:
+                                \({source: { id }, args: { limit }}) -> pure []
+                              }
+                          }
+                        }
+
+
+-- NOTE use isomorphism to constrain open record to closed record
+-- class TestParseFn fn i o | fn -> i o, i o -> fn
+
+-- instance testParseFn :: TestParseFn (i -> o) i o
+
+-- test
+--   :: forall psType args o
+--    . TestParseFn psType args o
+--   => Proxy psType
+--   -> (args -> o)
+--   -> Unit
+-- test _ _ = unit
+
+-- testExample = test (Proxy :: Proxy ({ id :: String } -> String))
+--                    (\({id}) -> id
+--                    )
