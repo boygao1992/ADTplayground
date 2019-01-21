@@ -15,8 +15,8 @@ import Type.Data.Boolean as Bool
 import Type.Proxy (Proxy(..))
 import Type.Row (RProxy(..))
 import Type.Row (class Cons) as Row
-import Type.Row.Utils (class FetchField, FetchFailure, FetchSuccess, kind FetchResult) as Row
-import Type.Row.Validation (class Validate, Optional, Repelled, Required, Success)
+import Type.Row.Utils (class HasFieldPred, class FetchField, FetchFailure, FetchSuccess, kind FetchResult) as Row
+import Type.Row.Validation (class ValidateExclusive, Optional, OptionalField, Required, RequiredField)
 
 foreign import _objectType :: forall objectRow a. Fn1 (Record objectRow) (ObjectType a)
 
@@ -80,56 +80,90 @@ instance validateObjectFieldsNil ::
   ValidateObjectFields source FieldList.Nil objectFieldsRow
 instance validateObjectFieldsConsDispatch ::
   ( IsScalarPred a isScalar
-  , Row.Cons name (Record objectFieldRow) restObjectFieldsRow objectFieldsRow
-  , ValidateObjectField isScalar name args rela a source objectFieldRow
+  , Row.HasFieldPred objectFieldsRow name hasField
+  , ValidateObjectFieldFirstDispatch hasField isScalar name args rela a source objectFieldsRow
   , ValidateObjectFields source restPsFnFl objectFieldsRow
   ) => ValidateObjectFields source (FieldList.Cons name args rela a restPsFnFl) objectFieldsRow
 
--- | ValidateObjectField
-class ValidateObjectField (isScalar :: Bool.Boolean) (name :: Symbol) (args :: FieldList.Arguments) (rela :: Relation) a  (source :: # Type) (objectFieldRow :: # Type)
+class ValidateObjectFieldFirstDispatch (hasField :: Bool.Boolean) (isScalar :: Bool.Boolean) (name :: Symbol) (args :: FieldList.Arguments) (rela :: Relation) a  (source :: # Type) (objectFieldsRow :: # Type)
 
-instance validateObjectFieldNoArgs ::
+instance validateObjectFieldFirstDispatchNoFieldIsScalar ::
+  -- NOTE Scalar field declaration is optional
+  -- because both its description and resolver are optional
+  ValidateObjectFieldFirstDispatch Bool.False Bool.True name args rela a source objectFieldsRow
+else instance validateObjectFieldFirstDispatchNoFieldNotScalar ::
+  Fail
+  ( Beside
+    ( Text "Missing declaration of Relational field `")
+    ( Beside
+      ( Text name)
+      ( Text "`.")
+    )
+  )
+  => ValidateObjectFieldFirstDispatch Bool.False Bool.False name args rela a source objectFieldsRow
+else instance validateObjectFieldFirstDispatchHasField ::
+  ( Row.Cons name (Record objectFieldRow) restObjectFieldsRow objectFieldsRow
+  , ValidateObjectFieldSecondDispatch isScalar name args rela a source objectFieldRow
+  ) => ValidateObjectFieldFirstDispatch Bool.True isScalar name args rela a source objectFieldsRow
+
+
+-- | ValidateObjectFieldSecondDispatch
+class ValidateObjectFieldSecondDispatch (isScalar :: Bool.Boolean) (name :: Symbol) (args :: FieldList.Arguments) (rela :: Relation) a  (source :: # Type) (objectFieldRow :: # Type)
+
+instance validateObjectFieldIsScalarNoArgs ::
   ( ParseRelation typ rela a -- typ <- rela a
-  , Validate ( description :: Optional String ) objectFieldRow Success
+  , ValidateExclusive
+    ( description :: Optional String
+    , resolve :: OptionalField
+    ) objectFieldRow
   , Row.FetchField "resolve" objectFieldRow resolveFn
-  , ValidateObjectFieldNoArgs resolveFn source typ
-  ) => ValidateObjectField Bool.True name FieldList.NoArgs rela a source objectFieldRow
-else instance validateObjectFieldWithArgs ::
+  , ValidateObjectFieldSecondDispatchNoArgs resolveFn source typ
+  ) => ValidateObjectFieldSecondDispatch Bool.True name FieldList.NoArgs rela a source objectFieldRow
+else instance validateObjectFieldIsScalarWithArgs ::
   ( ParseRelation typ rela a -- typ <- rela a
-  , Validate ( description :: Optional String ) objectFieldRow Success
+  , ValidateExclusive
+    ( description :: Optional String
+    , resolve :: RequiredField
+    ) objectFieldRow
   , Row.FetchField "resolve" objectFieldRow resolveFn
-  , ValidateObjectFieldWithArgs name resolveFn args source typ
-  ) => ValidateObjectField Bool.True name (FieldList.Args args) rela a source objectFieldRow
+  , ValidateObjectFieldSecondDispatchWithArgs name resolveFn args source typ
+  ) => ValidateObjectFieldSecondDispatch Bool.True name (FieldList.Args args) rela a source objectFieldRow
 else instance validateObjectFieldNotScalarNoArgs ::
   ( GenericToScalarTypeRow a aScalarRow
   , ParseRelation typ rela (Record aScalarRow) -- typ <- rela (Record aScalarRow)
-  , Validate ( description :: Optional String ) objectFieldRow Success
+  , ValidateExclusive
+    ( description :: Optional String
+    , resolve :: RequiredField
+    ) objectFieldRow
   , Row.FetchField "resolve" objectFieldRow resolveFn
-  , ValidateObjectFieldNoArgs resolveFn source typ
-  ) => ValidateObjectField Bool.False name FieldList.NoArgs rela a source objectFieldRow
+  , ValidateObjectFieldSecondDispatchNoArgs resolveFn source typ
+  ) => ValidateObjectFieldSecondDispatch Bool.False name FieldList.NoArgs rela a source objectFieldRow
 else instance validateObjectFieldNotScalarWithArgs ::
   ( GenericToScalarTypeRow a aScalarRow
   , ParseRelation typ rela (Record aScalarRow) -- typ <- rela (Record aScalarRow)
-  , Validate ( description :: Optional String ) objectFieldRow Success
+  , ValidateExclusive
+    ( description :: Optional String
+    , resolve :: RequiredField
+    ) objectFieldRow
   , Row.FetchField "resolve" objectFieldRow resolveFn
-  , ValidateObjectFieldWithArgs name resolveFn args source typ
-  ) => ValidateObjectField Bool.False name (FieldList.Args args) rela a source objectFieldRow
+  , ValidateObjectFieldSecondDispatchWithArgs name resolveFn args source typ
+  ) => ValidateObjectFieldSecondDispatch Bool.False name (FieldList.Args args) rela a source objectFieldRow
 
-class ValidateObjectFieldNoArgs (resolveFn :: Row.FetchResult) (source :: # Type) typ
+class ValidateObjectFieldSecondDispatchNoArgs (resolveFn :: Row.FetchResult) (source :: # Type) typ
 
 instance validateObjectFieldNoArgsNoResolve ::
-  ValidateObjectFieldNoArgs Row.FetchFailure source typ
+  ValidateObjectFieldSecondDispatchNoArgs Row.FetchFailure source typ
 else instance validateObjectFieldNoArgsWithResolve ::
-  ( ValidateObjectFieldNoArgsSuccess resolve source typ
-  ) => ValidateObjectFieldNoArgs (Row.FetchSuccess (resolve) rest) source typ
+  ( ValidateObjectFieldSecondDispatchNoArgsSuccess resolve source typ
+  ) => ValidateObjectFieldSecondDispatchNoArgs (Row.FetchSuccess (resolve) rest) source typ
 
-class ValidateObjectFieldNoArgsSuccess (resolve :: Type) (source :: # Type) typ | resolve -> source typ, source typ -> resolve
+class ValidateObjectFieldSecondDispatchNoArgsSuccess (resolve :: Type) (source :: # Type) typ | resolve -> source typ, source typ -> resolve
 
 instance validateObjectFieldNoArgsSuccess ::
   ( Row.Cons "source" (Record source) () i
-  ) => ValidateObjectFieldNoArgsSuccess (Record i -> Aff typ) source typ
+  ) => ValidateObjectFieldSecondDispatchNoArgsSuccess (Record i -> Aff typ) source typ
 
-class ValidateObjectFieldWithArgs (name :: Symbol) (resolveFn :: Row.FetchResult) (args :: # Type) (source :: # Type) typ
+class ValidateObjectFieldSecondDispatchWithArgs (name :: Symbol) (resolveFn :: Row.FetchResult) (args :: # Type) (source :: # Type) typ
 
 instance validateObjectFieldWithArgsNoResolve ::
   Fail
@@ -137,20 +171,20 @@ instance validateObjectFieldWithArgsNoResolve ::
     (Beside (Text "Missing resolve function for field `") (Beside (Text name) (Text "`:")))
     (Quote ({source :: Record source, args :: Record args} -> Aff typ))
   )
-  => ValidateObjectFieldWithArgs name Row.FetchFailure args source typ
+  => ValidateObjectFieldSecondDispatchWithArgs name Row.FetchFailure args source typ
 else instance validateObjectFieldWithArgsWithResolve ::
-  ( ValidateObjectFieldWithArgsSuccess resolve args source typ
-  ) => ValidateObjectFieldWithArgs name (Row.FetchSuccess resolve rest) args source typ
+  ( ValidateObjectFieldSecondDispatchWithArgsSuccess resolve args source typ
+  ) => ValidateObjectFieldSecondDispatchWithArgs name (Row.FetchSuccess resolve rest) args source typ
 
-class ValidateObjectFieldWithArgsSuccess (resolve :: Type) (args :: # Type) (source :: # Type) typ | resolve -> args source typ, args source typ -> resolve
+class ValidateObjectFieldSecondDispatchWithArgsSuccess (resolve :: Type) (args :: # Type) (source :: # Type) typ | resolve -> args source typ, args source typ -> resolve
 
 instance validateObjectFieldWithArgsSuccess ::
   -- Fail
   -- ( Quote typ)
-  -- => ValidateObjectFieldWithArgsSuccess (Record i -> Aff tye) args source typ
-  ( Row.Cons "source" (Record source) i0 i
-  , Row.Cons "args" (Record args) i1 i
-  ) => ValidateObjectFieldWithArgsSuccess (Record i -> Aff typ) args source typ
+  -- => ValidateObjectFieldSecondDispatchWithArgsSuccess (Record i -> Aff tye) args source typ
+  ( Row.Cons "source" (Record source) () i0
+  , Row.Cons "args" (Record args) i0 i
+  ) => ValidateObjectFieldSecondDispatchWithArgsSuccess (Record i -> Aff typ) args source typ
 
 
 
@@ -163,7 +197,10 @@ objectType
    . Generic psType (Constructor psTypeName (Argument (Record psFnRow)))
   => FieldList.FromRow psFnRow psFnFl
   => FieldList.ToScalarTypeRow psFnFl psScalarTypeRow -- psScalarTypeRow ~ source
-  => Validate (description :: Optional String) objectRow Success
+  => ValidateExclusive
+     ( description :: Optional String
+     , fields :: RequiredField
+     ) objectRow
   => Row.FetchField "fields" objectRow (Row.FetchSuccess (Record objectFieldsRow) rest)
   => ValidateObjectFields psScalarTypeRow psFnFl objectFieldsRow
   => Record objectRow
@@ -183,7 +220,11 @@ objectTypeTest
    . Generic psType (Constructor psTypeName (Argument (Record psFnRow)))
   => FieldList.FromRow psFnRow psFnFl
   => FieldList.ToScalarTypeRow psFnFl psScalarTypeRow -- psScalarTypeRow ~ source
-  => Validate (description :: Optional String) objectRow Success
+  => ValidateExclusive
+     ( description :: Optional String
+     , fields :: RequiredField
+     )
+     objectRow
   => Row.FetchField "fields" objectRow (Row.FetchSuccess (Record objectFieldsRow) rest)
   => ValidateObjectFields psScalarTypeRow psFnFl objectFieldsRow
   => Proxy psType
@@ -217,6 +258,7 @@ objectTypeTestExample = objectTypeTest
                                 \({source: { id }, args: { limit }}) -> pure []
                               }
                           }
+                        , description: "type declaration for User"
                         }
 
 

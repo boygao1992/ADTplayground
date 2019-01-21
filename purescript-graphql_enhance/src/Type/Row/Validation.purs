@@ -19,7 +19,9 @@ data RSProxy (result :: Result) = RSProxy
 
 data Required a
 data Optional a
-data Repelled
+data Repelled -- NOTE for Validate only, not for ValidateExclusive
+data RequiredField -- NOTE no type check
+data OptionalField -- NOTE no type check
 
 -- | AppendResult
 class Append (r1 :: Result) (r2 :: Result) (r :: Result) | r1 r2 -> r
@@ -111,6 +113,14 @@ else instance validateExlusiveRowListConsRequired ::
   ( Row.FetchField name i fetchResult
   , ValidateExclusiveRowListDispatch fetchResult name (Required typ) restSchemaRl i
   ) => ValidateExclusiveRowList (RowList.Cons name (Required typ) restSchemaRl) i
+else instance validateExlusiveRowListConsRequiredField ::
+  ( Row.FetchField name i fetchResult
+  , ValidateExclusiveRowListDispatch fetchResult name RequiredField restSchemaRl i
+  ) => ValidateExclusiveRowList (RowList.Cons name RequiredField restSchemaRl) i
+else instance validateExlusiveRowListConsOptionalField ::
+  ( Row.FetchField name i fetchResult
+  , ValidateExclusiveRowListDispatch fetchResult name OptionalField restSchemaRl i
+  ) => ValidateExclusiveRowList (RowList.Cons name OptionalField restSchemaRl) i
 else instance validateExlusiveRowListInvalidPattern ::
   Fail
   ( Above
@@ -139,12 +149,27 @@ class ValidateExclusiveRowListDispatch (fetchResult :: Row.FetchResult) (name ::
 instance validateExclusiveRowListFetchFailureOptional ::
   ( ValidateExclusiveRowList restSchemaRl i
   ) => ValidateExclusiveRowListDispatch Row.FetchFailure name (Optional typ) restSchemaRl i
+else instance validateExclusiveRowListFetchFailureOptionalField ::
+  ( ValidateExclusiveRowList restSchemaRl i
+  ) => ValidateExclusiveRowListDispatch Row.FetchFailure name OptionalField restSchemaRl i
 else instance validateExclusiveRowListFetchFailureRequired ::
   Fail
   (Beside
    (Text "Required field `") (Beside (Text name) (Text "` is not provided."))
   )
   => ValidateExclusiveRowListDispatch Row.FetchFailure name (Required typ) restSchemaRl i
+else instance validateExclusiveRowListFetchFailureRequiredField ::
+  Fail
+  (Beside
+   (Text "Required field `") (Beside (Text name) (Text "` is not provided."))
+  )
+  => ValidateExclusiveRowListDispatch Row.FetchFailure name RequiredField restSchemaRl i
+else instance validateExclusiveRowListFetchSuccessOptionalField ::
+  ( ValidateExclusiveRowList restSchemaRl restI
+  ) => ValidateExclusiveRowListDispatch (Row.FetchSuccess typ1 restI) name OptionalField restSchemaRl i
+else instance validateExclusiveRowListFetchSuccessRequiredField ::
+  ( ValidateExclusiveRowList restSchemaRl restI
+  ) => ValidateExclusiveRowListDispatch (Row.FetchSuccess typ1 restI) name RequiredField restSchemaRl i
 else instance validateExclusiveRowListFetchSuccessOptional ::
   ( Type.IsEqualPred typ1 typ2 isEqual
   , ValidateExclusiveRowListFetchSuccessOptional isEqual name typ1 typ2 restSchemaRl restI
