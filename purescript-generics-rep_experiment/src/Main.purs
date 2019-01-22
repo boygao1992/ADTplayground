@@ -279,7 +279,15 @@ class IsField row name <= InjectDescription (row :: # Type) (name :: Symbol) (de
 -- e.g.
 -- InjectDescription (id :: String) "id" "This is a unique identifier for ..."
 
-main :: Effect Unit
+-- | NoArg Type Class
+-- NOTE able to carry static values
+class TypeClassNoArg where
+  name :: String
+
+instance typeClassNoArg :: TypeClassNoArg where
+  name = "wenbo"
+
+main :: TypeClassNoArg => Effect Unit
 main = do
 
   -- case (JSON.readJSON testJSON) of
@@ -311,3 +319,5 @@ main = do
 
   logShow $ ConsF 1 $ ConsF 2 $ ConsF 3 $ NilF :: ListF Int Unit
   -- (ConsF 1 (ConsF 2 (ConsF 3 NilF)))
+
+  logShow $ name

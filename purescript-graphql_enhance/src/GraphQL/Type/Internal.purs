@@ -1,280 +1,138 @@
 module GraphQL.Type.Internal where
 
--- TODO fields in source are all scalars
--- TODO add Context (ctx)
-
+import Data.Function.Uncurried
 import Prelude
 
-import Data.Function.Uncurried (Fn1)
-import Data.Generic.Rep (class Generic, Argument, Constructor)
-import Effect.Aff (Aff)
-import GraphQL.Data.FieldList as FieldList
-import GraphQL.Type (class IsScalarPred, class ParseRelation, ObjectType, kind Relation)
-import Prim.TypeError (class Fail, Text, Quote, Above, Beside)
+import Data.Maybe (Maybe(..))
+import Data.NonEmpty (NonEmpty)
+import Prim.TypeError (class Fail, Beside, Quote, Text)
 import Type.Data.Boolean as Bool
-import Type.Proxy (Proxy(..))
-import Type.Row (RProxy(..))
-import Type.Row (class Cons) as Row
-import Type.Row.Utils (class HasFieldPred, class FetchField, FetchFailure, FetchSuccess, kind FetchResult) as Row
-import Type.Row.Validation (class ValidateExclusive, Optional, OptionalField, Required, RequiredField)
-
-foreign import _objectType :: forall objectRow a. Fn1 (Record objectRow) (ObjectType a)
 
 {-
-given = ctx
-input = Record objectRow
-Geneirc psType (Constructor psTypeName (Argument (Record psFnRow)))
-RowToList psFnRow psFnRl
-FieldList.FromRowList (psFnRl :: RowList) (psFnFl :: FieldList)
-PartitionFieldList (psFnFl :: FieldList) (psScalarFnFl :: FieldList) (psRelationFnFl :: FieldList)
-FieldList.RemoveArgs psScalarFnFl psScalarTypeFl
-FieldList.ToRowList (psScalarTypeFl :: FieldList) (psScalarTypeRow :: # Type)
-Validate ( name :: Required String, description :: Optional String) objectRow Success
-FetchField "fields" objectRow (Record objectFieldsRow)
-ValidateFields (psFl :: FieldList) (objectFieldsRow :: # Type) =
-  FieldList.Cons (fieldName :: Symbol) (args :: # Type) (rela :: Relation) (typ :: Type) restPsFl psFl
-  Row.Cons fieldName (Record fieldRow) restObjectFieldsRow objectFieldsRow
-  IsScalarType (typ :: Type) (isScalar :: Bool.Boolean)
-  if isScalar == Bool.True
-  then
-    RelationToPsType (rela :: Relation) (typ :: Type) (o :: Type)
-    Validate (description :: Optional String) fieldRow
-    FetchField "resolve" fieldRow (result :: FetchResult)
-    if FetchFailure then pass
-    if (FetchSuccess ((Record resolveInputRow) -> Aff o)) then
-      Validate ( source :: Optional psScalarRow
-               , args :: Required args
-               , ctx :: Optional ctx
-               )
-               resolveInputRow
-  else
-    Generic a (Constructor name (Argument (Record typRow)))
-    PartitionRow typRow typScalarRow typRelationRow
-    RelationToPsType (rela :: Relation) (Record typeScalarRow) (o :: Type)
-    Validate (description :: Optional String) fieldRow
-    FetchField "resolve" fieldRow (result :: FetchResult)
-    if FetchFailure then pass
-    if (FetchSuccess ((Record resolveInputRow) -> Aff o)) then
-      Validate ( source :: Optional psScalarRow
-               , args :: Required args
-               , ctx :: Optional ctx
-               )
-               resolveInputRow
+data ObjectType a
+data InputObjectType a
+data ScalarType a
+data ListType (f :: Type -> Type) a
+
+class GraphQLType a
+
+instance graphQLTypeScalarType :: GraphQLType (ScalarType a)
+instance graphQLTypeListType :: GraphQLType (List f a)
 -}
 
-type ObjectTypeConstructor deps psType = Record deps -> ObjectType psType
 
--- | ToScalarTypeRow
-class GenericToScalarTypeRow a (scalarTypeRow :: # Type) | a -> scalarTypeRow
+data GraphQLType a
 
-instance genericToScalarTypeRowImpl ::
-  ( Generic a (Constructor name (Argument (Record fnRow)))
-  , FieldList.FromRow fnRow fnFl
-  , FieldList.ToScalarTypeRow fnFl scalarTypeRow
-  ) => GenericToScalarTypeRow a scalarTypeRow
+newtype Id = Id String
 
--- | ValidateObjectFields
-class ValidateObjectFields (source :: # Type) (psFnFl :: FieldList.FieldList) (objectFieldsRow :: # Type)
+-- | FFI
 
-instance validateObjectFieldsNil ::
-  ValidateObjectFields source FieldList.Nil objectFieldsRow
-instance validateObjectFieldsConsDispatch ::
-  ( IsScalarPred a isScalar
-  , Row.HasFieldPred objectFieldsRow name hasField
-  , ValidateObjectFieldFirstDispatch hasField isScalar name args rela a source objectFieldsRow
-  , ValidateObjectFields source restPsFnFl objectFieldsRow
-  ) => ValidateObjectFields source (FieldList.Cons name args rela a restPsFnFl) objectFieldsRow
+foreign import int :: GraphQLType (Maybe Int)
+foreign import float :: GraphQLType (Maybe Number)
+foreign import string :: GraphQLType (Maybe String)
+foreign import id :: GraphQLType (Maybe Id)
+foreign import boolean :: GraphQLType (Maybe Boolean)
 
-class ValidateObjectFieldFirstDispatch (hasField :: Bool.Boolean) (isScalar :: Bool.Boolean) (name :: Symbol) (args :: FieldList.Arguments) (rela :: Relation) a  (source :: # Type) (objectFieldsRow :: # Type)
+foreign import _nonNull ::
+  forall a. Fn1 (GraphQLType (Maybe a)) (GraphQLType a)
 
-instance validateObjectFieldFirstDispatchNoFieldIsScalar ::
-  -- NOTE Scalar field declaration is optional
-  -- because both its description and resolver are optional
-  ValidateObjectFieldFirstDispatch Bool.False Bool.True name args rela a source objectFieldsRow
-else instance validateObjectFieldFirstDispatchNoFieldNotScalar ::
+nonNull :: forall a. GraphQLType (Maybe a) -> GraphQLType a
+nonNull gType = runFn1 _nonNull gType
+
+foreign import _list ::
+  forall f a. Fn1 (GraphQLType a) (GraphQLType (Maybe (f a)))
+
+list :: forall f a. GraphQLType a -> GraphQLType (Maybe (f a))
+list gType = runFn1 _list gType
+
+-- | IsUnitPred
+-- NOTE output type can be Unit for mutations
+-- NOTE GraphQL doesn't support Unit type
+--   https://github.com/apollographql/graphql-tools/issues/277
+class IsUnitPred a (b :: Bool.Boolean) | a -> b
+instance isUnitPredYes :: IsUnitPred Unit Bool.True
+else instance isUnitPredNo :: IsUnitPred other Bool.False
+
+-- | IsScalarPred
+class IsScalarPred a (b :: Bool.Boolean) | a -> b
+instance isScalarPredInt ::
+  IsScalarPred Int Bool.True
+else instance isScalarPredNumber ::
+  IsScalarPred Number Bool.True
+else instance isScalarPredString ::
+  IsScalarPred String Bool.True
+else instance isScalarPredId ::
+  IsScalarPred Id Bool.True
+else instance isScalarPredBoolean ::
+  IsScalarPred Boolean Bool.True
+else instance isScalarPredMaybeInt ::
+  IsScalarPred (Maybe Int) Bool.True
+else instance isScalarPredMaybeNumber ::
+  IsScalarPred (Maybe Number) Bool.True
+else instance isScalarPredMaybeString ::
+  IsScalarPred (Maybe String) Bool.True
+else instance isScalarPredMaybeId ::
+  IsScalarPred (Maybe Id) Bool.True
+else instance isScalarPredMaybeBoolean ::
+  IsScalarPred (Maybe Boolean) Bool.True
+else instance isScalarPredNo ::
+  IsScalarPred other Bool.False
+
+-- | IsScalar
+class IsScalar a where
+  toScalar :: GraphQLType a
+
+instance isScalarInt :: IsScalar Int where
+  toScalar = nonNull int
+else instance isScalarNumber :: IsScalar Number where
+  toScalar = nonNull float
+else instance isScalarString :: IsScalar String where
+  toScalar = nonNull string
+else instance isScalarId :: IsScalar Id where
+  toScalar = nonNull id
+else instance isScalarBoolean :: IsScalar Boolean where
+  toScalar = nonNull boolean
+else instance isScalarMaybeInt :: IsScalar (Maybe Int) where
+  toScalar = int
+else instance isScalarMaybeNumber :: IsScalar (Maybe Number) where
+  toScalar = float
+else instance isScalarMaybeString :: IsScalar (Maybe String) where
+  toScalar = string
+else instance isScalarMaybeId :: IsScalar (Maybe Id) where
+  toScalar = id
+else instance isScalarMaybeBoolean :: IsScalar (Maybe Boolean) where
+  toScalar = boolean
+else instance isScalarNo ::
   Fail
   ( Beside
-    ( Text "Missing declaration of Relational field `")
-    ( Beside
-      ( Text name)
-      ( Text "`.")
-    )
+    ( Quote a)
+    ( Text " is not a valid scalar type.")
   )
-  => ValidateObjectFieldFirstDispatch Bool.False Bool.False name args rela a source objectFieldsRow
-else instance validateObjectFieldFirstDispatchHasField ::
-  ( Row.Cons name (Record objectFieldRow) restObjectFieldsRow objectFieldsRow
-  , ValidateObjectFieldSecondDispatch isScalar name args rela a source objectFieldRow
-  ) => ValidateObjectFieldFirstDispatch Bool.True isScalar name args rela a source objectFieldsRow
+  => IsScalar a where
+  toScalar = toScalar
 
+-- | IsListPred
+class IsListPred a (b :: Bool.Boolean) | a -> b
+instance isListPredArray ::
+  IsListPred (Array a) Bool.True
+else instance isListPredNonEmptyArray ::
+  IsListPred (NonEmpty Array a) Bool.True
+else instance isListPredNo ::
+  IsListPred other Bool.False
 
--- | ValidateObjectFieldSecondDispatch
-class ValidateObjectFieldSecondDispatch (isScalar :: Bool.Boolean) (name :: Symbol) (args :: FieldList.Arguments) (rela :: Relation) a  (source :: # Type) (objectFieldRow :: # Type)
+-- | IsList
+class IsList (f :: Type -> Type) (a :: Type) where
+  toList :: GraphQLType a -> GraphQLType (f a)
 
-instance validateObjectFieldIsScalarNoArgs ::
-  ( ParseRelation typ rela a -- typ <- rela a
-  , ValidateExclusive
-    ( description :: Optional String
-    , resolve :: OptionalField
-    ) objectFieldRow
-  , Row.FetchField "resolve" objectFieldRow resolveFn
-  , ValidateObjectFieldSecondDispatchNoArgs resolveFn source typ
-  ) => ValidateObjectFieldSecondDispatch Bool.True name FieldList.NoArgs rela a source objectFieldRow
-else instance validateObjectFieldIsScalarWithArgs ::
-  ( ParseRelation typ rela a -- typ <- rela a
-  , ValidateExclusive
-    ( description :: Optional String
-    , resolve :: RequiredField
-    ) objectFieldRow
-  , Row.FetchField "resolve" objectFieldRow resolveFn
-  , ValidateObjectFieldSecondDispatchWithArgs name resolveFn args source typ
-  ) => ValidateObjectFieldSecondDispatch Bool.True name (FieldList.Args args) rela a source objectFieldRow
-else instance validateObjectFieldNotScalarNoArgs ::
-  ( GenericToScalarTypeRow a aScalarRow
-  , ParseRelation typ rela (Record aScalarRow) -- typ <- rela (Record aScalarRow)
-  , ValidateExclusive
-    ( description :: Optional String
-    , resolve :: RequiredField
-    ) objectFieldRow
-  , Row.FetchField "resolve" objectFieldRow resolveFn
-  , ValidateObjectFieldSecondDispatchNoArgs resolveFn source typ
-  ) => ValidateObjectFieldSecondDispatch Bool.False name FieldList.NoArgs rela a source objectFieldRow
-else instance validateObjectFieldNotScalarWithArgs ::
-  ( GenericToScalarTypeRow a aScalarRow
-  , ParseRelation typ rela (Record aScalarRow) -- typ <- rela (Record aScalarRow)
-  , ValidateExclusive
-    ( description :: Optional String
-    , resolve :: RequiredField
-    ) objectFieldRow
-  , Row.FetchField "resolve" objectFieldRow resolveFn
-  , ValidateObjectFieldSecondDispatchWithArgs name resolveFn args source typ
-  ) => ValidateObjectFieldSecondDispatch Bool.False name (FieldList.Args args) rela a source objectFieldRow
-
-class ValidateObjectFieldSecondDispatchNoArgs (resolveFn :: Row.FetchResult) (source :: # Type) typ
-
-instance validateObjectFieldNoArgsNoResolve ::
-  ValidateObjectFieldSecondDispatchNoArgs Row.FetchFailure source typ
-else instance validateObjectFieldNoArgsWithResolve ::
-  ( ValidateObjectFieldSecondDispatchNoArgsSuccess resolve source typ
-  ) => ValidateObjectFieldSecondDispatchNoArgs (Row.FetchSuccess (resolve) rest) source typ
-
-class ValidateObjectFieldSecondDispatchNoArgsSuccess (resolve :: Type) (source :: # Type) typ | resolve -> source typ, source typ -> resolve
-
-instance validateObjectFieldNoArgsSuccess ::
-  ( Row.Cons "source" (Record source) () i
-  ) => ValidateObjectFieldSecondDispatchNoArgsSuccess (Record i -> Aff typ) source typ
-
-class ValidateObjectFieldSecondDispatchWithArgs (name :: Symbol) (resolveFn :: Row.FetchResult) (args :: # Type) (source :: # Type) typ
-
-instance validateObjectFieldWithArgsNoResolve ::
+instance isListArray :: IsList Array a where
+  toList gType = nonNull (list gType)
+else instance isListNonEmpty :: IsList (NonEmpty Array) a where
+  toList gType = nonNull (list gType)
+else instance isListNo ::
   Fail
-  ( Above
-    (Beside (Text "Missing resolve function for field `") (Beside (Text name) (Text "`:")))
-    (Quote ({source :: Record source, args :: Record args} -> Aff typ))
+  ( Beside
+    (Quote (f a))
+    (Text " is not a valid list type.")
   )
-  => ValidateObjectFieldSecondDispatchWithArgs name Row.FetchFailure args source typ
-else instance validateObjectFieldWithArgsWithResolve ::
-  ( ValidateObjectFieldSecondDispatchWithArgsSuccess resolve args source typ
-  ) => ValidateObjectFieldSecondDispatchWithArgs name (Row.FetchSuccess resolve rest) args source typ
-
-class ValidateObjectFieldSecondDispatchWithArgsSuccess (resolve :: Type) (args :: # Type) (source :: # Type) typ | resolve -> args source typ, args source typ -> resolve
-
-instance validateObjectFieldWithArgsSuccess ::
-  -- Fail
-  -- ( Quote typ)
-  -- => ValidateObjectFieldSecondDispatchWithArgsSuccess (Record i -> Aff tye) args source typ
-  ( Row.Cons "source" (Record source) () i0
-  , Row.Cons "args" (Record args) i0 i
-  ) => ValidateObjectFieldSecondDispatchWithArgsSuccess (Record i -> Aff typ) args source typ
-
-
-
--- | objectType
-
-objectType
-  :: forall objectRow deps psType psTypeName psFnRow psFnFl psScalarTypeRow
-     objectFieldsRow
-     rest
-   . Generic psType (Constructor psTypeName (Argument (Record psFnRow)))
-  => FieldList.FromRow psFnRow psFnFl
-  => FieldList.ToScalarTypeRow psFnFl psScalarTypeRow -- psScalarTypeRow ~ source
-  => ValidateExclusive
-     ( description :: Optional String
-     , fields :: RequiredField
-     ) objectRow
-  => Row.FetchField "fields" objectRow (Row.FetchSuccess (Record objectFieldsRow) rest)
-  => ValidateObjectFields psScalarTypeRow psFnFl objectFieldsRow
-  => Record objectRow
-  -> ObjectTypeConstructor deps psType
-  -> Unit -- TODO class InjectName, class InjectType, class ToGraphQLType
-objectType _ _ = unit
-
---   => Record objectRow
---   -> ObjectTypeConstructor deps psType
-
--- Test
-
-objectTypeTest
-  :: forall objectRow psType psTypeName psFnRow psFnFl psScalarTypeRow
-     objectFieldsRow
-     rest
-   . Generic psType (Constructor psTypeName (Argument (Record psFnRow)))
-  => FieldList.FromRow psFnRow psFnFl
-  => FieldList.ToScalarTypeRow psFnFl psScalarTypeRow -- psScalarTypeRow ~ source
-  => ValidateExclusive
-     ( description :: Optional String
-     , fields :: RequiredField
-     )
-     objectRow
-  => Row.FetchField "fields" objectRow (Row.FetchSuccess (Record objectFieldsRow) rest)
-  => ValidateObjectFields psScalarTypeRow psFnFl objectFieldsRow
-  => Proxy psType
-  -> Record objectRow
-  -> Unit -- TODO class InjectName, class InjectType, class ToGraphQLType
-objectTypeTest _ _ = unit
-
-
-newtype User = User
-  { id :: String
-  , posts :: { limit :: Int } -> Array Post
-  }
-derive instance genericUser :: Generic User _
-
-newtype Post = Post
-  { id :: String
-  }
-derive instance genericPost :: Generic Post _
-
-objectTypeTestExample = objectTypeTest
-                        (Proxy :: Proxy User)
-                        { fields:
-                          { id:
-                              { description : ""
-                              , resolve:
-                                \({source: { id }}) -> pure id
-                              }
-                          , posts:
-                              { description : ""
-                              , resolve:
-                                \({source: { id }, args: { limit }}) -> pure []
-                              }
-                          }
-                        , description: "type declaration for User"
-                        }
-
-
--- NOTE use isomorphism to constrain open record to closed record
--- class TestParseFn fn i o | fn -> i o, i o -> fn
-
--- instance testParseFn :: TestParseFn (i -> o) i o
-
--- test
---   :: forall psType args o
---    . TestParseFn psType args o
---   => Proxy psType
---   -> (args -> o)
---   -> Unit
--- test _ _ = unit
-
--- testExample = test (Proxy :: Proxy ({ id :: String } -> String))
---                    (\({id}) -> id
---                    )
+  => IsList f a where
+  toList = toList

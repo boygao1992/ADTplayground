@@ -12,11 +12,11 @@ exports.id = G.GraphQLID
 
 exports.boolean = G.GraphQLBoolean
 
-exports.nonNull = function (type) {
+exports._nonNull = function (type) {
   return new G.GraphQLNonNull(type)
 }
 
-exports.list = function (type) {
+exports._list = function (type) {
   return new G.GraphQLList(type)
 }
 
