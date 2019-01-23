@@ -4,7 +4,7 @@ import Prelude
 
 import Data.Generic.Rep (class Generic, Constructor)
 import Data.Nullable (Nullable)
-import GraphQL.Type (GraphQLObject)
+import GraphQL.Type.Internal (GraphQLType)
 import Prim.RowList (kind RowList)
 import Prim.RowList as RowList
 import Type.Row (RProxy(..))
@@ -27,7 +27,7 @@ else instance toDependenciesRowListInductionStep ::
   ( ToDependenciesRowList restRelaRl restDepRl
   , FetchTargetType typ targetType
   , Generic targetType (Constructor targetTypeName arg)
-  ) => ToDependenciesRowList (RowList.Cons name typ restRelaRl) (RowList.Cons targetTypeName (Unit -> Nullable(GraphQLObject targetType)) restDepRl)
+  ) => ToDependenciesRowList (RowList.Cons name typ restRelaRl) (RowList.Cons targetTypeName (Unit -> Nullable(GraphQLType targetType)) restDepRl)
 
 -- | FetchTargetType
 class FetchTargetType i o | i -> o
@@ -61,8 +61,8 @@ newtype Comment = Comment
 derive instance genericComment :: Generic Comment _
 
 toDependenciesExample :: RProxy
-  ( "Comment" :: Unit -> Nullable (GraphQLObject Comment)
-  , "Post" :: Unit -> Nullable (GraphQLObject Post)
+  ( "Comment" :: Unit -> Nullable (GraphQLType Comment)
+  , "Post" :: Unit -> Nullable (GraphQLType Post)
   )
 toDependenciesExample = toDependencies
                         (RProxy :: RProxy ( posts :: Array Post

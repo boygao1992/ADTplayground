@@ -9,7 +9,7 @@ import Data.Generic.Rep (class Generic, Argument, Constructor)
 import Effect.Aff (Aff)
 import GraphQL.Type.Data.FieldList as FieldList
 import GraphQL.Type.Data.Relation (class ParseRelation, kind Relation)
-import GraphQL.Type.Internal (class IsScalarPred, ObjectType)
+import GraphQL.Type.Internal (class IsScalarPred, GraphQLType)
 import Prim.TypeError (class Fail, Text, Quote, Above, Beside)
 import Type.Data.Boolean as Bool
 import Type.Proxy (Proxy(..))
@@ -59,7 +59,7 @@ ValidateFields (psFl :: FieldList) (objectFieldsRow :: # Type) =
                resolveInputRow
 -}
 
-type ObjectTypeConstructor deps psType = Record deps -> ObjectType psType
+type ObjectTypeConstructor deps psType = Record deps -> GraphQLType psType
 
 -- | ToScalarTypeRow
 class GenericToScalarTypeRow a (scalarTypeRow :: # Type) | a -> scalarTypeRow

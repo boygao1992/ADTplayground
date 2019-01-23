@@ -1,10 +1,13 @@
 module GraphQL.Type.Internal.ToInputObject where
 
-import GraphQL.Type.Internal
+import Prelude
 
 import Data.Generic.Rep (class Generic, Constructor, Argument)
 import Data.Newtype (class Newtype)
+import GraphQL.Type.Internal (class IsList, class IsListPred, class IsScalar, class IsScalarPred, GraphQLType, inputObjectType, toList, toScalar)
 import Prim.RowList as RowList
+import Record.Builder (Builder)
+import Record.Builder as Builder
 import Type.Data.Boolean (BProxy(..))
 import Type.Data.Boolean as Bool
 import Type.Data.RowList (RLProxy(..))
@@ -12,7 +15,7 @@ import Type.Data.Symbol (SProxy(..))
 import Type.Data.Symbol as Symbol
 import Type.Proxy (Proxy(..))
 import Type.Row (RProxy(..))
-import Type.Row (class Cons) as Row
+import Type.Row (class Cons, class Lacks) as Row
 import Type.Row.Utils (class IsRecordPred) as Row
 
 class ToInputObject (i :: # Type) (o :: # Type) | i -> o where
@@ -21,29 +24,57 @@ class ToInputObject (i :: # Type) (o :: # Type) | i -> o where
 instance toInputObjectInit ::
   ( ToInputObjectWithPath "" i o
   ) => ToInputObject i o
+  where
+    toInputObject i = toInputObjectWithPath (SProxy :: SProxy "") i
 
 class ToInputObjectWithPath (path :: Symbol) (i :: # Type) (o :: # Type) | path i -> o where
   toInputObjectWithPath :: SProxy path -> RProxy i -> Record o
 
-instance toInputObjectRowList ::
+instance toInputObjectWithPathToRowList ::
   ( RowList.RowToList i iRl
-  , ToInputObjectRowList path iRl o
+  , ToInputObjectRowList path iRl () o
   ) => ToInputObjectWithPath path i o
+  where
+    toInputObjectWithPath _ _
+      = Builder.build
+          ( toInputObjectRowList
+              (SProxy :: SProxy path)
+              (RLProxy :: RLProxy iRl)
+          )
+          {}
 
-class ToInputObjectRowList (path :: Symbol) (iRl :: RowList.RowList) (o :: # Type) | path iRl -> o where
-  toInputObjectRowList :: SProxy path -> RLProxy iRl -> Record o
+class ToInputObjectRowList (path :: Symbol) (iRl :: RowList.RowList) (from :: # Type) (to :: # Type) | path iRl -> from to where
+  toInputObjectRowList :: SProxy path -> RLProxy iRl -> Builder (Record from) (Record to)
 
 instance toInputObjectRowListNil ::
-  ToInputObjectRowList path RowList.Nil ()
+  ToInputObjectRowList path RowList.Nil () ()
+  where
+    toInputObjectRowList _ _ = identity
 else instance toInputObjectRowListCons ::
   ( ToInputObjectType name path typ gType
-  , Row.Cons "type" gType () typeRow
-  , ToInputObjectRowList path restRl restO
-  , Row.Cons name (Record typeRow) restO o
-  ) => ToInputObjectRowList path (RowList.Cons name typ restRl) o
+  , ToInputObjectRowList path restRl from restTo
+  -- Builder.insert
+  , Row.Cons name (Record ( "type" :: GraphQLType gType)) restTo to
+  , Row.Lacks name restTo
+  , Symbol.IsSymbol name
+  ) => ToInputObjectRowList path (RowList.Cons name typ restRl) from to
+  where
+    toInputObjectRowList pathP _
+        = ( Builder.insert
+              (SProxy :: SProxy name)
+              { "type": toInputObjectType
+                          (SProxy :: SProxy name)
+                          pathP
+                          (Proxy :: Proxy typ)
+              }
+          )
+      <<< ( toInputObjectRowList
+              pathP
+              (RLProxy :: RLProxy restRl)
+          )
 
 class ToInputObjectType (name :: Symbol) (path :: Symbol) typ gType | name path typ -> gType where
-  toInputObjectType :: SProxy name -> SProxy path -> Proxy typ -> gType
+  toInputObjectType :: SProxy name -> SProxy path -> Proxy typ -> GraphQLType gType
 
 instance toInputObjectFieldDispatch ::
   ( IsScalarPred typ isScalar
@@ -51,48 +82,82 @@ instance toInputObjectFieldDispatch ::
   , Row.IsRecordPred typ isRecord
   , ToInputObjectTypeDispatch isScalar isList isRecord name path typ gType
   ) => ToInputObjectType name path typ gType
+  where
+    toInputObjectType _ _ _
+      = toInputObjectTypeDispatch
+          (BProxy :: BProxy isScalar)
+          (BProxy :: BProxy isList)
+          (BProxy :: BProxy isRecord)
+          (SProxy :: SProxy name)
+          (SProxy :: SProxy path)
+          (Proxy :: Proxy typ)
 
 class ToInputObjectTypeDispatch
   (isScalar :: Bool.Boolean) (isList :: Bool.Boolean) (isRecord :: Bool.Boolean)
   (name :: Symbol) (path :: Symbol) typ gType
   | isScalar isList isRecord name path typ -> gType
   where
-    toInputObjectTypeDispatch :: BProxy isScalar -> BProxy isList -> BProxy isRecord -> SProxy name -> SProxy path -> Proxy typ -> gType
+    toInputObjectTypeDispatch
+      :: BProxy isScalar -> BProxy isList -> BProxy isRecord
+         -> SProxy name -> SProxy path -> Proxy typ -> GraphQLType gType
 
 instance toInputObjectFieldIsScalar ::
   ( IsScalar typ
-  ) => ToInputObjectTypeDispatch Bool.True isList isRecord name path typ (GraphQLType typ)
+  ) => ToInputObjectTypeDispatch Bool.True isList isRecord name path typ typ
   where
     toInputObjectTypeDispatch _ _ _ _ _ _ = toScalar
 else instance toInputObjectFieldIsList ::
-  ( Symbol.Append name "Item" name'
-  , ToInputObjectType name' path a gType
-  , IsList (f a)
-  ) => ToInputObjectTypeDispatch Bool.False Bool.True isRecord name path (f a) (GraphQLType (f a))
+  ( Symbol.Append name "-Item" name'
+  , ToInputObjectType name' path a a
+  , IsList f a
+  ) => ToInputObjectTypeDispatch Bool.False Bool.True isRecord name path (f a) (f a)
   where
     toInputObjectTypeDispatch _ _ _ _ _ _
-      = toList
-        ( toInputObjectType
-          (SProxy :: SProxy name')
-          (SProxy :: SProxy path)
-          (Proxy :: Proxy typ)
-        )
+      = let
+          item = toInputObjectType
+                  (SProxy :: SProxy name')
+                  (SProxy :: SProxy path)
+                  (Proxy :: Proxy a)
+        in
+          toList item
 else instance toInputObjectFieldIsRecord ::
   ( Symbol.Append path "_" path0
   , Symbol.Append path0 name path1
   , ToInputObjectWithPath path1 row o -- path1 row -> o
-  , Row.Cons "name" String () row0
-  , Row.Cons "fields" (Record o) row0 row1 -- TODO for value-level
-  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.True name path (Record row) (GraphQLType (Record row))
+  , Symbol.IsSymbol path1
+  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.True name path (Record row) (Record o)
+  where
+    toInputObjectTypeDispatch _ _ _ _ _ _
+      = let
+          fields = toInputObjectWithPath
+                    (SProxy :: SProxy path1)
+                    (RProxy :: RProxy row)
+        in
+          inputObjectType
+            { name: Symbol.reflectSymbol (SProxy :: SProxy path1)
+            , fields
+            }
 else instance toInputObjectFieldIsNewType ::
   ( Newtype typ a
   , Generic typ (Constructor name1 (Argument (Record row))) -- NOTE use name1 over name
   , Symbol.Append path "_" path0
-  , Symbol.Append path0 name1 path1
-  , ToInputObjectWithPath path1 row o -- path1 row -> o
-  , Row.Cons "name" String () row0
-  , Row.Cons "fields" (Record o) row0 row1 -- TODO for value-level
-  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.False name path typ (GraphQLType (Record row))
+  , Symbol.Append path0 name path1
+  , Symbol.Append path1 "-" path2
+  , Symbol.Append path2 name1 path3
+  , ToInputObjectWithPath path3 row o -- path1 row -> o
+  , Symbol.IsSymbol path3
+  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.False name path typ (Record o)
+  where
+    toInputObjectTypeDispatch _ _ _ _ _ _
+      = let
+          fields = toInputObjectWithPath
+                    (SProxy :: SProxy path3)
+                    (RProxy :: RProxy row)
+        in
+          inputObjectType
+            { name: Symbol.reflectSymbol (SProxy :: SProxy path3)
+            , fields
+            }
 
 {- input
 

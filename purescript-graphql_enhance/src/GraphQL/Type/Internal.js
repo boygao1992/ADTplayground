@@ -2,27 +2,45 @@
 
 const G = require("graphql")
 
-exports.int = G.GraphQLInt
+// NOTE testing
+exports.int = "GraphQLInt"
+// exports.int = G.GraphQLInt
 
-exports.float = G.GraphQLFloat
+// NOTE testing
+exports.float = "GraphQLFloat"
+// exports.float = G.GraphQLFloat
 
-exports.string = G.GraphQLString
+// NOTE testing
+exports.string = "GraphQLString"
+// exports.string = G.GraphQLString
 
-exports.id = G.GraphQLID
+// NOTE testing
+exports.id = "GraphQLID"
+// exports.id = G.GraphQLID
 
-exports.boolean = G.GraphQLBoolean
+// NOTE testing
+exports.boolean = "GraphQLBoolean"
+// exports.boolean = G.GraphQLBoolean
 
 exports._nonNull = function (type) {
-  return new G.GraphQLNonNull(type)
+  // NOTE testing
+  return { "nonNull": type }
+
+  // return new G.GraphQLNonNull(type)
 }
 
 exports._list = function (type) {
-  return new G.GraphQLList(type)
+  // NOTE testing
+  return { "GraphQLList": type }
+
+  // return new G.GraphQLList(type)
 }
 
 // { name :: String, description :: Maybe String, fields :: Record fieldsRow }
 exports._objectType = function (objectRecord) {
-  return new G.GraphQLObjectType(objectRecord)
+  // NOTE testing
+  return { "GraphQLObjectType": objectRecord }
+  // return new G.GraphQLObjectType(objectRecord)
 }
 
 // exports._objectTypeField = function (type, args, resolve, description) {
@@ -30,7 +48,10 @@ exports._objectType = function (objectRecord) {
 // }
 
 exports._inputObjectType = function (inputObjectRecord) {
-  return new G.GraphQLInputObjectType(inputObjectRecord)
+  // NOTE testing
+  return  { "GraphQLInputObjectType": inputObjectRecord }
+
+  // return new G.GraphQLInputObjectType(inputObjectRecord)
 }
 
 // exports._inputObjectTypeField = function (type, description) {
