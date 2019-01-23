@@ -45,6 +45,11 @@ foreign import _list ::
 list :: forall f a. GraphQLType a -> GraphQLType (Maybe (f a))
 list gType = runFn1 _list gType
 
+foreign import _inputObjectType :: forall row0 row. Fn1 (Record row0) (GraphQLType(Record row))
+
+inputObjectType :: forall row0 row. Record row0 -> GraphQLType (Record row)
+inputObjectType config = runFn1 _inputObjectType config
+
 -- | IsUnitPred
 -- NOTE output type can be Unit for mutations
 -- NOTE GraphQL doesn't support Unit type

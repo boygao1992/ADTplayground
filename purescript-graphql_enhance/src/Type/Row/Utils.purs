@@ -101,3 +101,10 @@ instance isEmptyPredToRowList ::
   ( RowList.RowToList row rl
   , RowList.IsEmptyPred rl b
   ) => IsEmptyPred row b
+
+-- | IsRecordPred
+
+class IsRecordPred typ (b :: Bool.Boolean) | typ -> b
+
+instance isRecordPredYes :: IsRecordPred (Record row) Bool.True
+else instance isRecordPredNo :: IsRecordPred other Bool.False
