@@ -3,7 +3,6 @@ module GraphQL.Type.Internal.ToInputObject where
 import Prelude
 
 import Data.Generic.Rep (class Generic, Constructor, Argument)
-import Data.Newtype (class Newtype)
 import GraphQL.Type.Internal (class IsList, class IsListPred, class IsScalar, class IsScalarPred, GraphQLType, inputObjectType, toList, toScalar)
 import Prim.RowList as RowList
 import Record.Builder (Builder)
@@ -108,9 +107,9 @@ instance toInputObjectFieldIsScalar ::
     toInputObjectTypeDispatch _ _ _ _ _ _ = toScalar
 else instance toInputObjectFieldIsList ::
   ( Symbol.Append name "-Item" name'
-  , ToInputObjectType name' path a a
-  , IsList f a
-  ) => ToInputObjectTypeDispatch Bool.False Bool.True isRecord name path (f a) (f a)
+  , ToInputObjectType name' path a b
+  , IsList f b
+  ) => ToInputObjectTypeDispatch Bool.False Bool.True isRecord name path (f a) (f b)
   where
     toInputObjectTypeDispatch _ _ _ _ _ _
       = let
@@ -123,9 +122,9 @@ else instance toInputObjectFieldIsList ::
 else instance toInputObjectFieldIsRecord ::
   ( Symbol.Append path "_" path0
   , Symbol.Append path0 name path1
-  , ToInputObjectWithPath path1 row o -- path1 row -> o
+  , ToInputObjectWithPath path1 row o -- path1 row -> o -- NOTE o is not carried
   , Symbol.IsSymbol path1
-  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.True name path (Record row) (Record o)
+  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.True name path (Record row) (Record row)
   where
     toInputObjectTypeDispatch _ _ _ _ _ _
       = let
@@ -138,15 +137,14 @@ else instance toInputObjectFieldIsRecord ::
             , fields
             }
 else instance toInputObjectFieldIsNewType ::
-  ( Newtype typ a
-  , Generic typ (Constructor name1 (Argument (Record row))) -- NOTE use name1 over name
+  ( Generic typ (Constructor name1 (Argument (Record row)))
   , Symbol.Append path "_" path0
   , Symbol.Append path0 name path1
   , Symbol.Append path1 "-" path2
   , Symbol.Append path2 name1 path3
-  , ToInputObjectWithPath path3 row o -- path1 row -> o
+  , ToInputObjectWithPath path3 row o -- path1 row -> o -- NOTE o is not carried
   , Symbol.IsSymbol path3
-  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.False name path typ (Record o)
+  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.False name path typ (Record row)
   where
     toInputObjectTypeDispatch _ _ _ _ _ _
       = let
