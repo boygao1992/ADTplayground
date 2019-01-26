@@ -3,22 +3,26 @@ module Main where
 import Prelude
 
 import Control.Alt ((<|>))
-import Data.Argonaut.Core (stringify)
 import Data.Argonaut.Decode.Class (class DecodeJson)
 import Data.Argonaut.Decode.Generic.Rep (genericDecodeJson)
-import Data.Argonaut.Encode.Class (class EncodeJson, encodeJson)
+import Data.Argonaut.Encode.Class (class EncodeJson)
 import Data.Argonaut.Encode.Generic.Rep (genericEncodeJson)
-import Data.Either (Either(..))
-import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), Product(..), Sum(..), from, to)
+import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments, Product, Sum(..), from, to)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
 import Effect (Effect)
-import Effect.Console (log, logShow)
+import Effect.Console (logShow)
 import Foreign (Foreign)
 import Foreign as Foreign
 import Simple.JSON as JSON
-import Test.Assert (assertEqual)
 import Type.Proxy (Proxy(..))
+import Prim.RowList (kind RowList)
+import Prim.RowList as RowList
+import Prim.Row as Row
+import Type.Row (RProxy(..))
+import Type.Data.RowList (RLProxy(..))
+import Record.Builder (Builder)
+import Record.Builder as Builder
 
 -- | Utils
 class UntaggedSumRep rep where
@@ -286,6 +290,111 @@ class TypeClassNoArg where
 
 instance typeClassNoArg :: TypeClassNoArg where
   name = "wenbo"
+
+-- | Dispatch Row fields in Arguments
+-- | e.g.
+
+{- gather first and second arguments of functions in a Row into two separate Row
+
+{ one :: { a :: Int } -> { x :: String } -> Unit
+, two :: { a :: Int } -> { y :: String } -> Number
+, three :: { b :: Int } -> { x :: String } -> Int
+, four :: { b :: Int } -> { y :: String } -> String
+}
+
+=>
+
+   { a :: Int, b :: Int }
+-> { x :: String, y :: String }
+-> { one :: Unit
+   , two :: Number
+   , three :: Int
+   , four :: String
+   }
+
+-}
+
+{- a simpler case
+
+{ one :: { a :: Int } -> Unit
+, two :: { a :: Int } -> Number
+, three :: { b :: Int } -> Int
+, four :: { b :: Int } -> String
+}
+
+=>
+
+   { a :: Int, b :: Int }
+-> { one :: Unit
+   , two :: Number
+   , three :: Int
+   , four :: String
+   }
+
+-}
+
+class MergeFunc (spec :: # Type) (i :: # Type) (o :: # Type) | spec -> i o
+
+instance mergeFuncImpl ::
+  ( RowList.RowToList spec rl
+  , CollectArgs rl i' o
+  , Row.Nub i' i
+  ) => MergeFunc spec i o
+
+class CollectArgs (rl :: RowList) (i :: # Type) (o :: # Type)| rl -> i o
+
+instance collectArgsNil ::
+  CollectArgs RowList.Nil () ()
+else instance collectArgsCons ::
+  ( CollectArgs restRl restI restO
+  , Row.Union arg restI i
+  , Row.Cons name output restO o
+  ) => CollectArgs (RowList.Cons name ((Record arg) -> output) restRl) i o
+
+-- class ApplyArgs (rl :: RowList) (spec :: # Type) (i :: # Type) (from :: # Type) (to :: # Type) | rl spec i -> from to
+--   where
+--     applyArgs :: RLProxy rl -> Record spec -> Record i -> Builder {|from} {|to}
+
+-- instance applyArgsNil ::
+--   ApplyArgs RowList.Nil spec i () ()
+--   where
+--     applyArgs _ _ _ = identity
+-- else instance applyArgsCons ::
+--   ( ApplyArgs restRl i from restTo
+--   , Row.Cons name output restTo to
+--   , Row.Lacks name restTo
+--   , IsSymbol name
+--   ) => ApplyArgs (RowList.Cons name ((Record arg) -> output) restRl) spec i from to
+--   where
+--     applyArgs _ spec i = 
+
+
+
+-- Test
+collectRowArgs :: forall spec i o. MergeFunc spec i o => RProxy spec -> Proxy (Record i -> Record o)
+collectRowArgs _ = Proxy :: Proxy (Record i -> Record o)
+
+collectExample1 :: Proxy
+  ({ a :: Int
+   , b :: Int
+   }
+   -> { four :: String
+      , one :: Unit
+      , three :: Int
+      , two :: Number
+      }
+  )
+collectExample1 = collectRowArgs
+                    (RProxy :: RProxy
+                               ( one :: { a :: Int } -> Unit
+                               , two :: { a :: Int } -> Number
+                               , three :: { b :: Int } -> Int
+                               , four :: { b :: Int } -> String
+                               )
+                    )
+
+
+
 
 main :: TypeClassNoArg => Effect Unit
 main = do
