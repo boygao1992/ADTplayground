@@ -181,3 +181,33 @@ echo json_encode($obj1), "\n"; // {"a": 0, "b": 1, "c": 2}
 
    http://php.net/manual/en/language.oop5.object-comparison.php
  */
+
+/* Functor
+ */
+
+$arr2 = [0,1,2];
+$arr3 = array_map( // NOTE map
+    function ($item) {
+        return $item * 2;
+    },
+    $arr2
+);
+array_walk( // NOTE forEach
+    $arr3,
+    function ($item, $index) {
+        echo $index, " : ",$item, "\n";
+    }
+);
+
+$sum = array_reduce(
+    $arr3,
+    function ($acc, $x) {
+        return $acc + $x;
+    },
+    0
+);
+echo $sum, "\n";
+
+foreach($arr3 as $key => $value) {
+    echo $key, " : ", $value, "\n";
+}
