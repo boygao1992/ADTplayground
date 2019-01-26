@@ -10,29 +10,14 @@ import Type.Proxy (Proxy(..))
 import Type.Row (RProxy(..))
 import Type.Row.Utils as Row
 import Type.Utils as Type
-
-foreign import kind Result
-foreign import data Failure :: Symbol -> Result
-foreign import data Success :: Result
-
-data RSProxy (result :: Result) = RSProxy
+import Type.Data.Result (kind Result, RSProxy(..))
+import Type.Data.Result as Result
 
 data Required a
 data Optional a
 data Repelled -- NOTE for Validate only, not for ValidateExclusive
 data RequiredField -- NOTE no type check
 data OptionalField -- NOTE no type check
-
--- | AppendResult
-class Append (r1 :: Result) (r2 :: Result) (r :: Result) | r1 r2 -> r
-
-instance appendSS :: Append Success Success Success
-instance appendSF :: Append Success (Failure err) (Failure err)
-instance appendFS :: Append (Failure err) Success (Failure err)
-instance appendFF ::
-  ( Symbol.Append err1 " |> " err0
-  , Symbol.Append err0 err2 err
-  ) => Append (Failure err1) (Failure err2) (Failure err)
 
 -- | Validate
 class Validate (schema :: # Type) (i :: # Type) (o :: Result) | schema i -> o
@@ -45,11 +30,11 @@ instance validateToRowList ::
 class ValidateRowList (schemaRl :: RowList) (i :: # Type) (o :: Result) | schemaRl i -> o
 
 instance validateRowListBaseCase ::
-  ValidateRowList RowList.Nil i Success
+  ValidateRowList RowList.Nil i Result.Success
 else instance validateRowListInductionStep ::
   ( ValidateRowList restRl i restO
   , ValidatePattern name pattern i o'
-  , Append o' restO o
+  , Result.Append o' restO o
   ) => ValidateRowList (RowList.Cons name pattern restRl) i o
 
 class ValidatePattern (name :: Symbol) (pattern :: Type) (i :: # Type) (o :: Result) | name pattern i -> o
@@ -62,13 +47,13 @@ instance validatePatternFetchField ::
 class ValidatePatternDispatch (fetchResult :: Row.FetchResult) (name :: Symbol) (pattern :: Type) (o :: Result) | fetchResult name pattern -> o
 
 instance validatePatternFetchFailureOptional ::
-  ValidatePatternDispatch Row.FetchFailure name (Optional typ) Success
+  ValidatePatternDispatch Row.FetchFailure name (Optional typ) Result.Success
 else instance validatePatternFetchFailureRequired ::
   ( Symbol.Append "Required field `" name err0
   , Symbol.Append err0 "` is not provided." err
-  ) => ValidatePatternDispatch Row.FetchFailure name (Required typ) (Failure err)
+  ) => ValidatePatternDispatch Row.FetchFailure name (Required typ) (Result.Failure err)
 else instance validatePatternFetchFailureRepelled ::
-  ValidatePatternDispatch Row.FetchFailure name Repelled Success
+  ValidatePatternDispatch Row.FetchFailure name Repelled Result.Success
 else instance validatePatternFetchSuccessOptional ::
   ( Type.IsEqualPred typ1 typ2 isEqual
   , ValidatePatternFetchSuccessDispatch isEqual name o
@@ -80,16 +65,16 @@ else instance validatePatternFetchSuccessRequired ::
 else instance validatePatternFetchSuccessRepelled ::
   ( Symbol.Append "Repelled field `" name err0
   , Symbol.Append err0 "` is provided." err
-  ) => ValidatePatternDispatch Row.FetchFailure name Repelled (Failure err)
+  ) => ValidatePatternDispatch Row.FetchFailure name Repelled (Result.Failure err)
 
 class ValidatePatternFetchSuccessDispatch (isEqual :: Bool.Boolean) (name :: Symbol) (o :: Result) | isEqual name -> o
 
 instance validatePatternFetchSuccessIsEqual ::
-  ValidatePatternFetchSuccessDispatch Bool.True name Success
+  ValidatePatternFetchSuccessDispatch Bool.True name Result.Success
 else instance validatePatternFetchSuccessNotEqual ::
   ( Symbol.Append "Field `" name err0
   , Symbol.Append err0 "` has a type mismatch." err
-  ) => ValidatePatternFetchSuccessDispatch Bool.False name (Failure err)
+  ) => ValidatePatternFetchSuccessDispatch Bool.False name (Result.Failure err)
 
 -- | ValidateExclusive
 class ValidateExclusive (schema :: # Type) (i :: # Type)
@@ -230,38 +215,38 @@ validatePattern
   -> RSProxy o
 validatePattern _ _ _ = RSProxy :: RSProxy o
 
-validatePatternExample1 :: RSProxy Success
+validatePatternExample1 :: RSProxy Result.Success
 validatePatternExample1 = validatePattern
                           (SProxy :: SProxy "id")
                           (Proxy :: Proxy (Required String))
                           (RProxy :: RProxy ( id :: String ))
 
-validatePatternExample2 :: RSProxy (Failure "Required field `id` is not provided.")
+validatePatternExample2 :: RSProxy (Result.Failure "Required field `id` is not provided.")
 validatePatternExample2 = validatePattern
                           (SProxy :: SProxy "id")
                           (Proxy :: Proxy (Required String))
                           (RProxy :: RProxy ( name :: String ))
 
-validatePatternExample3 :: RSProxy (Failure "Field `id` has a type mismatch.")
+validatePatternExample3 :: RSProxy (Result.Failure "Field `id` has a type mismatch.")
 validatePatternExample3 = validatePattern
                           (SProxy :: SProxy "id")
                           (Proxy :: Proxy (Required Int))
                           (RProxy :: RProxy ( id :: String ))
 
 
-validatePatternExample4 :: RSProxy Success
+validatePatternExample4 :: RSProxy Result.Success
 validatePatternExample4 = validatePattern
                           (SProxy :: SProxy "id")
                           (Proxy :: Proxy (Optional String))
                           (RProxy :: RProxy ( id :: String ))
 
-validatePatternExample5 :: RSProxy Success
+validatePatternExample5 :: RSProxy Result.Success
 validatePatternExample5 = validatePattern
                           (SProxy :: SProxy "id")
                           (Proxy :: Proxy (Optional String))
                           (RProxy :: RProxy ( name :: String ))
 
-validatePatternExample6 :: RSProxy (Failure "Field `id` has a type mismatch.")
+validatePatternExample6 :: RSProxy (Result.Failure "Field `id` has a type mismatch.")
 validatePatternExample6 = validatePattern
                           (SProxy :: SProxy "id")
                           (Proxy :: Proxy (Optional Int))
@@ -275,7 +260,7 @@ validate
   -> RSProxy o
 validate _ _ = RSProxy :: RSProxy o
 
-validateExample1 :: RSProxy Success
+validateExample1 :: RSProxy Result.Success
 validateExample1 = validate
                    ( RProxy :: RProxy ( name :: Required String
                                       , description :: Optional String
@@ -287,7 +272,7 @@ validateExample1 = validate
                                       )
                    )
 
-validateExample2 :: RSProxy (Failure "Required field `fields` is not provided. |> Field `name` has a type mismatch.")
+validateExample2 :: RSProxy (Result.Failure "Required field `fields` is not provided. |> Field `name` has a type mismatch.")
 validateExample2 = validate
                   ( RProxy :: RProxy  ( name :: Required String
                                       , description :: Optional String
@@ -325,3 +310,4 @@ validateExample2 = validate
 --     Redundant fields:
 --     { rest :: String
 --     }
+

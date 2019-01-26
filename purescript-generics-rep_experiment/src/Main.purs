@@ -296,6 +296,138 @@ instance typeClassNoArg :: TypeClassNoArg where
 
 {- gather first and second arguments of functions in a Row into two separate Row
 
+rules for resolvers
+- if a field has args definition in its fieldSpec
+  - then its resolver is Required
+  - else
+    - if the field is Scalar
+      , or the field is Relational and all its fields have a resolver Required
+        - NOTE cyclic dependency alert
+        - e.g. User { post :: Post }, Post { author :: User }
+          to see if resolver for field `post` in User is Required
+          we need to know if resolver for field `author` in Post is Required
+          which then come back to the question itself
+      - then its resolver is Optional
+      - else its resolver is Required
+
+updated rules for resolvers with cyclic dependency avoided
+- if a field has args definition in its fieldSpec
+  - then its resolver is Required
+  - else
+    - case1: the field is Scalar
+      - then its resolver is Optional
+    - case2: the field is Relational
+      - then its resolver is Required
+    - otherwise: TypeError
+
+NOTE extra rules to forbid trivial resolvers to be Required
+- an Entity must have at least one Scalar field
+  - which doesn't have a resolver itself
+  - but is resolved from its parent
+e.g. User { id :: String, post :: Post }, Post { id :: { id :: String } -> String }
+  the resolver for field `post` in User is trivial:
+    postResolver :: { source:: {} } -> Aff {}
+  which takes in an empty Record and produces an empty Record
+
+newtype User = User
+  { id :: String
+  , posts :: { date :: String } -> Array Post
+  , comments :: { limit :: Int } -> Array Comment
+  }
+newtype Post = Post
+  { id :: String
+  , author :: User
+  , comments :: { limit :: Int } -> Array Comment
+  }
+newtype Comment = Comment
+  { id :: String
+  , author :: User
+  , post :: Post
+  }
+
+variables
+- Generic entity (Constructor entityName (Argument spec))
+- spec :: # Type
+  - source
+  - argsRow
+  - outputRow
+  - fieldTypeRow
+  - resolversSchema <- source, argsRow, outputRow
+  - deps <- fieldTypeRow
+- resolvers :: # Type
+- deps :: # Type
+- o = GraphQLType spec
+
+source = { id :: String }
+
+argsRow =
+  { id :: NoArg
+  , posts :: WithArgs { date :: String }
+  , comments :: WithArgs { limit :: Int }
+  }
+outputRow =
+  { id :: String
+  , posts :: Array { id :: String }
+  , comments :: Array { id :: String }
+  }
+fieldTypeRow =
+  { id :: ScalarField
+  , posts :: RelationalField Post
+  , comments :: RelationalField Comment
+  }
+argsRow + outputRow =
+  { id :: ObjectField NoArg String
+  , posts :: ObjectField (WithArgs { date :: String }) (Array { id :: String })
+  , comments :: ObjectField (WithArgs { id :: String }) (Array { id :: String })
+  }
+
+resolversSchema =
+  { id :: Optional
+      { source :: source
+      }
+      -> Aff String
+  , posts :: Required
+      { source :: source
+      , args :: { date :: String }
+      }
+      -> Aff (Array postScalars)
+  , comments :: Required
+      { source :: source
+      , args :: { limit :: Int }
+      }
+      -> Aff (Array commentScalars)
+  }
+
+deps =
+  { "Post" :: Unit -> Nullable(GraphQLType Post)
+  , "Comment" :: Unit -> Nullable(GraphQLType Comment)
+  }
+
+GraphQLType User =
+G.object
+{ name: "User"
+, fields: \_ ->
+  { id:
+    { type: G.string }
+  , posts:
+    { type: G.list( deps."Post" unit )
+    , args:
+      { date: { type: G.string }
+      }
+    , resolve: resolvers.posts
+    }
+  , comments:
+    { type: G.list( deps."Comment" unit )
+    , args:
+      { limit: { type: G.int }
+      }
+    , resolve: resolvers.comments
+    }
+  }
+}
+
+
+
 { one :: { a :: Int } -> { x :: String } -> Unit
 , two :: { a :: Int } -> { y :: String } -> Number
 , three :: { b :: Int } -> { x :: String } -> Int
