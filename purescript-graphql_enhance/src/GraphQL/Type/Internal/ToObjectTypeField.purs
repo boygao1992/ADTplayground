@@ -268,6 +268,19 @@ toObjectField
 
 -}
 
+{-
+--- type-level ---
+1. first pass, parse type info for each field and gather them into a List
+  - fieldName
+  - args
+  - fieldType
+  - target
+2. get source = scalarFields of input type <- List
+3. get resolvers and deps both of which are type info of toObject
+--- value-level ---
+4. dispatch resolvers Record and deps Record to each field
+-}
+
 class ToRelationalObjectField
   (path :: Symbol) source fieldSpec -- input
   resolve target fieldRow -- output

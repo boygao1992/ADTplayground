@@ -17,14 +17,14 @@ import Type.Row (RProxy(..))
 import Type.Row (class Cons, class Lacks) as Row
 import Type.Row.Utils (class IsRecordPred) as Row
 
-class ToInputObject (i :: # Type) (o :: # Type) | i -> o where
-  toInputObject :: RProxy i -> Record o
+-- class ToInputObject (i :: # Type) (o :: # Type) | i -> o where
+--   toInputObject :: RProxy i -> Record o
 
-instance toInputObjectInit ::
-  ( ToInputObjectWithPath "" i o
-  ) => ToInputObject i o
-  where
-    toInputObject i = toInputObjectWithPath (SProxy :: SProxy "") i
+-- instance toInputObjectInit ::
+--   ( ToInputObjectWithPath "" i o
+--   ) => ToInputObject i o
+--   where
+--     toInputObject i = toInputObjectWithPath (SProxy :: SProxy "") i
 
 class ToInputObjectWithPath (path :: Symbol) (i :: # Type) (o :: # Type) | path i -> o where
   toInputObjectWithPath :: SProxy path -> RProxy i -> Record o
@@ -144,7 +144,7 @@ else instance toInputObjectFieldIsNewType ::
   , Symbol.Append path2 name1 path3
   , ToInputObjectWithPath path3 row o -- path1 row -> o -- NOTE o is not carried
   , Symbol.IsSymbol path3
-  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.False name path typ (Record row)
+  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.False name path typ typ
   where
     toInputObjectTypeDispatch _ _ _ _ _ _
       = let
@@ -213,3 +213,4 @@ G.input
 }
 
 -}
+

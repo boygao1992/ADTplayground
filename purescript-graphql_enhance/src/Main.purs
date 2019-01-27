@@ -4,7 +4,7 @@ import Prelude
 
 import Data.Generic.Rep (class Generic)
 import Effect (Effect)
-import GraphQL.Type.Internal (Id)
+import GraphQL.Type.Internal (GraphQLType, Id)
 import GraphQL.Type.Internal.ToInputObject (toInputObjectWithPath)
 import Type.Data.Symbol (SProxy(..))
 import Type.Row (RProxy(..))
@@ -12,8 +12,14 @@ import Type.Row (RProxy(..))
 newtype User = User
   { id :: Id
   , name :: String
+  , background :: UserBackground
   }
 derive instance genericUser :: Generic User _
+
+newtype UserBackground = UserBackground
+  { age :: Int
+  }
+derive instance genericUserBackground :: Generic UserBackground _
 
 {- InputObject spec
 
@@ -86,29 +92,62 @@ derive instance genericUser :: Generic User _
             { name: { type: { nonNull: 'GraphQLString' } },
               id: { type: { nonNull: 'GraphQLID' } } } } } } }
 -}
+
+
+test :: { author :: { "type" :: GraphQLType User
+            }
+, authors :: { "type" :: GraphQLType (Array User)
+             }
+, bool :: { "type" :: GraphQLType Boolean
+          }
+, comment :: { "type" :: GraphQLType
+                           { id :: Id
+                           , content :: String
+                           }
+             }
+, content :: { "type" :: GraphQLType
+                           { date :: String
+                           , todoList :: Array
+                                           { id :: Id
+                                           , todo :: String
+                                           }
+                           }
+             }
+, id :: { "type" :: GraphQLType Id
+        }
+, int :: { "type" :: GraphQLType Int
+         }
+, listInt :: { "type" :: GraphQLType (Array Int)
+             }
+, num :: { "type" :: GraphQLType Number
+         }
+, str :: { "type" :: GraphQLType String
+         }
+}
+test = toInputObjectWithPath
+        (SProxy :: SProxy "Post_createPost")
+        (RProxy :: RProxy
+                ( id :: Id
+                , str :: String
+                , num :: Number
+                , bool :: Boolean
+                , int :: Int
+                , listInt :: Array Int
+                , author :: User
+                , authors :: Array User
+                , comment ::  { id :: Id
+                              , content :: String
+                              }
+                , content ::
+                    { date :: String
+                    , todoList :: Array
+                                    { id :: Id
+                                    , todo :: String
+                                    }
+                    }
+                )
+      )
+
 main :: Effect Unit
 main = do
-  let test = toInputObjectWithPath
-             (SProxy :: SProxy "Post_createPost")
-             (RProxy :: RProxy
-                      ( id :: Id
-                      , str :: String
-                      , num :: Number
-                      , bool :: Boolean
-                      , int :: Int
-                      , listInt :: Array Int
-                      , author :: User
-                      , authors :: Array User
-                      , comment ::  { id :: Id
-                                    , content :: String
-                                    }
-                      , content ::
-                          { date :: String
-                          , todoList :: Array
-                                          { id :: Id
-                                          , todo :: String
-                                          }
-                          }
-                      )
-            )
   pure unit
