@@ -5,7 +5,7 @@ import Prelude
 import Data.Generic.Rep (class Generic)
 import Effect (Effect)
 import GraphQL.Type.Internal (GraphQLType, Id)
-import GraphQL.Type.Internal.ToInputObject (toInputObjectWithPath)
+import GraphQL.Type.Internal.ToInputObject (class ToInputObjectArgs, toInputObjectWithPath)
 import Type.Data.Symbol (SProxy(..))
 import Type.Row (RProxy(..))
 
@@ -93,6 +93,64 @@ derive instance genericUserBackground :: Generic UserBackground _
               id: { type: { nonNull: 'GraphQLID' } } } } } } }
 -}
 
+inputObjectArg
+  :: forall i arg
+   . ToInputObjectArgs i arg
+  => RProxy i
+  -> RProxy arg
+inputObjectArg _ = RProxy :: RProxy arg
+
+inputObjectArgExample :: RProxy
+  ( author :: { background :: { age :: Int
+                              }
+              , id :: Id
+              , name :: String
+              }
+  , authors :: Array
+                 { background :: { age :: Int
+                                 }
+                 , id :: Id
+                 , name :: String
+                 }
+  , bool :: Boolean
+  , comment :: { content :: String
+               , id :: Id
+               }
+  , content :: { date :: String
+               , todoList :: Array
+                               { id :: Id
+                               , todo :: String
+                               }
+               }
+  , id :: Id
+  , int :: Int
+  , listInt :: Array Int
+  , num :: Number
+  , str :: String
+  )
+inputObjectArgExample
+  = inputObjectArg
+    (RProxy :: RProxy
+               ( id :: Id
+               , str :: String
+               , num :: Number
+               , bool :: Boolean
+               , int :: Int
+               , listInt :: Array Int
+               , author :: User
+               , authors :: Array User
+               , comment ::  { id :: Id
+                             , content :: String
+                             }
+               , content ::
+                    { date :: String
+                    , todoList :: Array
+                                  { id :: Id
+                                  , todo :: String
+                                  }
+                    }
+               )
+    )
 
 test :: { author :: { "type" :: GraphQLType User
             }

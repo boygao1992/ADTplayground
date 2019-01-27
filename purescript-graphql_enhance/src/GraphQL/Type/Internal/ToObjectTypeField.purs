@@ -2,16 +2,20 @@ module GraphQL.Type.Internal.ToObjectTypeField where
 
 import Prelude
 
-import Prim.RowList (kind RowList)
 import Data.NonEmpty (NonEmpty)
-import GraphQL.Type.Internal (class IsScalarPred, GraphQLType)
 import Data.Nullable (Nullable)
+import Effect.Aff (Aff)
+import GraphQL.Type.Internal (class IsScalarPred, GraphQLType)
+import GraphQL.Type.Internal.ToInputObject
+import Prim.Row as Row
+import Prim.RowList (kind RowList)
 import Prim.RowList as RowList
 import Type.Data.Boolean as Bool
 import Type.Data.List as List
-import Type.Data.Symbol (SProxy)
+import Type.Data.Symbol (SProxy(..))
 import Type.Data.Symbol as Symbol
 import Type.Proxy (Proxy)
+import Type.Row (RProxy(..))
 
 
 -- NOTE refactoring of ValidateMissingFields with better organized constructs
@@ -272,7 +276,7 @@ toObjectField
 --- type-level ---
 1. first pass, parse type info for each field and gather them into a List
   - fieldName
-  - args
+  - args <= toInputObjectWithPath (path i -> o args)
   - fieldType
   - target
 2. get source = scalarFields of input type <- List
@@ -281,58 +285,96 @@ toObjectField
 4. dispatch resolvers Record and deps Record to each field
 -}
 
-class ToRelationalObjectField
-  (path :: Symbol) source fieldSpec -- input
-  resolve target fieldRow -- output
-  | source fieldSpec -> resolve
-  , fieldSpec -> target
-  , path source fieldSpec -> fieldRow
+class ToRelationalObjectFieldNoArg
+  source target targetScalars
+  resolve
+  (fieldRow :: # Type)
+  | source target targetScalars -> resolve
+  , target resolve -> fieldRow
   where
-    toRelationalObjectField
-      :: SProxy path -> Proxy source -> Proxy fieldSpec
+    toRelationalObjectFieldNoArg
+      :: Proxy source -> Proxy target -> Proxy targetScalars
       -> resolve
       -> (Unit -> Nullable(GraphQLType target))
       -> (Record fieldRow)
 
--- TODO
--- instance toRelationalObjectFieldImpl ::
---   ( ParseFieldSpec fieldSpec argType typ -- fieldSpec -> args typ
---   , ToFieldType typ fieldType target -- typ -> fieldType target
---   -- , ToInputObjectWithPath path i NOTE if argType == (WithArgs i)
---   -- , UnwrapNewtype i args
---   ) => ToRelationalObjectField path source fieldSpec resolve target fieldRow
+instance toRelationalObjectFieldNoArgImpl ::
+  ToRelationalObjectFieldNoArg
+    source target targetScalars
+    ({ source :: source } -> Aff targetScalars)
+    ( "type" :: Nullable(GraphQLType target)
+    , resolve :: { source :: source } -> Aff targetScalars
+    )
+  where
+    toRelationalObjectFieldNoArg _ _ _ resolveFn depFn =
+      { "type": depFn unit
+      , resolve: resolveFn
+      }
+
+class ToRelationalObjectFieldWithArgs
+  (path :: Symbol) source (i :: # Type) target targetScalars
+  resolve
+  (fieldRow :: # Type)
+  | source i target targetScalars -> resolve
+  , path i target resolve -> fieldRow
+  where
+    toRelationalObjectFieldWithArgs
+      :: SProxy path -> Proxy source -> RProxy i
+         -> Proxy target -> Proxy targetScalars
+      -> resolve
+      -> (Unit -> Nullable(GraphQLType target))
+      -> (Record fieldRow)
+
+instance toRelationalObjectFieldWithArgsImpl ::
+  ( ToInputObjectWithPath path i o args
+  ) => ToRelationalObjectFieldWithArgs
+        path source i target targetScalars
+        ({ source :: source, args :: Record args} -> Aff targetScalars)
+        ( "type" :: Nullable(GraphQLType target)
+        , args :: Record o
+        , resolve :: { source :: source, args :: Record args} -> Aff targetScalars
+        )
+  where
+    toRelationalObjectFieldWithArgs _ _ _ _ _ resolveFn depFn =
+      { "type": depFn unit
+      , args: toInputObjectWithPath
+                (SProxy :: SProxy path)
+                (RProxy :: RProxy i)
+      , resolve: resolveFn
+      }
+
 
 -- | FieldType = ScalarField | RelationalField
 foreign import kind FieldType
 foreign import data ScalarField :: FieldType
 foreign import data RelationalField :: FieldType
-
 data FTProxy (fieldType :: FieldType) = FTProxy
 
 -- | Args = NoArgs | WithArgs a
 foreign import kind ArgType
 foreign import data NoArg :: ArgType
 foreign import data WithArgs :: Type -> ArgType
-
-data AProxy (args :: ArgType) = AProxy
+data AProxy (argType :: ArgType) = AProxy
 
 -- | Field
-data Field (name :: Symbol) (target :: Type) (fieldType :: FieldType) (args :: ArgType)
-
--- | ObjectType
-
-data ObjectType a -- a = Newtype (Record (spec :: # Type))
-data ObjectTypeField
+data Field (name :: Symbol) (argType :: ArgType) typ (fieldType :: FieldType) target
 
 -- | ParseFieldSpec
-class ParseFieldSpec (spec :: Type) (args :: ArgType) typ | spec -> args typ
+class ParseFieldSpec
+  (spec :: Type)
+  (argType :: ArgType) typ
+  (fieldType :: FieldType) target
+  | spec -> argType typ
+  , typ -> fieldType target
 
 instance parseFieldSpecWithArgs ::
-  ParseFieldSpec (i -> o) (WithArgs i) o
+  ( ParseList o fieldType target
+  ) => ParseFieldSpec ((Record i) -> o) (WithArgs (Record i)) o fieldType target
 else instance parseFieldSpecNoArg ::
-  ParseFieldSpec o NoArg o
+  ( ParseList o fieldType target
+  ) => ParseFieldSpec o NoArg o fieldType target
 
--- | ParseList
+---- | ParseList
 class ParseList typ (fieldType :: FieldType) target | typ -> fieldType target
 
 instance parseListRelationalArray ::
@@ -345,7 +387,7 @@ else instance parseListRelationalTarget ::
   ( ToFieldType target fieldType
   ) => ParseList target fieldType target
 
--- | ToFieldType
+------ | ToFieldType
 class ToFieldType a (fieldType :: FieldType) | a -> fieldType
 
 instance toFieldTypeImpl ::
@@ -355,3 +397,25 @@ instance toFieldTypeImpl ::
       (FTProxy RelationalField)
       (FTProxy fieldType)
   ) => ToFieldType a fieldType
+
+-- | ToFieldList
+class ToFieldList (specRl :: RowList) (fieldList :: List.List)
+  | specRl -> fieldList
+
+instance toFieldListNil ::
+  ToFieldList RowList.Nil List.Nil
+else instance toFieldListCons ::
+  ( ToFieldList restSpecRl restFieldList
+  , ParseFieldSpec fieldSpec args typ fieldType target
+  ) => ToFieldList (RowList.Cons fieldName fieldSpec restSpecRl) (List.Cons (Field fieldName args typ fieldType target) restFieldList)
+
+-- | FetchScalarFields
+class FetchScalarFields (fieldList :: List.List) (scalarFields :: # Type)
+  | fieldList -> scalarFields
+
+instance fetchScalarFieldsNil ::
+  FetchScalarFields List.Nil ()
+else instance fetchScalarFieldsCons ::
+  ( FetchScalarFields restList restFields
+  , Row.Cons name typ restFields fields
+  ) => FetchScalarFields (List.Cons (Field name argType typ ScalarField target) restList) fields

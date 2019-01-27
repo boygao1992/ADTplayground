@@ -17,22 +17,26 @@ import Type.Row (RProxy(..))
 import Type.Row (class Cons, class Lacks) as Row
 import Type.Row.Utils (class IsRecordPred) as Row
 
--- class ToInputObject (i :: # Type) (o :: # Type) | i -> o where
---   toInputObject :: RProxy i -> Record o
+class ToInputObjectArgs (i :: # Type) (arg :: # Type) | i -> arg
 
--- instance toInputObjectInit ::
---   ( ToInputObjectWithPath "" i o
---   ) => ToInputObject i o
---   where
---     toInputObject i = toInputObjectWithPath (SProxy :: SProxy "") i
+instance toInputObjectArgsImpl ::
+  ( ToInputObjectWithPath "" i o arg
+  ) => ToInputObjectArgs i arg
 
-class ToInputObjectWithPath (path :: Symbol) (i :: # Type) (o :: # Type) | path i -> o where
-  toInputObjectWithPath :: SProxy path -> RProxy i -> Record o
+
+class ToInputObjectWithPath
+  (path :: Symbol) (i :: # Type)
+  (o :: # Type)
+  (arg :: # Type)
+  | path i -> o
+  , path i -> arg
+  where
+    toInputObjectWithPath :: SProxy path -> RProxy i -> Record o
 
 instance toInputObjectWithPathToRowList ::
   ( RowList.RowToList i iRl
-  , ToInputObjectRowList path iRl () o
-  ) => ToInputObjectWithPath path i o
+  , ToInputObjectRowList path iRl () o arg
+  ) => ToInputObjectWithPath path i o arg
   where
     toInputObjectWithPath _ _
       = Builder.build
@@ -42,21 +46,30 @@ instance toInputObjectWithPathToRowList ::
           )
           {}
 
-class ToInputObjectRowList (path :: Symbol) (iRl :: RowList.RowList) (from :: # Type) (to :: # Type) | path iRl -> from to where
-  toInputObjectRowList :: SProxy path -> RLProxy iRl -> Builder (Record from) (Record to)
+class ToInputObjectRowList
+  (path :: Symbol) (iRl :: RowList.RowList)
+  (from :: # Type) (to :: # Type)
+  (arg :: # Type)
+  | path iRl -> from to
+  , path iRl -> arg
+  where
+    toInputObjectRowList
+      :: SProxy path -> RLProxy iRl
+      -> Builder (Record from) (Record to)
 
 instance toInputObjectRowListNil ::
-  ToInputObjectRowList path RowList.Nil () ()
+  ToInputObjectRowList path RowList.Nil () () ()
   where
     toInputObjectRowList _ _ = identity
 else instance toInputObjectRowListCons ::
-  ( ToInputObjectType name path typ gType
-  , ToInputObjectRowList path restRl from restTo
+  ( ToInputObjectType name path typ argType
+  , ToInputObjectRowList path restRl from restTo restArg
+  , Row.Cons name argType restArg arg
   -- Builder.insert
-  , Row.Cons name (Record ( "type" :: GraphQLType gType)) restTo to
+  , Row.Cons name (Record ( "type" :: GraphQLType typ)) restTo to
   , Row.Lacks name restTo
   , Symbol.IsSymbol name
-  ) => ToInputObjectRowList path (RowList.Cons name typ restRl) from to
+  ) => ToInputObjectRowList path (RowList.Cons name typ restRl) from to arg
   where
     toInputObjectRowList pathP _
         = ( Builder.insert
@@ -72,15 +85,19 @@ else instance toInputObjectRowListCons ::
               (RLProxy :: RLProxy restRl)
           )
 
-class ToInputObjectType (name :: Symbol) (path :: Symbol) typ gType | name path typ -> gType where
-  toInputObjectType :: SProxy name -> SProxy path -> Proxy typ -> GraphQLType gType
+class ToInputObjectType
+  (name :: Symbol) (path :: Symbol) typ
+  argType
+  | name path typ -> argType
+  where
+    toInputObjectType :: SProxy name -> SProxy path -> Proxy typ -> GraphQLType typ
 
 instance toInputObjectFieldDispatch ::
   ( IsScalarPred typ isScalar
   , IsListPred typ isList
   , Row.IsRecordPred typ isRecord
-  , ToInputObjectTypeDispatch isScalar isList isRecord name path typ gType
-  ) => ToInputObjectType name path typ gType
+  , ToInputObjectTypeDispatch isScalar isList isRecord name path typ argType
+  ) => ToInputObjectType name path typ argType
   where
     toInputObjectType _ _ _
       = toInputObjectTypeDispatch
@@ -93,12 +110,13 @@ instance toInputObjectFieldDispatch ::
 
 class ToInputObjectTypeDispatch
   (isScalar :: Bool.Boolean) (isList :: Bool.Boolean) (isRecord :: Bool.Boolean)
-  (name :: Symbol) (path :: Symbol) typ gType
-  | isScalar isList isRecord name path typ -> gType
+  (name :: Symbol) (path :: Symbol) typ
+  argType
+  | isScalar isList isRecord name path typ -> argType
   where
     toInputObjectTypeDispatch
       :: BProxy isScalar -> BProxy isList -> BProxy isRecord
-         -> SProxy name -> SProxy path -> Proxy typ -> GraphQLType gType
+         -> SProxy name -> SProxy path -> Proxy typ -> GraphQLType typ
 
 instance toInputObjectFieldIsScalar ::
   ( IsScalar typ
@@ -107,9 +125,9 @@ instance toInputObjectFieldIsScalar ::
     toInputObjectTypeDispatch _ _ _ _ _ _ = toScalar
 else instance toInputObjectFieldIsList ::
   ( Symbol.Append name "-Item" name'
-  , ToInputObjectType name' path a b
-  , IsList f b
-  ) => ToInputObjectTypeDispatch Bool.False Bool.True isRecord name path (f a) (f b)
+  , ToInputObjectType name' path a argType
+  , IsList f a
+  ) => ToInputObjectTypeDispatch Bool.False Bool.True isRecord name path (f a) (f argType)
   where
     toInputObjectTypeDispatch _ _ _ _ _ _
       = let
@@ -122,9 +140,9 @@ else instance toInputObjectFieldIsList ::
 else instance toInputObjectFieldIsRecord ::
   ( Symbol.Append path "_" path0
   , Symbol.Append path0 name path1
-  , ToInputObjectWithPath path1 row o -- path1 row -> o -- NOTE o is not carried
+  , ToInputObjectWithPath path1 row o arg -- path1 row -> o -- NOTE o is not carried
   , Symbol.IsSymbol path1
-  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.True name path (Record row) (Record row)
+  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.True name path (Record row) (Record arg)
   where
     toInputObjectTypeDispatch _ _ _ _ _ _
       = let
@@ -142,9 +160,9 @@ else instance toInputObjectFieldIsNewType ::
   , Symbol.Append path0 name path1
   , Symbol.Append path1 "-" path2
   , Symbol.Append path2 name1 path3
-  , ToInputObjectWithPath path3 row o -- path1 row -> o -- NOTE o is not carried
+  , ToInputObjectWithPath path3 row o arg -- path1 row -> o -- NOTE o is not carried
   , Symbol.IsSymbol path3
-  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.False name path typ typ
+  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.False name path typ (Record arg)
   where
     toInputObjectTypeDispatch _ _ _ _ _ _
       = let
