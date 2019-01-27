@@ -398,10 +398,29 @@ resolversSchema =
       -> Aff (Array commentScalars)
   }
 
+resolvers =
+  { id :: Maybe
+      ( { source :: source
+        }
+        -> Aff String
+      )
+  , posts ::
+      { source :: source
+      , args :: { date :: String }
+      }
+      -> Aff (Array postScalars)
+  , comments ::
+      { source :: source
+      , args :: { limit :: Int }
+      }
+      -> Aff (Array commentScalars)
+  }
+
 deps =
   { "Post" :: Unit -> Nullable(GraphQLType Post)
   , "Comment" :: Unit -> Nullable(GraphQLType Comment)
   }
+
 
 GraphQLType User =
 G.object
@@ -426,7 +445,60 @@ G.object
   }
 }
 
+-}
 
+{- ToObject
+
+input
+- entity :: Type
+
+entity = User { id :: String, posts :: { date :: String } -> Array Post }
+- specRow <- entity
+  - Generic entity (Constructor name (Argument (Record specRow)))
+- specRl <- specRow
+  - RowToList
+  - Row.Cons fieldName fieldSpec restSpecRl
+- resolve, dep, fieldRow <- fieldSpec
+
+-}
+
+{- ToObjectField
+
+input
+- name :: Symbol
+- source :: Type
+- fieldSpec :: Type
+
+output
+- resolve :: Type
+- dep :: Type
+- fieldRow :: # Type
+
+fieldSpec = { date :: String } -> Array Post
+- i = { data :: String }
+  - args <- UnwrapNewtype i
+- o = Array Post
+  - target <- o
+    = Post
+  - postScalars <- target
+    = { id :: String }
+  - dep <- target
+    = Unit -> Nullable(GraphQLType Post)
+- resolve <- args, postScalars
+  = { source :: source, args :: args } -> Aff postScalars
+
+toObjectField
+  :: resolve
+  -> dep
+  -> Record
+      ( type :: Nullable(GraphQLType Post)
+      , args :: GraphQLType i <= ToInputObjectWithPath
+      , resolve :: resolve
+      )
+
+-}
+
+{-
 
 { one :: { a :: Int } -> { x :: String } -> Unit
 , two :: { a :: Int } -> { y :: String } -> Number
