@@ -1,21 +1,23 @@
 module GraphQL.Type.Internal.ToObjectTypeField where
 
+import GraphQL.Type.Internal (class IsList, class IsListPred, class IsScalar, class IsScalarPred, GraphQLType, toList, toScalar)
+import GraphQL.Type.Internal.ToInputObject (class ToInputObjectWithPath, toInputObjectWithPath)
 import Prelude
 
+import Data.Maybe (Maybe)
 import Data.NonEmpty (NonEmpty)
-import Data.Nullable (Nullable)
+import Data.Nullable (Nullable, toNullable)
 import Effect.Aff (Aff)
-import GraphQL.Type.Internal (class IsScalarPred, GraphQLType)
-import GraphQL.Type.Internal.ToInputObject
 import Prim.Row as Row
 import Prim.RowList (kind RowList)
 import Prim.RowList as RowList
+import Type.Data.Boolean (BProxy(..))
 import Type.Data.Boolean as Bool
 import Type.Data.List as List
 import Type.Data.Symbol (SProxy(..))
-import Type.Data.Symbol as Symbol
-import Type.Proxy (Proxy)
+import Type.Proxy (Proxy(..))
 import Type.Row (RProxy(..))
+import Unsafe.Coerce (unsafeCoerce)
 
 
 -- NOTE refactoring of ValidateMissingFields with better organized constructs
@@ -285,64 +287,193 @@ toObjectField
 4. dispatch resolvers Record and deps Record to each field
 -}
 
-class ToRelationalObjectFieldNoArg
-  source target targetScalars
+
+
+-- | ToScalarObjectField
+class ToScalarObjectFieldNoArg
+  source typ
   resolve
   (fieldRow :: # Type)
-  | source target targetScalars -> resolve
+  | source typ -> resolve
+  , resolve -> fieldRow
+  where
+    toScalarObjectFieldNoArg
+      :: Proxy source -> Proxy typ
+      -> Maybe resolve
+      -> Record fieldRow
+
+instance toScalarObjectFieldNoArgImpl ::
+  ( ToScalarObjectFieldHandleList typ
+  ) => ToScalarObjectFieldNoArg
+    source typ
+    ({ source :: source } -> Aff typ)
+    ( "type" :: GraphQLType typ
+    , resolve :: Nullable ({ source :: source } -> Aff typ)
+    )
+    where
+      toScalarObjectFieldNoArg _ _ resolveFn =
+        { "type": toScalarObjectFieldHandleList (Proxy :: Proxy typ)
+        , resolve: toNullable resolveFn
+        }
+
+class ToScalarObjectFieldWithArgs
+      (path :: Symbol) source (i :: # Type) typ
+      resolve
+      (fieldRow :: # Type)
+  | path source i typ -> resolve
+  , resolve -> fieldRow
+  where
+    toScalarObjectFieldWithArgs
+      :: SProxy path -> Proxy source -> RProxy i -> Proxy typ
+      -> resolve
+      -> Record fieldRow
+
+instance toScalarObjectFieldWithArgsImpl ::
+  ( ToInputObjectWithPath path i o args
+    , ToScalarObjectFieldHandleList typ
+  ) => ToScalarObjectFieldWithArgs
+  path source i typ
+  ({ source :: source, args :: Record args} -> Aff typ)
+  ( "type" :: GraphQLType typ
+  , args :: Record o
+  , resolve :: { source :: source, args :: Record args} -> Aff typ
+  )
+  where
+    toScalarObjectFieldWithArgs _ _ _ _ resolveFn =
+      { "type": toScalarObjectFieldHandleList (Proxy :: Proxy typ)
+      , args: toInputObjectWithPath
+        (SProxy :: SProxy path)
+        (RProxy :: RProxy i)
+      , resolve: resolveFn
+      }
+
+---- | ToScalarObjectFieldHandleList
+class ToScalarObjectFieldHandleList typ
+  where
+    toScalarObjectFieldHandleList :: Proxy typ -> GraphQLType typ
+
+class ToScalarObjectFieldHandleListDispatch
+  (isList :: Bool.Boolean) typ
+  where
+    toScalarObjectFieldHandleListDispatch :: BProxy isList -> Proxy typ -> GraphQLType typ
+
+instance toScalarObjectFieldHandleListDispatchIsList ::
+  ( ToScalarObjectFieldHandleList a
+  , IsList f a
+  ) => ToScalarObjectFieldHandleListDispatch Bool.True (f a)
+  where
+    toScalarObjectFieldHandleListDispatch _ _
+      = toList
+        ( toScalarObjectFieldHandleList
+            (Proxy :: Proxy a)
+        )
+else instance toScalarObjectFieldHandleListDispatchNotList ::
+  ( IsScalar a
+  ) => ToScalarObjectFieldHandleListDispatch Bool.False a
+  where
+    toScalarObjectFieldHandleListDispatch _ _ = toScalar
+
+-- | ToRelationalObjectField
+class ToRelationalObjectFieldNoArg
+  source typ target targetScalars
+  resolve
+  (fieldRow :: # Type)
+  | source typ target targetScalars -> resolve
   , target resolve -> fieldRow
   where
     toRelationalObjectFieldNoArg
-      :: Proxy source -> Proxy target -> Proxy targetScalars
+      :: Proxy source -> Proxy typ -> Proxy target -> Proxy targetScalars
       -> resolve
       -> (Unit -> Nullable(GraphQLType target))
-      -> (Record fieldRow)
+      -> Record fieldRow
 
 instance toRelationalObjectFieldNoArgImpl ::
-  ToRelationalObjectFieldNoArg
-    source target targetScalars
+  ( ToRelationalObjectFieldHandleList typ (Nullable (GraphQLType target)) gType
+  ) => ToRelationalObjectFieldNoArg
+    source typ target targetScalars
     ({ source :: source } -> Aff targetScalars)
-    ( "type" :: Nullable(GraphQLType target)
+    ( "type" :: gType
     , resolve :: { source :: source } -> Aff targetScalars
     )
   where
-    toRelationalObjectFieldNoArg _ _ _ resolveFn depFn =
-      { "type": depFn unit
+    toRelationalObjectFieldNoArg _ _ _ _ resolveFn depFn =
+      { "type": toRelationalObjectHandleList (Proxy :: Proxy typ) depFn
       , resolve: resolveFn
       }
 
 class ToRelationalObjectFieldWithArgs
-  (path :: Symbol) source (i :: # Type) target targetScalars
+  (path :: Symbol) source (i :: # Type) typ target targetScalars
   resolve
   (fieldRow :: # Type)
-  | source i target targetScalars -> resolve
+  | source i typ target targetScalars -> resolve
   , path i target resolve -> fieldRow
   where
     toRelationalObjectFieldWithArgs
-      :: SProxy path -> Proxy source -> RProxy i
+      :: SProxy path -> Proxy source -> RProxy i -> Proxy typ
          -> Proxy target -> Proxy targetScalars
       -> resolve
       -> (Unit -> Nullable(GraphQLType target))
-      -> (Record fieldRow)
+      -> Record fieldRow
 
 instance toRelationalObjectFieldWithArgsImpl ::
   ( ToInputObjectWithPath path i o args
+  , ToRelationalObjectFieldHandleList typ (Nullable (GraphQLType target)) gType
   ) => ToRelationalObjectFieldWithArgs
-        path source i target targetScalars
+        path source i typ target targetScalars
         ({ source :: source, args :: Record args} -> Aff targetScalars)
-        ( "type" :: Nullable(GraphQLType target)
+        ( "type" :: gType
         , args :: Record o
         , resolve :: { source :: source, args :: Record args} -> Aff targetScalars
         )
   where
-    toRelationalObjectFieldWithArgs _ _ _ _ _ resolveFn depFn =
-      { "type": depFn unit
+    toRelationalObjectFieldWithArgs _ _ _ _ _ _ resolveFn depFn =
+      { "type": toRelationalObjectHandleList (Proxy :: Proxy typ) depFn
       , args: toInputObjectWithPath
                 (SProxy :: SProxy path)
                 (RProxy :: RProxy i)
       , resolve: resolveFn
       }
 
+---- | ToRelationalObjectFieldHandleList
+class ToRelationalObjectFieldHandleList i dep o | i dep -> o where
+  toRelationalObjectHandleList :: Proxy i -> (Unit -> dep) -> o
+
+instance toRelationalObjectFieldHandleListIsListPred ::
+  ( IsListPred i isList
+  , ToRelationalObjectFieldHandleListDispatch isList i dep o
+  ) => ToRelationalObjectFieldHandleList i dep o
+  where
+    toRelationalObjectHandleList _ depFn
+      = toRelationalObjectFieldHandleListDispatch
+          (BProxy :: BProxy isList)
+          (Proxy :: Proxy i)
+          depFn
+
+class ToRelationalObjectFieldHandleListDispatch
+  (isList :: Bool.Boolean) i dep o
+  | isList i dep -> o
+  where
+    toRelationalObjectFieldHandleListDispatch
+      :: BProxy isList -> Proxy i -> (Unit -> dep) -> o
+
+instance toRelationalObjectFieldHandleListDispatchIsList ::
+  ( ToRelationalObjectFieldHandleList a dep (GraphQLType restO)
+  , IsList f restO
+  ) => ToRelationalObjectFieldHandleListDispatch
+    Bool.True (f a) dep (GraphQLType (f restO))
+  where
+    toRelationalObjectFieldHandleListDispatch _ _ depFn
+      = toList
+        ( toRelationalObjectHandleList
+            (Proxy :: Proxy a)
+            depFn
+        )
+else instance toRelationalObjectFieldHandleListDispatchBaseCase ::
+  ToRelationalObjectFieldHandleListDispatch
+    Bool.False a (Nullable dep) dep
+  where
+    toRelationalObjectFieldHandleListDispatch _ _ depFn
+      = unsafeCoerce (depFn unit) -- HACK unsafely drop Nullable
 
 -- | FieldType = ScalarField | RelationalField
 foreign import kind FieldType
