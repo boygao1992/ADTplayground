@@ -1,210 +1,48 @@
 module Main where
 
 import Prelude
-
-import Data.Generic.Rep (class Generic)
 import Effect (Effect)
-import GraphQL.Type.Internal (GraphQLType, Id)
-import GraphQL.Type.Internal.ToInputObject (class ToInputObjectArgs, toInputObjectWithPath)
-import Type.Data.Symbol (SProxy(..))
+
+import Data.Maybe (Maybe(..))
+import Data.Generic.Rep (class Generic, Constructor, Argument)
+import GraphQL.Type.Internal (GraphQLType)
+import Type.Proxy (Proxy(..))
 import Type.Row (RProxy(..))
+import GraphQL.Type.Internal.ToObjectTypeField (class FetchScalarFields, class ToFieldList, toObject)
+import ForumExample.Model (Comment, Post, User)
+import Prim.RowList as RowList
+import Effect.Aff (Aff)
+import Data.Nullable (Nullable)
 
-newtype User = User
-  { id :: Id
-  , name :: String
-  , background :: UserBackground
-  }
-derive instance genericUser :: Generic User _
+toFieldType
+  :: forall spec specName specRow specRl specFl source
+   . Generic spec (Constructor specName (Argument (Record specRow)))
+  => RowList.RowToList specRow specRl
+  => ToFieldList specRl specFl
+  => FetchScalarFields specFl source
+  => Proxy spec
+  -> RProxy source
+toFieldType _ = RProxy :: RProxy source
 
-newtype UserBackground = UserBackground
-  { age :: Int
-  }
-derive instance genericUserBackground :: Generic UserBackground _
-
-{- InputObject spec
-
-( id :: Id
-, str :: String
-, num :: Number
-, bool :: Boolean
-, int :: Int
-, listInt :: Array Int
-, author :: User
-, authors :: Array User
-, comment ::  { id :: Id
-              , content :: String
-              }
-, content ::
-    { date :: String
-    , todoList :: Array
-                    { id :: Id
-                    , todo :: String
-                    }
-    }
-)
-
--}
-{- NOTE inspect for testing
-
-{ str: { type: { nonNull: 'GraphQLString' } },
-  num: { type: { nonNull: 'GraphQLFloat' } },
-  listInt:
-   { type: { nonNull: { GraphQLList: { nonNull: 'GraphQLInt' } } } },
-  int: { type: { nonNull: 'GraphQLInt' } },
-  id: { type: { nonNull: 'GraphQLID' } },
-  content:
-   { type:
-      { GraphQLInputObjectType:
-         { name: 'Post_createPost_content',
-           fields:
-            { todoList:
-               { type:
-                  { nonNull:
-                     { GraphQLList:
-                        { GraphQLInputObjectType:
-                           { name: 'Post_createPost_content_todoList-Item',
-                             fields:
-                              { todo: { type: { nonNull: 'GraphQLString' } },
-                                id: { type: { nonNull: 'GraphQLID' } } } } } } } },
-              date: { type: { nonNull: 'GraphQLString' } } } } } },
-  comment:
-   { type:
-      { GraphQLInputObjectType:
-         { name: 'Post_createPost_comment',
-           fields:
-            { id: { type: { nonNull: 'GraphQLID' } },
-              content: { type: { nonNull: 'GraphQLString' } } } } } },
-  bool: { type: { nonNull: 'GraphQLBoolean' } },
-  authors:
-   { type:
-      { nonNull:
-         { GraphQLList:
-            { GraphQLInputObjectType:
-               { name: 'Post_createPost_authors-Item-User',
-                 fields:
-                  { name: { type: { nonNull: 'GraphQLString' } },
-                    id: { type: { nonNull: 'GraphQLID' } } } } } } } },
-  author:
-   { type:
-      { GraphQLInputObjectType:
-         { name: 'Post_createPost_author-User',
-           fields:
-            { name: { type: { nonNull: 'GraphQLString' } },
-              id: { type: { nonNull: 'GraphQLID' } } } } } } }
--}
-
-inputObjectArg
-  :: forall i arg
-   . ToInputObjectArgs i arg
-  => RProxy i
-  -> RProxy arg
-inputObjectArg _ = RProxy :: RProxy arg
-
-inputObjectArgExample :: RProxy
-  ( author :: { background :: { age :: Int
-                              }
-              , id :: Id
-              , name :: String
-              }
-  , authors :: Array
-                 { background :: { age :: Int
-                                 }
-                 , id :: Id
-                 , name :: String
-                 }
-  , bool :: Boolean
-  , comment :: { content :: String
-               , id :: Id
-               }
-  , content :: { date :: String
-               , todoList :: Array
-                               { id :: Id
-                               , todo :: String
-                               }
-               }
-  , id :: Id
-  , int :: Int
-  , listInt :: Array Int
-  , num :: Number
-  , str :: String
+toFieldTypeText :: RProxy
+  ( id :: String
   )
-inputObjectArgExample
-  = inputObjectArg
-    (RProxy :: RProxy
-               ( id :: Id
-               , str :: String
-               , num :: Number
-               , bool :: Boolean
-               , int :: Int
-               , listInt :: Array Int
-               , author :: User
-               , authors :: Array User
-               , comment ::  { id :: Id
-                             , content :: String
-                             }
-               , content ::
-                    { date :: String
-                    , todoList :: Array
-                                  { id :: Id
-                                  , todo :: String
-                                  }
-                    }
-               )
-    )
+toFieldTypeText = toFieldType (Proxy :: Proxy User)
 
-test :: { author :: { "type" :: GraphQLType User
-            }
-, authors :: { "type" :: GraphQLType (Array User)
-             }
-, bool :: { "type" :: GraphQLType Boolean
-          }
-, comment :: { "type" :: GraphQLType
-                           { id :: Id
-                           , content :: String
-                           }
-             }
-, content :: { "type" :: GraphQLType
-                           { date :: String
-                           , todoList :: Array
-                                           { id :: Id
-                                           , todo :: String
-                                           }
-                           }
-             }
-, id :: { "type" :: GraphQLType Id
-        }
-, int :: { "type" :: GraphQLType Int
-         }
-, listInt :: { "type" :: GraphQLType (Array Int)
-             }
-, num :: { "type" :: GraphQLType Number
-         }
-, str :: { "type" :: GraphQLType String
-         }
-}
-test = toInputObjectWithPath
-        (SProxy :: SProxy "Post_createPost")
-        (RProxy :: RProxy
-                ( id :: Id
-                , str :: String
-                , num :: Number
-                , bool :: Boolean
-                , int :: Int
-                , listInt :: Array Int
-                , author :: User
-                , authors :: Array User
-                , comment ::  { id :: Id
-                              , content :: String
-                              }
-                , content ::
-                    { date :: String
-                    , todoList :: Array
-                                    { id :: Id
-                                    , todo :: String
-                                    }
-                    }
-                )
-      )
+-- TODO testing
+toObjectTest ::
+  { "Comment" :: Unit -> Nullable (GraphQLType Comment)
+  , "Post" :: Unit -> Nullable (GraphQLType Post)
+  }
+  -> GraphQLType User
+toObjectTest =
+  toObject
+    (Proxy :: Proxy User)
+    { id: Nothing
+    , posts: \({args: {date}}) -> pure []
+    , comments: \({args: {limit}}) -> pure []
+    }
+
 
 main :: Effect Unit
 main = do

@@ -35,7 +35,7 @@ class ToInputObjectWithPath
 
 instance toInputObjectWithPathToRowList ::
   ( RowList.RowToList i iRl
-  , ToInputObjectRowList path iRl () o arg
+  , ToInputObjectRowList path iRl o arg
   ) => ToInputObjectWithPath path i o arg
   where
     toInputObjectWithPath _ _
@@ -48,28 +48,28 @@ instance toInputObjectWithPathToRowList ::
 
 class ToInputObjectRowList
   (path :: Symbol) (iRl :: RowList.RowList)
-  (from :: # Type) (to :: # Type)
+  (to :: # Type)
   (arg :: # Type)
-  | path iRl -> from to
+  | path iRl -> to
   , path iRl -> arg
   where
     toInputObjectRowList
       :: SProxy path -> RLProxy iRl
-      -> Builder (Record from) (Record to)
+      -> Builder {} (Record to)
 
 instance toInputObjectRowListNil ::
-  ToInputObjectRowList path RowList.Nil () () ()
+  ToInputObjectRowList path RowList.Nil () ()
   where
     toInputObjectRowList _ _ = identity
 else instance toInputObjectRowListCons ::
   ( ToInputObjectType name path typ argType
-  , ToInputObjectRowList path restRl from restTo restArg
+  , ToInputObjectRowList path restRl restTo restArg
   , Row.Cons name argType restArg arg
   -- Builder.insert
   , Row.Cons name (Record ( "type" :: GraphQLType typ)) restTo to
   , Row.Lacks name restTo
   , Symbol.IsSymbol name
-  ) => ToInputObjectRowList path (RowList.Cons name typ restRl) from to arg
+  ) => ToInputObjectRowList path (RowList.Cons name typ restRl) to arg
   where
     toInputObjectRowList pathP _
         = ( Builder.insert

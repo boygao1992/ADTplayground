@@ -4,3 +4,4 @@ foreign import kind List
 foreign import data Nil :: List
 foreign import data Cons :: Type -> List -> List
 
+data LProxy (list :: List) = LProxy

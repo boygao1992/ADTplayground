@@ -50,6 +50,11 @@ foreign import _inputObjectType :: forall row typ. Fn1 (Record row) (GraphQLType
 inputObjectType :: forall row typ. Record row -> GraphQLType typ
 inputObjectType config = runFn1 _inputObjectType config
 
+foreign import _objectType :: forall row typ. Fn1 (Record row) (GraphQLType typ)
+
+objectType :: forall row typ. Record row -> GraphQLType typ
+objectType config = runFn1 _objectType config
+
 -- | IsUnitPred
 -- NOTE output type can be Unit for mutations
 -- NOTE GraphQL doesn't support Unit type
