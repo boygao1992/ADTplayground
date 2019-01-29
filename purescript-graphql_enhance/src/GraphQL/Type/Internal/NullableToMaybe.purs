@@ -89,11 +89,10 @@ else instance nullableToMaybeDispatchIsRecord ::
   where
     nullableToMaybeDispatch _ _ _ _ i = nullableToMaybeIsRecord i
 else instance nullableToMaybeDispatchIsNullable ::
-  -- NOTE Nullable doesn't have a Functor instance so it blocks further conversion
-  -- TODO try Data.Nullable.Safe
-  NullableToMaybeDispatch Bool.False Bool.False Bool.False Bool.True (Nullable a) (Maybe a)
+  ( NullableToMaybe a b
+  ) => NullableToMaybeDispatch Bool.False Bool.False Bool.False Bool.True (Nullable a) (Maybe b)
   where
-    nullableToMaybeDispatch _ _ _ _ i = toMaybe i
+    nullableToMaybeDispatch _ _ _ _ i = nullableToMaybe <$> toMaybe i
 else instance nullableToMaybeDispatchInvalid ::
   Fail
   ( Above
