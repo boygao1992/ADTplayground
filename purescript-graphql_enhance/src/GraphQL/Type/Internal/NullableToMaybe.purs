@@ -3,7 +3,7 @@ module GraphQL.Type.Internal.NullableToMaybe where
 import Prelude
 
 import Data.Maybe (Maybe)
-import Data.Nullable (Nullable, toMaybe)
+import Data.Nullable (Nullable, toMaybe, toNullable)
 import GraphQL.Type.Internal (Id, class IsListPred)
 import Type.Data.Boolean (BProxy(..))
 import Type.Data.Boolean as Bool
@@ -44,7 +44,6 @@ else instance isNullablePredNo :: IsNullablePred other Bool.False
 -- NOTE for args from InputObject, thus leaf nodes are all scalars
 class NullableToMaybe i o | i -> o where
   nullableToMaybe :: i -> o
-  -- maybeToNullable :: o -> i
 
 instance nullableToMaybeTypeDispatch ::
   ( IsScalarPred i isScalar
@@ -142,5 +141,108 @@ else instance nullableToMaybeIsRecordRowListCons ::
             (SProxy :: SProxy name)
             (nullableToMaybe :: a -> b)
       <<< nullableToMaybeIsRecordRowList
+            (RLProxy :: RLProxy restRl)
+            x
+
+-- | MaybeToNullable
+class MaybeToNullable i o | i -> o where
+  maybeToNullable :: i -> o
+
+instance maybeToNullablePredDispatch ::
+  ( IsScalarPred i isScalar
+  , IsListPred i isList
+  , IsRecordPred i isRecord
+  , IsMaybePred i isMaybe
+  , MaybeToNullableDispatch isScalar isList isRecord isMaybe i o
+  ) => MaybeToNullable i o
+  where
+    maybeToNullable i =
+      maybeToNullableDispatch
+        (BProxy :: BProxy isScalar)
+        (BProxy :: BProxy isList)
+        (BProxy :: BProxy isRecord)
+        (BProxy :: BProxy isMaybe)
+        i
+
+class MaybeToNullableDispatch
+  (isScalar :: Bool.Boolean) (isList :: Bool.Boolean)
+  (isRecord :: Bool.Boolean) (isMaybe :: Bool.Boolean)
+  i o
+  | isScalar isList isRecord isMaybe i -> o
+  where
+    maybeToNullableDispatch
+      :: BProxy isScalar -> BProxy isList
+         -> BProxy isRecord -> BProxy isMaybe -> i
+      -> o
+
+instance maybeToNullableDispatchIsScalar ::
+  MaybeToNullableDispatch Bool.True Bool.False Bool.False Bool.False i i
+  where
+    maybeToNullableDispatch _ _ _ _ i = i
+else instance aybeDispatchIsList ::
+  ( Functor f
+  , MaybeToNullable a restO
+  ) => MaybeToNullableDispatch Bool.False Bool.True Bool.False Bool.False (f a) (f restO)
+  where
+    maybeToNullableDispatch _ _ _ _ i = maybeToNullable <$> i
+else instance aybeDispatchIsRecord ::
+  ( MaybeToNullableIsRecord row o
+  ) => MaybeToNullableDispatch Bool.False Bool.False Bool.True Bool.False (Record row) (Record o)
+  where
+    maybeToNullableDispatch _ _ _ _ i = maybeToNullableIsRecord i
+else instance maybeToNullableDispatchIsMaybe ::
+  ( MaybeToNullable a b
+  ) => MaybeToNullableDispatch Bool.False Bool.False Bool.False Bool.True (Maybe a) (Nullable b)
+  where
+    maybeToNullableDispatch _ _ _ _ i = toNullable $ maybeToNullable <$> i
+else instance maybeToNullableDispatchInvalid ::
+  Fail
+  ( Above
+    ( Text "MaybeToNullableDispatch: Invalid type")
+    ( Quote i)
+  )
+  => MaybeToNullableDispatch isScalar isList isRecord isMaybe i o
+  where
+    maybeToNullableDispatch = maybeToNullableDispatch
+
+class MaybeToNullableIsRecord (i :: # Type) (o :: # Type) | i -> o
+  where
+    maybeToNullableIsRecord :: Record i -> Record o
+
+instance maybeToNullableIsRecordToRowList ::
+  ( RowList.RowToList i rl
+  , MaybeToNullableIsRecordRowList rl i o
+  ) => MaybeToNullableIsRecord i o
+  where
+    maybeToNullableIsRecord x
+      = Builder.build
+        ( maybeToNullableIsRecordRowList
+            (RLProxy :: RLProxy rl)
+            x
+        )
+        x
+
+class MaybeToNullableIsRecordRowList (rl :: RowList) (i :: # Type) (o :: # Type)
+  | rl i -> o
+  where
+    maybeToNullableIsRecordRowList :: RLProxy rl -> Record i -> Builder (Record i) (Record o)
+
+instance maybeToNullableIsRecordRowListNil ::
+  MaybeToNullableIsRecordRowList RowList.Nil i i
+  where
+    maybeToNullableIsRecordRowList _ _ = identity
+else instance maybeToNullableIsRecordRowListCons ::
+  ( MaybeToNullableIsRecordRowList restRl i o'
+  , Symbol.IsSymbol name
+  , MaybeToNullable a b
+  , Row.Cons name a restO o'
+  , Row.Cons name b restO o
+  ) => MaybeToNullableIsRecordRowList (RowList.Cons name a restRl) i o
+  where
+    maybeToNullableIsRecordRowList _ x
+        = Builder.modify
+            (SProxy :: SProxy name)
+            (maybeToNullable :: a -> b)
+      <<< maybeToNullableIsRecordRowList
             (RLProxy :: RLProxy restRl)
             x
