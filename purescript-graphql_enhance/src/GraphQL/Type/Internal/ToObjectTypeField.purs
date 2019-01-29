@@ -25,6 +25,7 @@ import Type.Proxy (Proxy(..))
 import Type.Row (RProxy(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Type.Utils as Type
+import GraphQL.Type.Internal.NullableAndMaybe
 
 
 -- NOTE refactoring of ValidateMissingFields with better organized constructs
@@ -537,25 +538,29 @@ class ToScalarObjectFieldNoArg
       -> Record fieldRow
 
 instance toScalarObjectFieldNoArgImpl ::
-  ( ToScalarObjectFieldHandleList typ
-  -- TODO experiment
-  -- TODO solve Nullable and Maybe conversion
-  , Type.IsEqual ({ source :: Record source } -> Aff typ) resolve
+  ( ToScalarObjectFieldHandleList mTyp
+  -- TODO solve Id and String conversion
+  -- NOTE solve Nullable and Maybe conversion
+  , NullableAndMaybe { source :: Record nSource } { source :: Record mSource }
+  , NullableAndMaybe nTyp mTyp
   ) => ToScalarObjectFieldNoArg
-    source typ
-    resolve
-    -- ({ source :: Record source } -> Aff typ)
-    ( "type" :: GraphQLType typ
-    , resolve :: Nullable (resolve)
-    )
+    mSource mTyp
+    -- resolve
+    ({ source :: Record mSource } -> Aff mTyp)
     -- ( "type" :: GraphQLType typ
-    -- , resolve :: Nullable ({ source :: Record source } -> Aff typ)
+    -- , resolve :: Nullable (resolve)
     -- )
+    ( "type" :: GraphQLType mTyp
+    -- TODO \source args context -> { source, args, context }
+    , resolve :: Nullable ({ source :: Record nSource } -> Aff nTyp)
+    )
     where
       toScalarObjectFieldNoArg _ _ resolveFn =
-        { "type": toScalarObjectFieldHandleList (Proxy :: Proxy typ)
-        , resolve: toNullable resolveFn
+        { "type": toScalarObjectFieldHandleList (Proxy :: Proxy mTyp)
+        , resolve: toNullable (trans <$> resolveFn)
         }
+        where
+          trans f = map fromMaybeToNullable <<< f <<< fromNullableToMaybe
 
 class ToScalarObjectFieldWithArgs
       (path :: Symbol) (source :: # Type) (i :: # Type) typ
@@ -570,30 +575,27 @@ class ToScalarObjectFieldWithArgs
       -> Record fieldRow
 
 instance toScalarObjectFieldWithArgsImpl ::
-  ( ToInputObjectWithPath path i o args
-  , ToScalarObjectFieldHandleList typ
-  -- TODO experiment
-  -- TODO solve Nullable and Maybe conversion
-  , Type.IsEqual ({ source :: Record source, args :: Record args} -> Aff typ) resolve
+  ( ToInputObjectWithPath path i o mArgs
+  , ToScalarObjectFieldHandleList mTyp
+  -- TODO solve Id and String conversion
+  -- NOTE solve Nullable and Maybe conversion
+  , NullableAndMaybe { source :: Record nSource, args :: Record nArgs} { source :: Record mSource, args :: Record mArgs}
+  , NullableAndMaybe nTyp mTyp
   ) => ToScalarObjectFieldWithArgs
-  path source i typ
-  resolve
-  -- ({ source :: Record source, args :: Record args} -> Aff typ)
-  ( "type" :: GraphQLType typ
+  path mSource i mTyp
+  ({ source :: Record mSource, args :: Record mArgs} -> Aff mTyp)
+  ( "type" :: GraphQLType mTyp
   , args :: Record o
-  , resolve :: resolve
+  -- TODO \source args context -> { source, args, context }
+  , resolve :: { source :: Record nSource, args :: Record nArgs} -> Aff nTyp
   )
-  -- ( "type" :: GraphQLType typ
-  -- , args :: Record o
-  -- , resolve :: { source :: Record source, args :: Record args} -> Aff typ
-  -- )
   where
     toScalarObjectFieldWithArgs _ _ _ _ resolveFn =
-      { "type": toScalarObjectFieldHandleList (Proxy :: Proxy typ)
+      { "type": toScalarObjectFieldHandleList (Proxy :: Proxy mTyp)
       , args: toInputObjectWithPath
         (SProxy :: SProxy path)
         (RProxy :: RProxy i)
-      , resolve: resolveFn
+      , resolve: map fromMaybeToNullable <<< resolveFn <<< fromNullableToMaybe
       }
 
 ---- | ToScalarObjectFieldHandleList
@@ -648,9 +650,10 @@ class ToRelationalObjectFieldNoArg
 
 instance toRelationalObjectFieldNoArgImpl ::
   ( ToRelationalObjectFieldHandleDepList typ (Nullable (GraphQLType target)) gType
-  -- TODO experiment
+  -- TODO solve Id and String conversion
   -- TODO solve Nullable and Maybe conversion
   , ToRelationalObjectFieldHandleOutputList typ targetScalars output
+  -- TODO experiment
   , Type.IsEqual ({ source :: Record source } -> Aff output) resolve
   ) => ToRelationalObjectFieldNoArg
     source typ target targetScalars
@@ -660,6 +663,7 @@ instance toRelationalObjectFieldNoArgImpl ::
     , resolve :: resolve
     )
     -- ( "type" :: gType
+    -- TODO \source args context -> { source, args, context }
     -- , resolve :: { source :: Record source } -> Aff (Record targetScalars)
     -- )
   where
@@ -686,8 +690,9 @@ instance toRelationalObjectFieldWithArgsImpl ::
   ( ToInputObjectWithPath path i o args
   , ToRelationalObjectFieldHandleDepList typ (Nullable (GraphQLType target)) gType
   , ToRelationalObjectFieldHandleOutputList typ targetScalars output
-  -- TODO experiment
+  -- TODO solve Id and String conversion
   -- TODO solve Nullable and Maybe conversion
+  -- TODO experiment
   , Type.IsEqual ({ source :: Record source, args :: Record args} -> Aff output) resolve
   ) => ToRelationalObjectFieldWithArgs
         path source i typ target targetScalars
@@ -698,6 +703,7 @@ instance toRelationalObjectFieldWithArgsImpl ::
         , resolve :: resolve
         -- ( "type" :: gType
         -- , args :: Record o
+        -- TODO \source args context -> { source, args, context }
         -- , resolve :: { source :: Record source, args :: Record args} -> Aff (Record targetScalars)
         )
   where

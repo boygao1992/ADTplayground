@@ -1,22 +1,22 @@
-module GraphQL.Type.Internal.NullableToMaybe where
+module Deprecated.NullableToMaybe where
 
 import Prelude
 
 import Data.Maybe (Maybe)
 import Data.Nullable (Nullable, toMaybe, toNullable)
 import GraphQL.Type.Internal (Id, class IsListPred)
-import Type.Data.Boolean (BProxy(..))
-import Type.Data.Boolean as Bool
-import Type.Row.Utils (class IsRecordPred)
-import Prim.TypeError (class Fail, Above, Quote, Text)
-import Type.Data.RowList (RLProxy(..))
+import Prim.Row as Row
 import Prim.RowList (kind RowList)
 import Prim.RowList as RowList
-import Prim.Row as Row
+import Prim.TypeError (class Fail, Above, Quote, Text)
 import Record.Builder (Builder)
 import Record.Builder as Builder
+import Type.Data.Boolean (BProxy(..))
+import Type.Data.Boolean as Bool
+import Type.Data.RowList (RLProxy(..))
 import Type.Data.Symbol (SProxy(..))
 import Type.Data.Symbol as Symbol
+import Type.Row.Utils (class IsRecordPred)
 
 -- NOTE different from GraphQL.Type.Internal (class IsScalarPred)
 class IsScalarPred a (b :: Bool.Boolean) | a -> b

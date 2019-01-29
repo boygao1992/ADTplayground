@@ -22,7 +22,8 @@
   - [ ] Union (non-nested)
 
 - [ ] GraphQLObjectType
-  - [ ] Nullable and Maybe conversion for `args`
+  - [ ] Nullable and Maybe conversion for `args` and `output`
+  - [ ] Id ans String conversion for `args` and `output`
 
 - [ ] description
 
