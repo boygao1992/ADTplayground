@@ -3,7 +3,7 @@ module GraphQL.Type.Internal.NullableToMaybe where
 import Prelude
 
 import Data.Maybe (Maybe)
-import Data.Nullable (Nullable, toNullable, toMaybe)
+import Data.Nullable (Nullable, toMaybe)
 import GraphQL.Type.Internal (Id, class IsListPred)
 import Type.Data.Boolean (BProxy(..))
 import Type.Data.Boolean as Bool
@@ -13,7 +13,6 @@ import Type.Data.RowList (RLProxy(..))
 import Prim.RowList (kind RowList)
 import Prim.RowList as RowList
 import Prim.Row as Row
-import Record as Record
 import Record.Builder (Builder)
 import Record.Builder as Builder
 import Type.Data.Symbol (SProxy(..))
@@ -90,6 +89,8 @@ else instance nullableToMaybeDispatchIsRecord ::
   where
     nullableToMaybeDispatch _ _ _ _ i = nullableToMaybeIsRecord i
 else instance nullableToMaybeDispatchIsNullable ::
+  -- NOTE Nullable doesn't have a Functor instance so it blocks further conversion
+  -- TODO try Data.Nullable.Safe
   NullableToMaybeDispatch Bool.False Bool.False Bool.False Bool.True (Nullable a) (Maybe a)
   where
     nullableToMaybeDispatch _ _ _ _ i = toMaybe i
@@ -133,15 +134,14 @@ else instance nullableToMaybeIsRecordRowListCons ::
   ( NullableToMaybeIsRecordRowList restRl i o'
   , Symbol.IsSymbol name
   , NullableToMaybe a b
-  , Row.Cons name a restI i
-  , Row.Cons name a restO' o'
-  , Row.Cons name b restO' o
+  , Row.Cons name a restO o'
+  , Row.Cons name b restO o
   ) => NullableToMaybeIsRecordRowList (RowList.Cons name a restRl) i o
   where
     nullableToMaybeIsRecordRowList _ x
         = Builder.modify
             (SProxy :: SProxy name)
-            nullableToMaybe
+            (nullableToMaybe :: a -> b)
       <<< nullableToMaybeIsRecordRowList
             (RLProxy :: RLProxy restRl)
             x
