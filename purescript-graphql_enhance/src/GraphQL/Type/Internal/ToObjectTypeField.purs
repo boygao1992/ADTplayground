@@ -305,6 +305,7 @@ class ToObject spec (resolvers :: # Type) (deps :: # Type)
 
 instance toObjectImpl ::
   ( Generic spec (Constructor specName (Argument (Record specRow)))
+  , Symbol.IsSymbol specName
   , RowList.RowToList specRow specRl
   , ToFieldList specRl specFl
   , FetchScalarFields specFl source
@@ -313,17 +314,20 @@ instance toObjectImpl ::
   , ToObjectRow specFl specName source resolvers deps to
   ) => ToObject spec resolvers deps
   where
-    toObject _ rs ds = objectType
-                       ( Builder.build
-                         ( toObjectRow
-                           (LProxy :: LProxy specFl)
-                           (SProxy :: SProxy specName)
-                           (RProxy :: RProxy source)
-                           rs
-                           ds
-                         )
-                         {}
-                       )
+    toObject _ rs ds =
+      objectType
+        { name: Symbol.reflectSymbol (SProxy :: SProxy specName)
+        , fields:
+          Builder.build
+          ( toObjectRow
+            (LProxy :: LProxy specFl)
+            (SProxy :: SProxy specName)
+            (RProxy :: RProxy source)
+            rs
+            ds
+          )
+          {}
+        }
 
 class ToObjectRow
   (specFl :: List.List) (specName :: Symbol) (source :: # Type) (resolvers :: # Type) (deps :: # Type)
@@ -525,7 +529,7 @@ class ToScalarObjectFieldNoArg
   resolve
   (fieldRow :: # Type)
   | source typ -> resolve
-  , resolve -> fieldRow
+  , source typ -> fieldRow
   where
     toScalarObjectFieldNoArg
       :: RProxy source -> Proxy typ
@@ -535,6 +539,7 @@ class ToScalarObjectFieldNoArg
 instance toScalarObjectFieldNoArgImpl ::
   ( ToScalarObjectFieldHandleList typ
   -- TODO experiment
+  -- TODO solve Nullable and Maybe conversion
   , Type.IsEqual ({ source :: Record source } -> Aff typ) resolve
   ) => ToScalarObjectFieldNoArg
     source typ
@@ -557,7 +562,7 @@ class ToScalarObjectFieldWithArgs
       resolve
       (fieldRow :: # Type)
   | path source i typ -> resolve
-  , resolve -> fieldRow
+  , path source i typ -> fieldRow
   where
     toScalarObjectFieldWithArgs
       :: SProxy path -> RProxy source -> RProxy i -> Proxy typ
@@ -568,6 +573,7 @@ instance toScalarObjectFieldWithArgsImpl ::
   ( ToInputObjectWithPath path i o args
   , ToScalarObjectFieldHandleList typ
   -- TODO experiment
+  -- TODO solve Nullable and Maybe conversion
   , Type.IsEqual ({ source :: Record source, args :: Record args} -> Aff typ) resolve
   ) => ToScalarObjectFieldWithArgs
   path source i typ
@@ -632,7 +638,7 @@ class ToRelationalObjectFieldNoArg
   resolve
   (fieldRow :: # Type)
   | source typ target targetScalars -> resolve
-  , target resolve -> fieldRow
+  , source typ target targetScalars -> fieldRow
   where
     toRelationalObjectFieldNoArg
       :: RProxy source -> Proxy typ -> Proxy target -> RProxy targetScalars
@@ -643,6 +649,7 @@ class ToRelationalObjectFieldNoArg
 instance toRelationalObjectFieldNoArgImpl ::
   ( ToRelationalObjectFieldHandleDepList typ (Nullable (GraphQLType target)) gType
   -- TODO experiment
+  -- TODO solve Nullable and Maybe conversion
   , ToRelationalObjectFieldHandleOutputList typ targetScalars output
   , Type.IsEqual ({ source :: Record source } -> Aff output) resolve
   ) => ToRelationalObjectFieldNoArg
@@ -666,7 +673,7 @@ class ToRelationalObjectFieldWithArgs
   resolve
   (fieldRow :: # Type)
   | source i typ target targetScalars -> resolve
-  , path i target resolve -> fieldRow
+  , source i typ target targetScalars -> fieldRow
   where
     toRelationalObjectFieldWithArgs
       :: SProxy path -> RProxy source -> RProxy i -> Proxy typ
@@ -680,6 +687,7 @@ instance toRelationalObjectFieldWithArgsImpl ::
   , ToRelationalObjectFieldHandleDepList typ (Nullable (GraphQLType target)) gType
   , ToRelationalObjectFieldHandleOutputList typ targetScalars output
   -- TODO experiment
+  -- TODO solve Nullable and Maybe conversion
   , Type.IsEqual ({ source :: Record source, args :: Record args} -> Aff output) resolve
   ) => ToRelationalObjectFieldWithArgs
         path source i typ target targetScalars

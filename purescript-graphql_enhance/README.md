@@ -1,20 +1,30 @@
 
-purescript-graphql currently misses Union and Interface from GraphQL API
 
-Union
-- `resolveType :: forall a b. GraphQLType b => a -> b`
-  - example function dispatches types through duck typing which is not necessary in PureScript
-  - can establish mapping from an existential type `a` to a GraphQLType through type class
-    - `GraphQLType b <= ToGraphQLType a b | a -> b`
+# Status
 
-Interface
-- TODO
+- [x] GraphQLScalarType
+  - [x] GraphQLInt
+  - [x] GraphQLFloat
+  - [x] GraphQLString
+  - [x] GraphQLBoolean
+  - [x] GraphQLID
 
-# Type-level
+- [ ] GraphQLInputObjectType
+  - [x] Scalar
+  - [x] Record
+  - [x] Newtype of Record
+  - [x] List of Scalar
+  - [x] List of Record
+  - [x] List of Newtype
+  - [x] Maybe Scalar
+  - [ ] Maybe Record
+  - [ ] Maybe Newtype of Record
+  - [ ] Union (non-nested)
 
-cannot directly pattern match empty row (`()`)
-- need to convert row to rowList by `Prim.RowList.RowToList`
-- then pattern match empty rowList (`Prim.RowList.Nil`)
+- [ ] GraphQLObjectType
+  - [ ] Nullable and Maybe conversion for `args`
+
+- [ ] description
 
 # Value without type annotation can be ambiguous at type-level
 
@@ -59,3 +69,11 @@ getId = \{ id } -> id :: String
 getId { id: "robot000" } -- r = ()
 ```
 
+# Union and Interface
+
+Union
+- `resolveType :: forall a b. GraphQLType b => a -> b`
+  - example function dispatches types through duck typing which is not necessary in PureScript
+
+Interface
+- TODO

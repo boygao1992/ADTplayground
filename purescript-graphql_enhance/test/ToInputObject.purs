@@ -1,5 +1,6 @@
 module Test.ToInputObject where
 
+import Data.Maybe (Maybe)
 import Data.Generic.Rep (class Generic)
 import GraphQL.Type.Internal (GraphQLType, Id)
 import GraphQL.Type.Internal.ToInputObject (class ToInputObjectArgs, toInputObjectWithPath)
@@ -122,7 +123,9 @@ inputObjectArgExample :: RProxy
   , id :: Id
   , int :: Int
   , listInt :: Array Int
+  , matrix :: Array (Array Int)
   , num :: Number
+  , optinalInt :: Maybe Int
   , str :: String
   )
 inputObjectArgExample
@@ -133,7 +136,9 @@ inputObjectArgExample
                , num :: Number
                , bool :: Boolean
                , int :: Int
+               , optinalInt :: Maybe Int
                , listInt :: Array Int
+               , matrix :: Array (Array Int)
                , author :: User
                , authors :: Array User
                , comment ::  { id :: Id

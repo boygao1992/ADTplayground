@@ -39,8 +39,8 @@ toObjectTest =
   toObject
     (Proxy :: Proxy User)
     { id: Nothing
-    , posts: \({args: {date}}) -> pure []
-    , comments: \({args: {limit}}) -> pure []
+    , posts: \({ args: { date } }) -> pure []
+    , comments: \({ args: { limit } }) -> pure []
     }
 
 
