@@ -22,8 +22,19 @@
   - [ ] Union (non-nested)
 
 - [ ] GraphQLObjectType
-  - [ ] Nullable and Maybe conversion for `args` and `output`
+  - [x] Nullable and Maybe conversion for `args` and `output`
+    - NOTE `source` doesn't need Nullable-Maybe conversion
+    - NOTE `args` needs recursive Nullable-Maybe conversion (`class NullableAndMaybeRec`)
+    - NOTE `output` needs single-layer Nullable-Maybe conversion (`class NullableAndMaybe`)
+    - [x] ToScalarObjectFieldNoArg
+    - [x] ToScalarObjectFieldWithArgs
+    - [x] ToRelationalObjectFieldNoArg
+    - [x] ToRelationalObjectFieldWithArgs
   - [ ] Id ans String conversion for `args` and `output`
+  - [x] Multi-argument input to a Record of arguments conversion for resolvers
+    - NOTE mkFn3
+  - [x] Aff to Promise conversion
+  - [ ] add Context
 
 - [ ] description
 

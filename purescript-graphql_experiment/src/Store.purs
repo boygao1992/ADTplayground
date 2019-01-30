@@ -4,19 +4,16 @@ import Prelude
 
 import Data.Maybe (Maybe(..))
 import Data.Foldable (class Foldable, find)
-import Data.Newtype (class Newtype, unwrap, wrap)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Ref as Ref
 
 type Id = String
 
-newtype Message = Message
+type Message =
   { id :: Id
-  , next_id :: Id
-  , next :: Maybe Message
+  , content :: Maybe String
   }
-derive instance newtypeMessage :: Newtype Message _
 
 type Store =
   { messages :: Ref.Ref (Array Message)}
@@ -24,8 +21,8 @@ type Store =
 createStore :: Aff Store
 createStore = do
   messages <- liftEffect
-              $ Ref.new [ Message { id: "001", next_id : "002", next : Nothing }
-                        , Message { id: "002", next_id : "001", next : Nothing }
+              $ Ref.new [ { id: "001", content: Nothing }
+                        , { id: "002", content: Just "hello world" }
                         ]
   pure { messages }
 
@@ -41,4 +38,4 @@ findById id = find ( (_ == id) <<< _.id )
 readMessageById :: forall r. { messages :: Ref.Ref (Array Message) | r } -> Id -> Aff (Maybe Message)
 readMessageById { messages: msRef } id = do
   messages <- liftEffect $ Ref.read msRef
-  pure $ map wrap <<< findById id <<< map unwrap $ messages
+  pure $ findById id $ messages

@@ -2,12 +2,17 @@ module GraphQL.Type.Internal.ToObjectTypeField where
 
 import Prelude
 
+import Control.Promise (Promise, fromAff)
 import Data.Generic.Rep (class Generic, Constructor, Argument)
 import Data.Maybe (Maybe)
 import Data.NonEmpty (NonEmpty)
 import Data.Nullable (Nullable, toNullable)
+import Data.Function.Uncurried (Fn3, mkFn3)
+import Effect (Effect)
 import Effect.Aff (Aff)
 import GraphQL.Type.Internal (class IsList, class IsListPred, class IsScalar, class IsScalarPred, GraphQLType, toList, toScalar, objectType)
+import GraphQL.Type.Internal.NullableAndMaybe (class NullableAndMaybe, fromMaybeToNullable)
+import GraphQL.Type.Internal.NullableAndMaybeRec (class NullableAndMaybeRec, fromNullableToMaybeRec)
 import GraphQL.Type.Internal.ToInputObject (class ToInputObjectWithPath, toInputObjectWithPath)
 import Prim.Row as Row
 import Prim.RowList (kind RowList)
@@ -24,8 +29,6 @@ import Type.Data.Symbol as Symbol
 import Type.Proxy (Proxy(..))
 import Type.Row (RProxy(..))
 import Unsafe.Coerce (unsafeCoerce)
-import Type.Utils as Type
-import GraphQL.Type.Internal.NullableAndMaybe
 
 
 -- NOTE refactoring of ValidateMissingFields with better organized constructs
@@ -541,26 +544,35 @@ instance toScalarObjectFieldNoArgImpl ::
   ( ToScalarObjectFieldHandleList mTyp
   -- TODO solve Id and String conversion
   -- NOTE solve Nullable and Maybe conversion
-  , NullableAndMaybe { source :: Record nSource } { source :: Record mSource }
   , NullableAndMaybe nTyp mTyp
   ) => ToScalarObjectFieldNoArg
-    mSource mTyp
+    source mTyp
     -- resolve
-    ({ source :: Record mSource } -> Aff mTyp)
+    ({ source :: Record source } -> Aff mTyp)
     -- ( "type" :: GraphQLType typ
     -- , resolve :: Nullable (resolve)
     -- )
     ( "type" :: GraphQLType mTyp
-    -- TODO \source args context -> { source, args, context }
-    , resolve :: Nullable ({ source :: Record nSource } -> Aff nTyp)
+    -- NOTE \source args context -> { source, args, context }
+    , resolve :: Nullable
+                 ( Fn3
+                    (Record source)
+                    noArg
+                    noContext -- TODO add Context
+                    (Effect (Promise nTyp))
+                 )
+                 -- ( { source :: Record source } -> Effect (Promise nTyp))
     )
     where
       toScalarObjectFieldNoArg _ _ resolveFn =
         { "type": toScalarObjectFieldHandleList (Proxy :: Proxy mTyp)
-        , resolve: toNullable (trans <$> resolveFn)
+        , resolve: toNullable
+                     (trans <$> resolveFn)
         }
         where
-          trans f = map fromMaybeToNullable <<< f <<< fromNullableToMaybe
+          trans f = mkFn3 \source _ _ ->
+            -- NOTE Aff to Promise
+            fromAff <<< map fromMaybeToNullable <<< f $ { source }
 
 class ToScalarObjectFieldWithArgs
       (path :: Symbol) (source :: # Type) (i :: # Type) typ
@@ -579,15 +591,21 @@ instance toScalarObjectFieldWithArgsImpl ::
   , ToScalarObjectFieldHandleList mTyp
   -- TODO solve Id and String conversion
   -- NOTE solve Nullable and Maybe conversion
-  , NullableAndMaybe { source :: Record nSource, args :: Record nArgs} { source :: Record mSource, args :: Record mArgs}
+  , NullableAndMaybeRec (Record nArgs) (Record mArgs)
   , NullableAndMaybe nTyp mTyp
   ) => ToScalarObjectFieldWithArgs
-  path mSource i mTyp
-  ({ source :: Record mSource, args :: Record mArgs} -> Aff mTyp)
+  path source i mTyp
+  ({ source :: Record source, args :: Record mArgs} -> Aff mTyp)
   ( "type" :: GraphQLType mTyp
   , args :: Record o
-  -- TODO \source args context -> { source, args, context }
-  , resolve :: { source :: Record nSource, args :: Record nArgs} -> Aff nTyp
+  -- NOTE \source args context -> { source, args, context }
+  , resolve ::
+       Fn3
+         (Record source)
+         (Record nArgs)
+         noContext -- TODO addContext
+         (Effect (Promise nTyp))
+      -- { source :: Record source, args :: Record nArgs} -> Effect (Promise nTyp)
   )
   where
     toScalarObjectFieldWithArgs _ _ _ _ resolveFn =
@@ -595,7 +613,13 @@ instance toScalarObjectFieldWithArgsImpl ::
       , args: toInputObjectWithPath
         (SProxy :: SProxy path)
         (RProxy :: RProxy i)
-      , resolve: map fromMaybeToNullable <<< resolveFn <<< fromNullableToMaybe
+      , resolve:
+          mkFn3 \source args _ ->
+            -- NOTE Aff to Promise
+            fromAff <<< map fromMaybeToNullable <<< resolveFn
+            $ { source
+              , args: fromNullableToMaybeRec args
+              }
       }
 
 ---- | ToScalarObjectFieldHandleList
@@ -651,25 +675,32 @@ class ToRelationalObjectFieldNoArg
 instance toRelationalObjectFieldNoArgImpl ::
   ( ToRelationalObjectFieldHandleDepList typ (Nullable (GraphQLType target)) gType
   -- TODO solve Id and String conversion
-  -- TODO solve Nullable and Maybe conversion
-  , ToRelationalObjectFieldHandleOutputList typ targetScalars output
-  -- TODO experiment
-  , Type.IsEqual ({ source :: Record source } -> Aff output) resolve
+  -- NOTE solve Nullable and Maybe conversion
+  , NullableAndMaybe (Record nTargetScalars) (Record mTargetScalars)
+  , ToRelationalObjectFieldHandleOutputList typ mTargetScalars output
   ) => ToRelationalObjectFieldNoArg
-    source typ target targetScalars
-    resolve
-    -- ({ source :: Record source } -> Aff (Record targetScalars))
-    ( "type" :: gType
-    , resolve :: resolve
+    source typ target mTargetScalars
+    ( { source :: Record source }
+      -> Aff (Record mTargetScalars)
     )
-    -- ( "type" :: gType
-    -- TODO \source args context -> { source, args, context }
-    -- , resolve :: { source :: Record source } -> Aff (Record targetScalars)
-    -- )
+    ( "type" :: gType
+    , resolve ::
+    -- NOTE \source args context -> { source, args, context }
+        Fn3
+          (Record source)
+          noArg
+          noContext -- TODO add Context
+          (Effect (Promise (Record nTargetScalars)))
+         -- { source :: Record source } -> Effect (Promise (Record nTargetScalars))
+    )
   where
     toRelationalObjectFieldNoArg _ _ _ _ resolveFn depFn =
       { "type": toRelationalObjectHandleDepList (Proxy :: Proxy typ) depFn
-      , resolve: resolveFn
+      , resolve:
+          mkFn3 \source _ _ ->
+            -- NOTE Aff to Promise
+            fromAff <<< map fromMaybeToNullable <<< resolveFn
+            $ { source }
       }
 
 class ToRelationalObjectFieldWithArgs
@@ -687,24 +718,28 @@ class ToRelationalObjectFieldWithArgs
       -> Record fieldRow
 
 instance toRelationalObjectFieldWithArgsImpl ::
-  ( ToInputObjectWithPath path i o args
+  ( ToInputObjectWithPath path i o mArgs
   , ToRelationalObjectFieldHandleDepList typ (Nullable (GraphQLType target)) gType
-  , ToRelationalObjectFieldHandleOutputList typ targetScalars output
+  , ToRelationalObjectFieldHandleOutputList typ mTargetScalars output
   -- TODO solve Id and String conversion
-  -- TODO solve Nullable and Maybe conversion
-  -- TODO experiment
-  , Type.IsEqual ({ source :: Record source, args :: Record args} -> Aff output) resolve
+  -- NOTE solve Nullable and Maybe conversion
+  , NullableAndMaybeRec (Record nArgs) (Record mArgs)
+  , NullableAndMaybe (Record nTargetScalars) (Record mTargetScalars)
   ) => ToRelationalObjectFieldWithArgs
-        path source i typ target targetScalars
-        resolve
-        -- ({ source :: Record source, args :: Record args} -> Aff (Record targetScalars))
+        path source i typ target mTargetScalars
+        ( { source :: Record source, args :: Record mArgs}
+          -> Aff (Record mTargetScalars)
+        )
         ( "type" :: gType
         , args :: Record o
-        , resolve :: resolve
-        -- ( "type" :: gType
-        -- , args :: Record o
-        -- TODO \source args context -> { source, args, context }
-        -- , resolve :: { source :: Record source, args :: Record args} -> Aff (Record targetScalars)
+        , resolve ::
+        -- NOTE \source args context -> { source, args, context }
+            Fn3
+              (Record source)
+              (Record nArgs)
+              noContext -- TODO add Context
+              (Effect (Promise (Record nTargetScalars)))
+        -- { source :: Record source, args :: Record nArgs} -> Effect (Promise (Record nTargetScalars))
         )
   where
     toRelationalObjectFieldWithArgs _ _ _ _ _ _ resolveFn depFn =
@@ -712,7 +747,13 @@ instance toRelationalObjectFieldWithArgsImpl ::
       , args: toInputObjectWithPath
                 (SProxy :: SProxy path)
                 (RProxy :: RProxy i)
-      , resolve: resolveFn
+      , resolve:
+          mkFn3 \source args _ ->
+            -- NOTE Aff to Promise
+            fromAff <<< map fromMaybeToNullable <<< resolveFn
+            $ { source
+              , args: fromNullableToMaybeRec args
+              }
       }
 
 ---- | ToRelationalObjectFieldHandleDepList
