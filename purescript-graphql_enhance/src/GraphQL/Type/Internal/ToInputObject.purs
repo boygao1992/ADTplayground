@@ -3,7 +3,8 @@ module GraphQL.Type.Internal.ToInputObject where
 import Prelude
 
 import Data.Generic.Rep (class Generic, Constructor, Argument)
-import GraphQL.Type.Internal (class IsList, class IsListPred, class IsScalar, class IsScalarPred, GraphQLType, inputObjectType, toList, toScalar)
+import Data.Maybe (Maybe)
+import GraphQL.Type.Internal (class IsList, class IsListPred, class IsScalar, class IsScalarPred, Id, GraphQLType, inputObjectType, toList, toScalar)
 import Prim.RowList as RowList
 import Record.Builder (Builder)
 import Record.Builder as Builder
@@ -118,7 +119,17 @@ class ToInputObjectTypeDispatch
       :: BProxy isScalar -> BProxy isList -> BProxy isRecord
          -> SProxy name -> SProxy path -> Proxy typ -> GraphQLType typ
 
-instance toInputObjectFieldIsScalar ::
+instance toInputObjectFieldIsScalarId :: -- NOTE Id to String
+  ( IsScalar Id
+  ) => ToInputObjectTypeDispatch Bool.True isList isRecord name path Id String
+  where
+    toInputObjectTypeDispatch _ _ _ _ _ _ = toScalar
+else instance toInputObjectFieldIsScalarMaybeId :: -- NOTE Id to String
+  ( IsScalar (Maybe Id)
+  ) => ToInputObjectTypeDispatch Bool.True isList isRecord name path (Maybe Id) (Maybe String)
+  where
+    toInputObjectTypeDispatch _ _ _ _ _ _ = toScalar
+else instance toInputObjectFieldIsScalarOther ::
   ( IsScalar typ
   ) => ToInputObjectTypeDispatch Bool.True isList isRecord name path typ typ
   where
@@ -140,7 +151,7 @@ else instance toInputObjectFieldIsList ::
 else instance toInputObjectFieldIsRecord ::
   ( Symbol.Append path "_" path0
   , Symbol.Append path0 name path1
-  , ToInputObjectWithPath path1 row o arg -- path1 row -> o -- NOTE o is not carried
+  , ToInputObjectWithPath path1 row o arg -- path1 row -> o arg -- NOTE o is not carried
   , Symbol.IsSymbol path1
   ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.True name path (Record row) (Record arg)
   where

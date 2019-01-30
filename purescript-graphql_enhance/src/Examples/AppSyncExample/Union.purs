@@ -1,4 +1,4 @@
-module AppSyncExample.Union where
+module Examples.AppSyncExample.Union where
 
 import Data.Maybe (Maybe)
 

@@ -1,4 +1,4 @@
-module PostExample.Model where
+module Examples.PostExample.Model where
 
 import Data.Maybe (Maybe(..))
 

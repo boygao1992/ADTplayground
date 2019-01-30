@@ -1,4 +1,4 @@
-module AppSyncExample.Interface where
+module Examples.AppSyncExample.Interface where
 
 import Data.Maybe (Maybe)
 

@@ -1,4 +1,4 @@
-module B2CExample.Model where
+module Examples.B2CExample.Model where
 
 -- PLAN
 -- distributed interface through type classes

@@ -30,7 +30,9 @@
     - [x] ToScalarObjectFieldWithArgs
     - [x] ToRelationalObjectFieldNoArg
     - [x] ToRelationalObjectFieldWithArgs
-  - [ ] Id ans String conversion for `args` and `output`
+  - [x] Id ans String conversion for `source`, `args` and `output`
+    - [x] FetchScalarFields (`source`, `output`)
+    - [x] ToInputObject (`args`)
   - [x] Multi-argument input to a Record of arguments conversion for resolvers
     - NOTE mkFn3
   - [x] Aff to Promise conversion

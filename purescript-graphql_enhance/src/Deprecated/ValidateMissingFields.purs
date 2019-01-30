@@ -1,4 +1,4 @@
-module GraphQL.Type.Internal.ValidateMissingFields where
+module Deprecated.ValidateMissingFields where
 
 -- TODO fields in source are all scalars
 -- TODO add Context (ctx)

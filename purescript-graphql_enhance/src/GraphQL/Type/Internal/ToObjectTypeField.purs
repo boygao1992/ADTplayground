@@ -10,7 +10,7 @@ import Data.Nullable (Nullable, toNullable)
 import Data.Function.Uncurried (Fn3, mkFn3)
 import Effect (Effect)
 import Effect.Aff (Aff)
-import GraphQL.Type.Internal (class IsList, class IsListPred, class IsScalar, class IsScalarPred, GraphQLType, toList, toScalar, objectType)
+import GraphQL.Type.Internal (class IsList, class IsListPred, class IsScalar, class IsScalarPred, Id, GraphQLType, toList, toScalar, objectType)
 import GraphQL.Type.Internal.NullableAndMaybe (class NullableAndMaybe, fromMaybeToNullable)
 import GraphQL.Type.Internal.NullableAndMaybeRec (class NullableAndMaybeRec, fromNullableToMaybeRec)
 import GraphQL.Type.Internal.ToInputObject (class ToInputObjectWithPath, toInputObjectWithPath)
@@ -676,12 +676,12 @@ instance toRelationalObjectFieldNoArgImpl ::
   ( ToRelationalObjectFieldHandleDepList typ (Nullable (GraphQLType target)) gType
   -- TODO solve Id and String conversion
   -- NOTE solve Nullable and Maybe conversion
-  , NullableAndMaybe (Record nTargetScalars) (Record mTargetScalars)
-  , ToRelationalObjectFieldHandleOutputList typ mTargetScalars output
+  , NullableAndMaybe nOutput mOutput
+  , ToRelationalObjectFieldHandleOutputList typ mTargetScalars mOutput
   ) => ToRelationalObjectFieldNoArg
     source typ target mTargetScalars
     ( { source :: Record source }
-      -> Aff (Record mTargetScalars)
+      -> Aff mOutput
     )
     ( "type" :: gType
     , resolve ::
@@ -690,7 +690,7 @@ instance toRelationalObjectFieldNoArgImpl ::
           (Record source)
           noArg
           noContext -- TODO add Context
-          (Effect (Promise (Record nTargetScalars)))
+          (Effect (Promise nOutput))
          -- { source :: Record source } -> Effect (Promise (Record nTargetScalars))
     )
   where
@@ -720,15 +720,15 @@ class ToRelationalObjectFieldWithArgs
 instance toRelationalObjectFieldWithArgsImpl ::
   ( ToInputObjectWithPath path i o mArgs
   , ToRelationalObjectFieldHandleDepList typ (Nullable (GraphQLType target)) gType
-  , ToRelationalObjectFieldHandleOutputList typ mTargetScalars output
+  , ToRelationalObjectFieldHandleOutputList typ mTargetScalars mOutput
   -- TODO solve Id and String conversion
   -- NOTE solve Nullable and Maybe conversion
   , NullableAndMaybeRec (Record nArgs) (Record mArgs)
-  , NullableAndMaybe (Record nTargetScalars) (Record mTargetScalars)
+  , NullableAndMaybe nOutput mOutput
   ) => ToRelationalObjectFieldWithArgs
         path source i typ target mTargetScalars
         ( { source :: Record source, args :: Record mArgs}
-          -> Aff (Record mTargetScalars)
+          -> Aff mOutput
         )
         ( "type" :: gType
         , args :: Record o
@@ -738,7 +738,7 @@ instance toRelationalObjectFieldWithArgsImpl ::
               (Record source)
               (Record nArgs)
               noContext -- TODO add Context
-              (Effect (Promise (Record nTargetScalars)))
+              (Effect (Promise nOutput))
         -- { source :: Record source, args :: Record nArgs} -> Effect (Promise (Record nTargetScalars))
         )
   where
@@ -888,6 +888,14 @@ class FetchScalarFields (fieldList :: List.List) (scalarFields :: # Type)
 
 instance fetchScalarFieldsNil ::
   FetchScalarFields List.Nil ()
+else instance fetchScalarFieldsConsIsScalarId :: -- NOTE Id to String
+  ( FetchScalarFields restList restFields
+  , Row.Cons name String restFields fields
+  ) => FetchScalarFields (List.Cons (Field name argType Id ScalarField target) restList) fields
+else instance fetchScalarFieldsConsIsScalarMaybeId :: -- NOTE Id to String
+  ( FetchScalarFields restList restFields
+  , Row.Cons name (Maybe String) restFields fields
+  ) => FetchScalarFields (List.Cons (Field name argType (Maybe Id) ScalarField target) restList) fields
 else instance fetchScalarFieldsConsIsScalar ::
   ( FetchScalarFields restList restFields
   , Row.Cons name typ restFields fields
