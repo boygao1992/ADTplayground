@@ -9,7 +9,7 @@
   - [x] GraphQLBoolean
   - [x] GraphQLID
 
-- [ ] GraphQLInputObjectType
+- [x] GraphQLInputObjectType
   - [x] Scalar
   - [x] Record
   - [x] Newtype of Record
@@ -17,26 +17,54 @@
   - [x] List of Record
   - [x] List of Newtype
   - [x] Maybe Scalar
-  - [ ] Maybe Record
-  - [ ] Maybe Newtype of Record
-  - [ ] Union (non-nested)
+  - [x] Maybe Record
+  - [x] Maybe Newtype of Record
+  - TODO Union (not part of the spec)
+    - `../purescript-generics-rep_experiment`
+      - module Generic.SumReadPayload (class GenericToConstructor)
 
 - [ ] GraphQLObjectType
   - [x] Nullable and Maybe conversion for `args` and `output`
     - NOTE `source` doesn't need Nullable-Maybe conversion
     - NOTE `args` needs recursive Nullable-Maybe conversion (`class NullableAndMaybeRec`)
     - NOTE `output` needs single-layer Nullable-Maybe conversion (`class NullableAndMaybe`)
-    - [x] ToScalarObjectFieldNoArg
-    - [x] ToScalarObjectFieldWithArgs
-    - [x] ToRelationalObjectFieldNoArg
-    - [x] ToRelationalObjectFieldWithArgs
+    - [x] class ToScalarObjectFieldNoArg
+    - [x] class ToScalarObjectFieldWithArgs
+    - [x] class ToRelationalObjectFieldNoArg
+    - [x] class ToRelationalObjectFieldWithArgs
   - [x] Id ans String conversion for `source`, `args` and `output`
-    - [x] FetchScalarFields (`source`, `output`)
-    - [x] ToInputObject (`args`)
+    - [x] class FetchScalarFields (`source`, `output`)
+    - [x] class ToInputObject (`args`)
   - [x] Multi-argument input to a Record of arguments conversion for resolvers
     - NOTE mkFn3
   - [x] Aff to Promise conversion
+  - [ ] `target` type can be `Maybe`
+    - [ ] class ParseList
+      - add a case for (Maybe target)
+    - [ ] class ToDeps
+      - Unit -> Nullable (GraphQLType (Maybe target))
+    - [ ] class ToRelationalObjectFieldNoArg
+      - Unit -> Nullable (GraphQLType (Maybe target))
+      - instance toRelationalObjectFieldNoArgImpl
+        - (Nullable (GraphQLType (Maybe target)))
+    - [ ] class ToRelationalObjectFieldWithArgs
+      - Unit -> Nullable (GraphQLType (Maybe target))
+      - instance toRelationalObjectFieldWithArgsImpl
+        - (Nullable (GraphQLType (Maybe target)))
+    - [ ] class ToRelationalObjectFieldHandleDepListDispatch
+      - instance toRelationalObjectFieldHandleDepListDispatchBaseCase
+        - NOTE split into two cases
+        - Bool.False (Maybe a) (Maybe (Nullable dep)) (Maybe dep)
+          - unsafeCoerce (depFn unit)
+        - Bool.False a (Nullable dep) dep
+          - nonNull (unsafeCoerce (depFn unit))
   - [ ] add Context
+
+- [ ] RootGraphQLObjectType
+  - [ ] inject dependencies
+    - [ ] circular reference
+      - `../purescript_record_ref`
+        - Record.ST.Nested (peekLazyRef)
 
 - [ ] description
 

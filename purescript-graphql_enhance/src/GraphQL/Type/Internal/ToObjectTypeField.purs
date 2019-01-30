@@ -10,7 +10,7 @@ import Data.Nullable (Nullable, toNullable)
 import Data.Function.Uncurried (Fn3, mkFn3)
 import Effect (Effect)
 import Effect.Aff (Aff)
-import GraphQL.Type.Internal (class IsList, class IsListPred, class IsScalar, class IsScalarPred, Id, GraphQLType, toList, toScalar, objectType)
+import GraphQL.Type.Internal (class IsList, class IsListPred, class IsScalar, class IsScalarPred, Id, GraphQLType, toList, toScalar, objectType, nonNull)
 import GraphQL.Type.Internal.NullableAndMaybe (class NullableAndMaybe, fromMaybeToNullable)
 import GraphQL.Type.Internal.NullableAndMaybeRec (class NullableAndMaybeRec, fromNullableToMaybeRec)
 import GraphQL.Type.Internal.ToInputObject (class ToInputObjectWithPath, toInputObjectWithPath)
@@ -305,7 +305,8 @@ class ToObject spec (resolvers :: # Type) (deps :: # Type)
   , spec -> deps
   where
     -- TODO  `Proxy spec` can be removed
-  toObject :: Proxy spec -> Record resolvers -> Record deps -> GraphQLType spec
+  toObject :: Proxy spec -> Record resolvers -> Record deps
+              -> GraphQLType (Maybe spec)
 
 instance toObjectImpl ::
   ( Generic spec (Constructor specName (Argument (Record specRow)))
@@ -321,16 +322,16 @@ instance toObjectImpl ::
     toObject _ rs ds =
       objectType
         { name: Symbol.reflectSymbol (SProxy :: SProxy specName)
-        , fields:
-          Builder.build
-          ( toObjectRow
-            (LProxy :: LProxy specFl)
-            (SProxy :: SProxy specName)
-            (RProxy :: RProxy source)
-            rs
-            ds
-          )
-          {}
+        , fields: \_ -> -- NOTE lazy
+            Builder.build
+            ( toObjectRow
+              (LProxy :: LProxy specFl)
+              (SProxy :: SProxy specName)
+              (RProxy :: RProxy source)
+              rs
+              ds
+            )
+            {}
         }
 
 class ToObjectRow

@@ -7,18 +7,6 @@ import GraphQL.Type.Internal.ToInputObject (class ToInputObjectArgs, toInputObje
 import Type.Data.Symbol (SProxy(..))
 import Type.Row (RProxy(..))
 
-newtype User = User
-  { id :: Id
-  , name :: String
-  , background :: UserBackground
-  }
-derive instance genericUser :: Generic User _
-
-newtype UserBackground = UserBackground
-  { age :: Int
-  }
-derive instance genericUserBackground :: Generic UserBackground _
-
 {- InputObject spec
 
 ( id :: Id
@@ -91,6 +79,18 @@ derive instance genericUserBackground :: Generic UserBackground _
               id: { type: { nonNull: 'GraphQLID' } } } } } } }
 -}
 
+newtype User = User
+  { id :: Id
+  , name :: String
+  , background :: Maybe UserBackground
+  }
+derive instance genericUser :: Generic User _
+
+newtype UserBackground = UserBackground
+  { age :: Int
+  }
+derive instance genericUserBackground :: Generic UserBackground _
+
 inputObjectArg
   :: forall i arg
    . ToInputObjectArgs i arg
@@ -99,28 +99,30 @@ inputObjectArg
 inputObjectArg _ = RProxy :: RProxy arg
 
 inputObjectArgExample :: RProxy
-  ( author :: { background :: { age :: Int
-                              }
-              , id :: Id
+  ( author :: { background :: Maybe
+                                { age :: Int
+                                }
+              , id :: String
               , name :: String
               }
   , authors :: Array
-                 { background :: { age :: Int
-                                 }
-                 , id :: Id
+                 { background :: Maybe
+                                   { age :: Int
+                                   }
+                 , id :: String
                  , name :: String
                  }
   , bool :: Boolean
   , comment :: { content :: String
-               , id :: Id
+               , id :: String
                }
   , content :: { date :: String
                , todoList :: Array
-                               { id :: Id
+                               { id :: String
                                , todo :: String
                                }
                }
-  , id :: Id
+  , id :: String
   , int :: Int
   , listInt :: Array Int
   , matrix :: Array (Array Int)

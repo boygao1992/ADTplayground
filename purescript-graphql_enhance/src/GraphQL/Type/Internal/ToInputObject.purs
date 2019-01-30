@@ -4,7 +4,7 @@ import Prelude
 
 import Data.Generic.Rep (class Generic, Constructor, Argument)
 import Data.Maybe (Maybe)
-import GraphQL.Type.Internal (class IsList, class IsListPred, class IsScalar, class IsScalarPred, Id, GraphQLType, inputObjectType, toList, toScalar)
+import GraphQL.Type.Internal (class IsList, class IsListPred, class IsScalar, class IsScalarPred, Id, GraphQLType, nonNull, inputObjectType, toList, toScalar)
 import Prim.RowList as RowList
 import Record.Builder (Builder)
 import Record.Builder as Builder
@@ -16,7 +16,13 @@ import Type.Data.Symbol as Symbol
 import Type.Proxy (Proxy(..))
 import Type.Row (RProxy(..))
 import Type.Row (class Cons, class Lacks) as Row
-import Type.Row.Utils (class IsRecordPred) as Row
+
+-- NOTE different from Row.Utils (class IsRecordPred)
+class IsRecordPred a (b :: Bool.Boolean) | a -> b
+instance isRecordPredRecord :: IsRecordPred (Record a) Bool.True
+else instance isRecordPredMaybeRecord :: IsRecordPred (Maybe (Record a)) Bool.True
+else instance isRecordPredOther :: IsRecordPred a Bool.False
+
 
 class ToInputObjectArgs (i :: # Type) (arg :: # Type) | i -> arg
 
@@ -96,7 +102,7 @@ class ToInputObjectType
 instance toInputObjectFieldDispatch ::
   ( IsScalarPred typ isScalar
   , IsListPred typ isList
-  , Row.IsRecordPred typ isRecord
+  , IsRecordPred typ isRecord
   , ToInputObjectTypeDispatch isScalar isList isRecord name path typ argType
   ) => ToInputObjectType name path typ argType
   where
@@ -121,24 +127,25 @@ class ToInputObjectTypeDispatch
 
 instance toInputObjectFieldIsScalarId :: -- NOTE Id to String
   ( IsScalar Id
-  ) => ToInputObjectTypeDispatch Bool.True isList isRecord name path Id String
+  ) => ToInputObjectTypeDispatch Bool.True Bool.False Bool.False name path Id String
   where
     toInputObjectTypeDispatch _ _ _ _ _ _ = toScalar
 else instance toInputObjectFieldIsScalarMaybeId :: -- NOTE Id to String
   ( IsScalar (Maybe Id)
-  ) => ToInputObjectTypeDispatch Bool.True isList isRecord name path (Maybe Id) (Maybe String)
+  ) => ToInputObjectTypeDispatch Bool.True Bool.False Bool.False name path (Maybe Id) (Maybe String)
   where
     toInputObjectTypeDispatch _ _ _ _ _ _ = toScalar
 else instance toInputObjectFieldIsScalarOther ::
   ( IsScalar typ
-  ) => ToInputObjectTypeDispatch Bool.True isList isRecord name path typ typ
+  ) => ToInputObjectTypeDispatch Bool.True Bool.False Bool.False name path typ typ
   where
     toInputObjectTypeDispatch _ _ _ _ _ _ = toScalar
-else instance toInputObjectFieldIsList ::
+
+instance toInputObjectFieldIsList ::
   ( Symbol.Append name "-Item" name'
   , ToInputObjectType name' path a argType
   , IsList f a
-  ) => ToInputObjectTypeDispatch Bool.False Bool.True isRecord name path (f a) (f argType)
+) => ToInputObjectTypeDispatch Bool.False Bool.True Bool.False name path (f a) (f argType)
   where
     toInputObjectTypeDispatch _ _ _ _ _ _
       = let
@@ -148,7 +155,8 @@ else instance toInputObjectFieldIsList ::
                   (Proxy :: Proxy a)
         in
           toList item
-else instance toInputObjectFieldIsRecord ::
+
+instance toInputObjectFieldIsRecord ::
   ( Symbol.Append path "_" path0
   , Symbol.Append path0 name path1
   , ToInputObjectWithPath path1 row o arg -- path1 row -> o arg -- NOTE o is not carried
@@ -161,8 +169,48 @@ else instance toInputObjectFieldIsRecord ::
                     (SProxy :: SProxy path1)
                     (RProxy :: RProxy row)
         in
+          nonNull
+          ( inputObjectType
+              { name: Symbol.reflectSymbol (SProxy :: SProxy path1)
+              , fields
+              }
+          )
+else instance toInputObjectFieldIsRecordMaybe ::
+  ( Symbol.Append path "_" path0
+  , Symbol.Append path0 name path1
+  , ToInputObjectWithPath path1 row o arg -- path1 row -> o arg -- NOTE o is not carried
+  , Symbol.IsSymbol path1
+  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.True name path (Maybe (Record row)) (Maybe (Record arg))
+  where
+    toInputObjectTypeDispatch _ _ _ _ _ _
+      = let
+        fields = toInputObjectWithPath
+                 (SProxy :: SProxy path1)
+                 (RProxy :: RProxy row)
+        in
           inputObjectType
             { name: Symbol.reflectSymbol (SProxy :: SProxy path1)
+            , fields
+            }
+
+instance toInputObjectFieldIsNewTypeMaybe ::
+  ( Generic typ (Constructor name1 (Argument (Record row)))
+  , Symbol.Append path "_" path0
+  , Symbol.Append path0 name path1
+  , Symbol.Append path1 "-" path2
+  , Symbol.Append path2 name1 path3
+  , ToInputObjectWithPath path3 row o arg -- path1 row -> o -- NOTE o is not carried
+  , Symbol.IsSymbol path3
+  ) => ToInputObjectTypeDispatch Bool.False Bool.False Bool.False name path (Maybe typ) (Maybe (Record arg))
+  where
+    toInputObjectTypeDispatch _ _ _ _ _ _
+      = let
+        fields = toInputObjectWithPath
+                 (SProxy :: SProxy path3)
+                 (RProxy :: RProxy row)
+        in
+          inputObjectType
+            { name: Symbol.reflectSymbol (SProxy :: SProxy path3)
             , fields
             }
 else instance toInputObjectFieldIsNewType ::
@@ -181,10 +229,12 @@ else instance toInputObjectFieldIsNewType ::
                     (SProxy :: SProxy path3)
                     (RProxy :: RProxy row)
         in
-          inputObjectType
-            { name: Symbol.reflectSymbol (SProxy :: SProxy path3)
-            , fields
-            }
+          nonNull
+          ( inputObjectType
+              { name: Symbol.reflectSymbol (SProxy :: SProxy path3)
+              , fields
+              }
+          )
 
 {- input
 

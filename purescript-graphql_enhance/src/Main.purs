@@ -3,7 +3,7 @@ module Main where
 import Prelude
 import Effect (Effect)
 
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 import Data.Generic.Rep (class Generic, Constructor, Argument)
 import GraphQL.Type.Internal (GraphQLType, Id)
 import Type.Proxy (Proxy(..))
@@ -39,41 +39,45 @@ toFieldTypeText :: RProxy
 toFieldTypeText = toFieldType (Proxy :: Proxy User)
 
 -- TODO testing
-toObjectTest ::
-  { comments :: { source :: { id :: String}
-                , args :: { limit :: Int}
-                }
-                -> Aff
-                      (Array
-                        { id :: String
+toObjectTest :: { comments :: { source :: { id :: String
+                          }
+              , args :: { limit :: Int
                         }
-                      )
-  , id :: Maybe
-            ({ source :: { id :: String
-                        }
-            }
-            -> Aff Id
-            )
-  , post :: { source :: { id :: String}
-            , args :: { id :: String}
-            }
-            -> Aff
-                { id :: String
-                }
-  , posts ::
-      { source :: { id :: String}
-      , args :: { date :: String}
-      }
-      -> Aff
-          (Array
-            { id :: String
-            }
+              }
+              -> Aff
+                   (Array
+                      { id :: String
+                      }
+                   )
+, id :: Maybe
+          ({ source :: { id :: String
+                       }
+           }
+           -> Aff Id
           )
-  }
-  ->  { "Comment" :: Unit -> Nullable (GraphQLType Comment)
-      , "Post" :: Unit -> Nullable (GraphQLType Post)
-      }
-  -> GraphQLType User
+, post :: { source :: { id :: String
+                      }
+          , args :: { id :: String
+                    }
+          }
+          -> Aff
+               { id :: String
+               }
+, posts :: { source :: { id :: String
+                       }
+           , args :: { date :: String
+                     }
+           }
+           -> Aff
+                (Array
+                   { id :: String
+                   }
+                )
+}
+-> { "Comment" :: Unit -> Nullable (GraphQLType Comment)
+   , "Post" :: Unit -> Nullable (GraphQLType Post)
+   }
+   -> GraphQLType (Maybe User)
 toObjectTest =
   toObject
     (Proxy :: Proxy User)

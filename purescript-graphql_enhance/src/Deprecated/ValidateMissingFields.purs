@@ -241,6 +241,7 @@ newtype Post = Post
   }
 derive instance genericPost :: Generic Post _
 
+objectTypeTestExample :: Unit
 objectTypeTestExample = objectTypeTest
                         (Proxy :: Proxy User)
                         { fields:
