@@ -86,6 +86,7 @@
         - Control.Monad.ST.Ref (modify)
       - [ ] seal the object Record to be immutable
         - ST.run
+  - ToObject without `source`
 
 - [ ] Context
 
