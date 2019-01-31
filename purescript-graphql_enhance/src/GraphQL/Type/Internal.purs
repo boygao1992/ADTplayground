@@ -21,7 +21,9 @@ instance graphQLTypeListType :: GraphQLType (List f a)
 -}
 
 
-data GraphQLType a
+data GraphQLType spec
+
+data GraphQLRootType rootSpec
 
 newtype Id = Id String
 
