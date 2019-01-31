@@ -7,7 +7,7 @@ import Prelude
 
 import Data.Generic.Rep (class Generic, Argument, Constructor)
 import Effect.Aff (Aff)
-import GraphQL.Type.Data.FieldList as FieldList
+import Deprecated.FieldList as FieldList
 import GraphQL.Type.Data.Relation (class ParseRelation, kind Relation)
 import GraphQL.Type.Internal (class IsScalarPred, GraphQLType)
 import Prim.TypeError (class Fail, Text, Quote, Above, Beside)

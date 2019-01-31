@@ -1,4 +1,4 @@
-module GraphQL.Type.Data.FieldList where
+module Deprecated.FieldList where
 
 import GraphQL.Type.Data.Relation (class ParseRelation, kind Relation)
 import GraphQL.Type.Internal (class IsScalarPred)

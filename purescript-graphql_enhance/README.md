@@ -54,13 +54,16 @@
     - [x] class ToRelationalObjectFieldHandleDepListDispatch
       - instance toRelationalObjectFieldHandleDepListDispatchBaseCase
         - NOTE split into two cases
-        - Bool.False (Maybe target) target (Maybe target)
+        - Bool.False (Maybe target) target (Maybe dep)
           - unsafeCoerce (depFn unit)
         - Bool.False target target target
           - nonNull (unsafeCoerce (depFn unit))
   - [ ] add Context
 
 - [ ] RootGraphQLObjectType
+  - [x] recursively collect all reachable entities from root node
+    - class CollectEntities
+  - [ ] infer dependency types
   - [ ] inject dependencies
     - [ ] circular reference
       - `../purescript_record_ref`

@@ -1,15 +1,16 @@
-module GraphQL.Type.Internal.ToObjectTypeField where
+module GraphQL.Type.Internal.ToObject where
 
 import Prelude
 
 import Control.Promise (Promise, fromAff)
+import Data.Function.Uncurried (Fn3, mkFn3)
 import Data.Generic.Rep (class Generic, Constructor, Argument)
 import Data.Maybe (Maybe)
 import Data.NonEmpty (NonEmpty)
 import Data.Nullable (Nullable, toNullable)
-import Data.Function.Uncurried (Fn3, mkFn3)
 import Effect (Effect)
 import Effect.Aff (Aff)
+import GraphQL.Type.Data.Field (AProxy(..), FTProxy(..), Field, NoArg, RelationalField, ScalarField, WithArgs, kind ArgType, kind FieldType)
 import GraphQL.Type.Internal (class IsList, class IsListPred, class IsScalar, class IsScalarPred, Id, GraphQLType, toList, toScalar, objectType, nonNull)
 import GraphQL.Type.Internal.NullableAndMaybe (class NullableAndMaybe, fromMaybeToNullable)
 import GraphQL.Type.Internal.NullableAndMaybeRec (class NullableAndMaybeRec, fromNullableToMaybeRec)
@@ -823,21 +824,6 @@ instance toRelationalObjectFieldHandleOutputListIsList ::
 else instance toRelationalObjectFieldHandleOutputListNotList ::
   ToRelationalObjectFieldHandleOutputListDispatch
     Bool.False a targetScalars (Record targetScalars) -- NOTE replace a by targetScalars
-
--- | FieldType = ScalarField | RelationalField
-foreign import kind FieldType
-foreign import data ScalarField :: FieldType
-foreign import data RelationalField :: FieldType
-data FTProxy (fieldType :: FieldType) = FTProxy
-
--- | Args = NoArgs | WithArgs a
-foreign import kind ArgType
-foreign import data NoArg :: ArgType
-foreign import data WithArgs :: Type -> ArgType
-data AProxy (argType :: ArgType) = AProxy
-
--- | Field
-data Field (name :: Symbol) (argType :: ArgType) typ (fieldType :: FieldType) target
 
 -- | ParseFieldSpec
 class ParseFieldSpec
