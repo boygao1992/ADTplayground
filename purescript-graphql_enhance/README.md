@@ -38,25 +38,25 @@
   - [x] Multi-argument input to a Record of arguments conversion for resolvers
     - NOTE mkFn3
   - [x] Aff to Promise conversion
-  - [ ] `target` type can be `Maybe`
-    - [ ] class ParseList
+  - [x] `target` type can be `Maybe`
+    - [x] class ParseList
       - add a case for (Maybe target)
-    - [ ] class ToDeps
+    - [x] class ToDeps
       - Unit -> Nullable (GraphQLType (Maybe target))
-    - [ ] class ToRelationalObjectFieldNoArg
+    - [x] class ToRelationalObjectFieldNoArg
       - Unit -> Nullable (GraphQLType (Maybe target))
       - instance toRelationalObjectFieldNoArgImpl
         - (Nullable (GraphQLType (Maybe target)))
-    - [ ] class ToRelationalObjectFieldWithArgs
+    - [x] class ToRelationalObjectFieldWithArgs
       - Unit -> Nullable (GraphQLType (Maybe target))
       - instance toRelationalObjectFieldWithArgsImpl
         - (Nullable (GraphQLType (Maybe target)))
-    - [ ] class ToRelationalObjectFieldHandleDepListDispatch
+    - [x] class ToRelationalObjectFieldHandleDepListDispatch
       - instance toRelationalObjectFieldHandleDepListDispatchBaseCase
         - NOTE split into two cases
-        - Bool.False (Maybe a) (Maybe (Nullable dep)) (Maybe dep)
+        - Bool.False (Maybe target) target (Maybe target)
           - unsafeCoerce (depFn unit)
-        - Bool.False a (Nullable dep) dep
+        - Bool.False target target target
           - nonNull (unsafeCoerce (depFn unit))
   - [ ] add Context
 

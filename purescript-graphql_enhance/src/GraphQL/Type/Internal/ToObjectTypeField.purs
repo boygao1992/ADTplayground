@@ -424,7 +424,7 @@ else instance toObjectRowDispatchRelationalNoArgs ::
   , Symbol.IsSymbol name
   , Row.Cons name resolve restResolvers resolvers
   , Symbol.IsSymbol targetName
-  , Row.Cons targetName (Unit -> Nullable(GraphQLType target)) restDeps deps
+  , Row.Cons targetName (Unit -> Nullable(GraphQLType (Maybe target))) restDeps deps
   ) => ToObjectRowDispatch specName name NoArg typ RelationalField target source resolvers deps fieldRow
   where
     toObjectRowDispatch _ _ _ _ _ _ _ rs ds =
@@ -446,7 +446,7 @@ else instance toObjectRowDispatchRelationalWithArgs ::
   , Symbol.IsSymbol name
   , Row.Cons name resolve restResolvers resolvers
   , Symbol.IsSymbol targetName
-  , Row.Cons targetName (Unit -> Nullable(GraphQLType target)) restDeps deps
+  , Row.Cons targetName (Unit -> Nullable(GraphQLType (Maybe target))) restDeps deps
   ) => ToObjectRowDispatch specName name (WithArgs (Record i)) typ RelationalField target source resolvers deps fieldRow
   where
     toObjectRowDispatch _ _ _ _ _ _ _ rs ds =
@@ -524,7 +524,7 @@ instance toDepsImplDispatchIsScalar ::
 else instance toDepsImplDispatchIsRelational ::
   ( ToDepsImpl restFl restDeps
   , Generic target (Constructor targetName (Argument (Record targetRow)))
-  , Row.Cons targetName (Unit -> Nullable (GraphQLType target)) restDeps deps
+  , Row.Cons targetName (Unit -> Nullable (GraphQLType (Maybe target))) restDeps deps
   ) => ToDepsImplDispatch Bool.False target restFl deps
 
 
@@ -670,11 +670,11 @@ class ToRelationalObjectFieldNoArg
     toRelationalObjectFieldNoArg
       :: RProxy source -> Proxy typ -> Proxy target -> RProxy targetScalars
       -> resolve
-      -> (Unit -> Nullable(GraphQLType target))
+      -> (Unit -> Nullable(GraphQLType (Maybe target)))
       -> Record fieldRow
 
 instance toRelationalObjectFieldNoArgImpl ::
-  ( ToRelationalObjectFieldHandleDepList typ (Nullable (GraphQLType target)) gType
+  ( ToRelationalObjectFieldHandleDepList typ target gType
   -- TODO solve Id and String conversion
   -- NOTE solve Nullable and Maybe conversion
   , NullableAndMaybe nOutput mOutput
@@ -684,7 +684,7 @@ instance toRelationalObjectFieldNoArgImpl ::
     ( { source :: Record source }
       -> Aff mOutput
     )
-    ( "type" :: gType
+    ( "type" :: GraphQLType gType
     , resolve ::
     -- NOTE \source args context -> { source, args, context }
         Fn3
@@ -715,12 +715,12 @@ class ToRelationalObjectFieldWithArgs
       :: SProxy path -> RProxy source -> RProxy i -> Proxy typ
          -> Proxy target -> RProxy targetScalars
       -> resolve
-      -> (Unit -> Nullable(GraphQLType target))
+      -> (Unit -> Nullable(GraphQLType (Maybe target)))
       -> Record fieldRow
 
 instance toRelationalObjectFieldWithArgsImpl ::
   ( ToInputObjectWithPath path i o mArgs
-  , ToRelationalObjectFieldHandleDepList typ (Nullable (GraphQLType target)) gType
+  , ToRelationalObjectFieldHandleDepList typ target gType
   , ToRelationalObjectFieldHandleOutputList typ mTargetScalars mOutput
   -- TODO solve Id and String conversion
   -- NOTE solve Nullable and Maybe conversion
@@ -731,7 +731,7 @@ instance toRelationalObjectFieldWithArgsImpl ::
         ( { source :: Record source, args :: Record mArgs}
           -> Aff mOutput
         )
-        ( "type" :: gType
+        ( "type" :: GraphQLType gType
         , args :: Record o
         , resolve ::
         -- NOTE \source args context -> { source, args, context }
@@ -758,13 +758,13 @@ instance toRelationalObjectFieldWithArgsImpl ::
       }
 
 ---- | ToRelationalObjectFieldHandleDepList
-class ToRelationalObjectFieldHandleDepList i dep o | i dep -> o where
-  toRelationalObjectHandleDepList :: Proxy i -> (Unit -> dep) -> o
+class ToRelationalObjectFieldHandleDepList i target o | i target -> o where
+  toRelationalObjectHandleDepList :: Proxy i -> (Unit -> Nullable (GraphQLType (Maybe target))) -> GraphQLType o
 
 instance toRelationalObjectFieldHandleDepListIsListPred ::
   ( IsListPred i isList
-  , ToRelationalObjectFieldHandleDepListDispatch isList i dep o
-  ) => ToRelationalObjectFieldHandleDepList i dep o
+  , ToRelationalObjectFieldHandleDepListDispatch isList i target o
+  ) => ToRelationalObjectFieldHandleDepList i target o
   where
     toRelationalObjectHandleDepList _ depFn
       = toRelationalObjectFieldHandleDepListDispatch
@@ -773,17 +773,17 @@ instance toRelationalObjectFieldHandleDepListIsListPred ::
           depFn
 
 class ToRelationalObjectFieldHandleDepListDispatch
-  (isList :: Bool.Boolean) i dep o
-  | isList i dep -> o
+  (isList :: Bool.Boolean) i target o
+  | isList i target -> o
   where
     toRelationalObjectFieldHandleDepListDispatch
-      :: BProxy isList -> Proxy i -> (Unit -> dep) -> o
+      :: BProxy isList -> Proxy i -> (Unit -> Nullable (GraphQLType (Maybe target))) -> GraphQLType o
 
 instance toRelationalObjectFieldHandleDepListDispatchIsList ::
-  ( ToRelationalObjectFieldHandleDepList a dep (GraphQLType restO)
+  ( ToRelationalObjectFieldHandleDepList a target restO
   , IsList f restO
   ) => ToRelationalObjectFieldHandleDepListDispatch
-    Bool.True (f a) dep (GraphQLType (f restO))
+    Bool.True (f a) target (f restO)
   where
     toRelationalObjectFieldHandleDepListDispatch _ _ depFn
       = toList
@@ -791,12 +791,18 @@ instance toRelationalObjectFieldHandleDepListDispatchIsList ::
             (Proxy :: Proxy a)
             depFn
         )
-else instance toRelationalObjectFieldHandleDepListDispatchBaseCase ::
+else instance toRelationalObjectFieldHandleDepListDispatchBaseCaseMaybe ::
   ToRelationalObjectFieldHandleDepListDispatch
-    Bool.False a (Nullable dep) dep -- NOTE replace a by (Nullable dep)
+    Bool.False (Maybe target) target (Maybe target) -- NOTE replace target by (Nullable (GraphQLType (Maybe target)))
   where
     toRelationalObjectFieldHandleDepListDispatch _ _ depFn
       = unsafeCoerce (depFn unit) -- HACK unsafely drop Nullable
+else instance toRelationalObjectFieldHandleDepListDispatchBaseCase ::
+  ToRelationalObjectFieldHandleDepListDispatch
+    Bool.False target target target -- NOTE replace target by (Nullable (GraphQLType (Maybe target)))
+  where
+    toRelationalObjectFieldHandleDepListDispatch _ _ depFn
+      = nonNull (unsafeCoerce (depFn unit)) -- HACK unsafely drop Nullable
 
 ---- | ToRelationalObjectFieldHandleOutputList
 class ToRelationalObjectFieldHandleOutputList i (targetScalars :: # Type) o | i targetScalars -> o
@@ -857,6 +863,9 @@ instance parseListRelationalArray ::
 else instance parseListRelationalNonEmptyArray ::
   ( ParseList a fieldType target
   ) => ParseList (NonEmpty Array a) fieldType target
+else instance parseListRelationalMaybeTarget ::
+  ( ParseList a fieldType target
+  ) => ParseList (Maybe a) fieldType target
 else instance parseListRelationalTarget ::
   ( ToFieldType target fieldType
   ) => ParseList target fieldType target
