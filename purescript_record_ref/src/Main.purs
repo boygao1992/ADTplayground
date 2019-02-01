@@ -10,11 +10,11 @@ import Data.Nullable (Nullable, null, notNull)
 import Effect (Effect)
 import Effect.Console (logShow)
 import Record as Record
+import Record.Builder (Builder)
 import Record.Builder as Builder
 import Record.ST as RST
 import Record.ST.Nested as RST
 import Type.Data.Symbol (SProxy(..))
-import Record.Builder (Builder)
 
 {- tying the knot in JS with direct mutations
 var refA = { value : { b : null } }
@@ -57,16 +57,13 @@ newtype A = A
   }
 
 aConstructor
-  :: forall h
-   . { "B" :: Unit -> Nullable B, "C" :: Unit -> Nullable C }
-  -> ST h A
+  :: { "B" :: Unit -> Nullable B, "C" :: Unit -> Nullable C }
+  -> A
 aConstructor ref =
-  pure (
-    A { name : "A"
-      , toB : Record.get (SProxy :: SProxy "B") ref
-      , toC : Record.get (SProxy :: SProxy "C") ref
-      }
-  )
+  A { name : "A"
+    , toB : Record.get (SProxy :: SProxy "B") ref
+    , toC : Record.get (SProxy :: SProxy "C") ref
+    }
 
 newtype B = B
   { name :: String
@@ -75,16 +72,13 @@ newtype B = B
   }
 
 bConstructor
-  :: forall h
-   . { "A" :: Unit -> Nullable A, "C" :: Unit -> Nullable C }
-  -> ST h B
+  :: { "A" :: Unit -> Nullable A, "C" :: Unit -> Nullable C }
+  -> B
 bConstructor ref =
-  pure (
-    B { name : "B"
-      , toA : Record.get (SProxy :: SProxy "A") ref
-      , toC : Record.get (SProxy :: SProxy "C") ref
-      }
-  )
+  B { name : "B"
+    , toA : Record.get (SProxy :: SProxy "A") ref
+    , toC : Record.get (SProxy :: SProxy "C") ref
+    }
 
 newtype C = C
   { name :: String
@@ -93,16 +87,19 @@ newtype C = C
   }
 
 cConstructor
-  :: forall h
-   . { "A" :: Unit -> Nullable A, "B" :: Unit -> Nullable B }
-  -> ST h C
+  :: { "A" :: Unit -> Nullable A, "B" :: Unit -> Nullable B }
+  -> C
 cConstructor ref =
-  pure (
-    C { name : "C"
-      , toA : Record.get (SProxy :: SProxy "A") ref
-      , toB : Record.get (SProxy :: SProxy "B") ref
-      }
-  )
+  C { name : "C"
+    , toA : Record.get (SProxy :: SProxy "A") ref
+    , toB : Record.get (SProxy :: SProxy "B") ref
+    }
+
+constructors =
+  { "A": aConstructor
+  , "B": bConstructor
+  , "C": cConstructor
+  }
 
 -- | OpenRecord, r = open row
 class OpenRecord (r :: # Type) typ (o :: # Type) | r typ -> o
@@ -170,7 +167,7 @@ main = do
                               (Record.get (SProxy :: SProxy "C") st)
                         )
                         {}
-            a <- aConstructor aSt
+            let a = (Record.get (SProxy :: SProxy "A") constructors) aSt
             RST.modify (SProxy :: SProxy "A") (const (notNull a)) deps
 
             let bSt = Builder.build
@@ -182,7 +179,7 @@ main = do
                               (Record.get (SProxy :: SProxy "C") st)
                         )
                         {}
-            b <- bConstructor bSt
+            let b = (Record.get (SProxy :: SProxy "B") constructors) bSt
             RST.modify (SProxy :: SProxy "B") (const (notNull b)) deps
 
             let cSt = Builder.build
@@ -194,7 +191,7 @@ main = do
                               (Record.get (SProxy :: SProxy "B") st)
                         )
                         {}
-            c <- cConstructor cSt
+            let c = (Record.get (SProxy :: SProxy "C") constructors) cSt
             RST.modify (SProxy :: SProxy "C") (const (notNull c)) deps
 
             pure st
