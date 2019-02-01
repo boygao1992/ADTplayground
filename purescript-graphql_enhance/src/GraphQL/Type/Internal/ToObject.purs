@@ -349,7 +349,8 @@ instance toObjectRowNil ::
   ToObjectRow List.Nil specName source resolvers deps ()
   where
     toObjectRow _ _ _ _ _ = identity
-else instance toObjectRowConsScalarNoArg ::
+
+instance toObjectRowCons ::
   ( ToObjectRow restFl specName source resolvers deps restTo
   , ToObjectRowDispatch specName name argType typ fieldType target source resolvers deps fieldRow
   , Row.Cons name (Record fieldRow) restTo to
@@ -396,12 +397,13 @@ instance toObjectRowDispatchScalarNoArg ::
   , Row.Cons name (Maybe resolve) restResolvers resolvers
   ) => ToObjectRowDispatch specName name NoArg typ ScalarField target source resolvers deps fieldRow
   where
-    toObjectRowDispatch _ _ _ _ _ _ _ rs ds =
+    toObjectRowDispatch _ _ _ _ _ _ _ rs _ =
       toScalarObjectFieldNoArg
         (RProxy :: RProxy source)
         (Proxy :: Proxy typ)
         (Record.get (SProxy :: SProxy name) rs)
-else instance toObjectRowDispatchScalarWithArgs ::
+
+instance toObjectRowDispatchScalarWithArgs ::
   ( Symbol.Append specName "_" path0
   , Symbol.Append path0 name path
   , ToScalarObjectFieldWithArgs path source i typ resolve fieldRow
@@ -409,14 +411,15 @@ else instance toObjectRowDispatchScalarWithArgs ::
   , Row.Cons name resolve restResolvers resolvers
   ) => ToObjectRowDispatch specName name (WithArgs (Record i)) typ ScalarField target source resolvers deps fieldRow
   where
-    toObjectRowDispatch _ _ _ _ _ _ _ rs ds =
+    toObjectRowDispatch _ _ _ _ _ _ _ rs _ =
       toScalarObjectFieldWithArgs
         (SProxy :: SProxy path)
         (RProxy :: RProxy source)
         (RProxy :: RProxy i)
         (Proxy :: Proxy typ)
         (Record.get (SProxy :: SProxy name) rs)
-else instance toObjectRowDispatchRelationalNoArgs ::
+
+instance toObjectRowDispatchRelationalNoArgs ::
   ( Generic target (Constructor targetName (Argument (Record targetRow)))
   , RowList.RowToList targetRow targetRl
   , ToFieldList targetRl targetFl
@@ -436,7 +439,8 @@ else instance toObjectRowDispatchRelationalNoArgs ::
         (RProxy :: RProxy targetScalars)
         (Record.get (SProxy :: SProxy name) rs)
         (Record.get (SProxy :: SProxy targetName) ds)
-else instance toObjectRowDispatchRelationalWithArgs ::
+
+instance toObjectRowDispatchRelationalWithArgs ::
   ( Generic target (Constructor targetName (Argument (Record targetRow)))
   , RowList.RowToList targetRow targetRl
   , ToFieldList targetRl targetFl
@@ -468,7 +472,8 @@ class ToResolvers (source :: # Type) (fl :: List.List) (resolvers :: # Type)
 
 instance toResolversNil ::
   ToResolvers source List.Nil ()
-else instance toResolversConsScalarNoArg ::
+
+instance toResolversCons ::
   ( ToResolversDispatch source argType typ fieldType target resolve
   , ToResolvers source restFl restResolvers
   , Row.Cons name resolve restResolvers resolvers
@@ -482,17 +487,20 @@ class ToResolversDispatch
 instance toResolversScalarNoArg ::
   ( ToScalarObjectFieldNoArg source typ resolve fieldRow
   ) => ToResolversDispatch source NoArg typ ScalarField target (Maybe resolve)
-else instance toResolversScalarWithArgs ::
+
+instance toResolversScalarWithArgs ::
   ( ToScalarObjectFieldWithArgs "" source i typ resolve fieldRow
   ) => ToResolversDispatch source (WithArgs (Record i)) typ ScalarField target resolve
-else instance toResolversRelationalNoArg ::
+
+instance toResolversRelationalNoArg ::
   ( Generic target (Constructor targetName (Argument (Record targetRow)))
   , RowList.RowToList targetRow targetRl
   , ToFieldList targetRl targetFl
   , FetchScalarFields targetFl targetScalars
   , ToRelationalObjectFieldNoArg source typ target targetScalars resolve fieldRow
   ) => ToResolversDispatch source NoArg typ RelationalField target resolve
-else instance toResolversRelationalWithArgs ::
+
+instance toResolversRelationalWithArgs ::
   ( Generic target (Constructor targetName (Argument (Record targetRow)))
   , RowList.RowToList targetRow targetRl
   , ToFieldList targetRl targetFl

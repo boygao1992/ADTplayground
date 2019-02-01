@@ -1,31 +1,32 @@
 module GraphQL.Type.Internal.ToRootObject where
 
-import GraphQL.Type.Data.Field (Field, RelationalField, ScalarField)
-import GraphQL.Type.Internal (GraphQLType, GraphQLRootType)
-import GraphQL.Type.Internal.ToObject (class ToFieldList, class ToObject)
 import Prelude
 
 import Control.Monad.ST (ST)
+import Type.Proxy (Proxy (..))
 import Control.Monad.ST (run) as ST
 import Data.Generic.Rep (class Generic, Constructor, Argument)
 import Data.Maybe (Maybe)
 import Data.Nullable (Nullable, null, notNull)
+import GraphQL.Type.Data.Field (Field, NoArg, WithArgs, RelationalField, ScalarField, kind ArgType, kind FieldType, AProxy (..), FTProxy (..))
+import GraphQL.Type.Internal (GraphQLRootType, GraphQLType, rootObjectType)
+import GraphQL.Type.Internal.ToObject
 import Prim.RowList (kind RowList)
 import Prim.RowList as RowList
 import Record as Record
 import Record.Builder (Builder)
 import Record.Builder as Builder
 import Record.ST (STRecord)
-import Record.ST (freeze, modify, thaw) as RST
+import Record.ST (modify, thaw) as RST
 import Record.ST.Nested (peekLazyRef) as RST
 import Type.Data.Boolean as Bool
-import Type.Data.List (LProxy (..))
+import Type.Data.List (LProxy(..))
 import Type.Data.List as List
-import Type.Data.RowList (RLProxy (..))
-import Type.Data.Symbol (SProxy (..))
+import Type.Data.RowList (RLProxy(..))
+import Type.Data.Symbol (SProxy(..))
 import Type.Data.Symbol as Symbol
 import Type.Proxy (Proxy)
-import Type.Row (RProxy (..))
+import Type.Row (RProxy(..))
 import Type.Row as Row
 
 -- NOTE differences between ToRootObject and ToObject
@@ -41,19 +42,246 @@ class ToRootObject rootSpec (constructorRow :: # Type) (resolverRow :: # Type)
       Proxy rootSpec -> Record constructorRow -> Record resolverRow
       -> GraphQLRootType rootSpec
 
--- TODO
--- instance toRootObjectImpl ::
---     -- rootSpec -> rootSpecFl
---   ( Generic rootSpec (Constructor rootSpecName (Argument (Record rootSpecRow)))
---   , RowList.RowToList rootSpecRow rootSpecRl
---   , ToFieldList rootSpecRl rootSpecFl
---     -- rootSpecFl -> constructorRow
---   , ToConstructors rootSpecFl constructorRow
---     -- rootSpecFl -> resolverRow
---   , ToResolvers () rootSpecFl resolverRow
---   ) => ToRootObject rootSpec resolverRow constructorRow
+instance toRootObjectImpl ::
+    -- rootSpec -> rootSpecFl
+  ( Generic rootSpec (Constructor rootSpecName (Argument (Record rootSpecRow)))
+  , RowList.RowToList rootSpecRow rootSpecRl
+  , ToFieldList rootSpecRl rootSpecFl
+    -- rootSpecFl -> entityList depRow
+  , FetchRelationalFieldList rootSpecFl rootRelationalSpecList
+  , CollectEntitiesTraverse rootRelationalSpecList entityList
+  , CollectConstructors entityList constructorRow
+  , ToEntityObjects entityList constructorRow depRow
+    -- rootSpecFl -> resolverRow
+  , ToResolvers () rootSpecFl resolverRow -- NOTE source = ()
+  , ToObjectRow rootSpecFl rootSpecName () resolverRow depRow to -- NOTE source = ()
+  ) => ToRootObject rootSpec constructorRow resolverRow
+  where
+    toRootObject _ constructors resolvers =
+      let
+        deps = toEntityObjects
+                (LProxy :: LProxy entityList)
+                constructors
+      in
+        rootObjectType
+          ( Builder.build
+              ( toObjectRow -- NOTE reuse toObjectRow with an empty source for now
+                (LProxy :: LProxy rootSpecFl)
+                (SProxy :: SProxy rootSpecName)
+                (RProxy :: RProxy ())
+                resolvers
+                deps
+              )
+              {}
+          )
+
+-- class ToRootObjectRow
+--   (specFl :: List.List) (specName :: Symbol) (resolverRow :: # Type) (depRow :: # Type)
+--   (to :: # Type)
+--   | specFl specName resolverRow depRow -> to
 --   where
---     toRootObject _ constructors resolverRow =
+--     toRootObjectRow :: LProxy specFl -> SProxy specName -> Record resolverRow -> Record depRow -> Builder {} (Record to)
+
+-- instance toRootObjectRowNil ::
+--   ToRootObjectRow List.Nil specName resolverRow depRow ()
+--   where
+--     toRootObjectRow _ _ _ _ = identity
+
+-- instance toRootObjectRowCons ::
+--   ( ToRootObjectRow restFl specName resolverRow depRow restTo
+--   , ToRootObjectRowDispatch specName fieldName argType typ fieldType target resolverRow depRow fieldRow
+--   , Row.Cons fieldName (Record fieldRow) restTo to
+--   , Row.Lacks fieldName restTo
+--   , Symbol.IsSymbol fieldName
+--   ) => ToRootObjectRow (List.Cons (Field fieldName argType typ fieldType target) restFl) specName resolverRow depRow to
+--   where
+--     toRootObjectRow _ _ resolvers deps =
+--           Builder.insert
+--             (SProxy :: SProxy fieldName)
+--             ( toRootObjectRowDispatch
+--                 (SProxy :: SProxy specName)
+--                 (SProxy :: SProxy fieldName)
+--                 (AProxy :: AProxy argType)
+--                 (Proxy :: Proxy typ)
+--                 (FTProxy :: FTProxy fieldType)
+--                 (Proxy :: Proxy target)
+--                 resolvers
+--                 deps
+--             )
+--       <<< toRootObjectRow
+--             (LProxy :: LProxy restFl)
+--             (SProxy :: SProxy specName)
+--             resolvers
+--             deps
+
+-- class ToRootObjectRowDispatch
+--   (specName :: Symbol) (fieldName :: Symbol) (argType :: ArgType) typ (fieldType :: FieldType) target (resolvers :: # Type) (deps :: # Type)
+--   (fieldRow :: # Type)
+--   | specName fieldName argType typ fieldType target resolvers deps -> fieldRow
+--   where
+--     toRootObjectRowDispatch
+--       :: SProxy specName -> SProxy fieldName -> AProxy argType -> Proxy typ
+--          -> FTProxy fieldType -> Proxy target
+--       -> Record resolvers -> Record deps
+--       -> Record fieldRow
+
+-- instance toRootObjectRowScalarNoArg ::
+--   ( ToRootObjectScalarFieldNoArg typ resolve fieldRow
+--   , Row.Cons fieldName resolve restResolverRow resolverRow
+--   , Symbol.IsSymbol fieldName
+--   ) => ToRootObjectRowDispatch specName fieldName NoArg typ ScalarField target resolverRow depRow fieldRow
+--   where
+--     toRootObjectRowDispatch _ _ _ _ _ _ resolvers _ =
+--       toRootObjectScalarFieldNoArg
+--       (Proxy :: Proxy typ)
+--       (Record.get (SProxy :: SProxy fieldName) resolvers)
+
+-- instance toRootObjectRowScalarWithArgs ::
+--   ( Symbol.Append specName "_" path0
+--   , Symbol.Append path0 fieldName path
+--   , ToRootObjectScalarFieldWithArgs path i typ resolve fieldRow
+--   , Symbol.IsSymbol fieldName
+--   , Row.Cons fieldName resolve restResolvers resolverRow
+--   ) => ToRootObjectRowDispatch specName fieldName (WithArgs (Record i)) typ ScalarField target resolverRow depRow fieldRow
+--   where
+--     toRootObjectRowDispatch _ _ _ _ _ _ resolvers _ =
+--       toRootObjectScalarFieldWithArgs
+--       (SProxy :: SProxy path)
+--       (RProxy :: RProxy i)
+--       (Proxy :: Proxy typ)
+--       (Record.get (SProxy :: SProxy fieldName) resolvers)
+
+-- instance toRootObjectRowRelationalNoArgs ::
+--   ( Generic target (Constructor targetName (Argument (Record targetRow)))
+--   , RowList.RowToList targetRow targetRl
+--   , ToFieldList targetRl targetFl
+--   , FetchScalarFields targetFl targetScalars
+--   , ToRootObjectRelationalFieldNoArg typ target targetScalars resolve fieldRow
+--   , Symbol.IsSymbol name
+--   , Row.Cons name resolve restResolvers resolverRow
+--   , Symbol.IsSymbol targetName
+--   , Row.Cons targetName (Unit -> Nullable(GraphQLType (Maybe target))) restDepRow depRow
+--   ) => ToRootObjectRowDispatch specName name NoArg typ RelationalField target resolverRow depRow fieldRow
+--   where
+--     toRootObjectRowDispatch _ _ _ _ _ _ resolvers deps =
+--       toRootObjectRelationalFieldNoArg
+--       (Proxy :: Proxy typ)
+--       (Proxy :: Proxy target)
+--       (RProxy :: RProxy targetScalars)
+--       (Record.get (SProxy :: SProxy name) resolvers)
+--       (Record.get (SProxy :: SProxy targetName) deps)
+
+-- instance toRootObjectRowRelationalWithArgs ::
+--   ( Generic target (Constructor targetName (Argument (Record targetRow)))
+--   , RowList.RowToList targetRow targetRl
+--   , ToFieldList targetRl targetFl
+--   , FetchScalarFields targetFl targetScalars
+--   , Symbol.Append specName "_" path0
+--   , Symbol.Append path0 name path
+--   , ToRootObjectRelationalFieldWithArgs path i typ target targetScalars resolve fieldRow
+--   , Symbol.IsSymbol name
+--   , Row.Cons name resolve restResolvers resolvers
+--   , Symbol.IsSymbol targetName
+--   , Row.Cons targetName (Unit -> Nullable(GraphQLType (Maybe target))) restDeps deps
+--   ) => ToRootObjectRowDispatch specName name (WithArgs (Record i)) typ RelationalField target resolvers deps fieldRow
+--   where
+--     toRootObjectRowDispatch _ _ _ _ _ _ rs ds =
+--       toRootObjectRelationalFieldWithArgs
+--         (SProxy :: SProxy path)
+--         (RProxy :: RProxy i)
+--         (Proxy :: Proxy typ)
+--         (Proxy :: Proxy target)
+--         (RProxy :: RProxy targetScalars)
+--         (Record.get (SProxy :: SProxy name) rs)
+--         (Record.get (SProxy :: SProxy targetName) ds)
+
+-- -- | ToRootResolvers
+-- class ToRootResolvers (fl :: List.List) (resolverRow :: # Type) | fl -> resolverRow
+
+-- instance toRootResolversNil ::
+--   ToRootResolvers List.Nil ()
+
+-- instance toRootResolversCons ::
+--   ( ToRootResolversDispatch argType typ fieldType target resolve
+--   , ToRootResolvers restFl restResolverRow
+--   , Row.Cons name resolve restResolverRow resolverRow
+--   ) => ToRootResolvers (List.Cons (Field name argType typ fieldType target) restFl) resolverRow
+
+-- class ToRootResolversDispatch
+--   (argType :: ArgType) typ (fieldType :: FieldType) target resolve
+--   | argType typ fieldType target -> resolve
+
+-- instance toRootResolversScalarNoArg ::
+--   ( ToRootObjectScalarFieldNoArg typ resolve fieldRow
+--   ) => ToRootResolversDispatch NoArg typ ScalarField target resolve
+
+-- instance toRootResolversScalarWithArgs ::
+--   ( ToRootObjectScalarFieldWithArgs "" i typ resolve fieldRow
+--   ) => ToRootResolversDispatch (WithArgs (Record i)) typ ScalarField target resolve
+
+-- instance toRootResolversRelationalNoArg ::
+--   ( Generic target (Constructor targetName (Argument (Record targetRow)))
+--   , RowList.RowToList targetRow targetRl
+--   , ToFieldList targetRl targetFl
+--   , FetchScalarFields targetFl targetScalars
+--   , ToRootObjectRelationalFieldNoArg typ target targetScalars resolve fieldRow
+--   ) => ToRootResolversDispatch NoArg typ RelationalField target resolve
+
+-- instance toRootResolversRelationalWithArgs ::
+--   ( Generic target (Constructor targetName (Argument (Record targetRow)))
+--   , RowList.RowToList targetRow targetRl
+--   , ToFieldList targetRl targetFl
+--   , FetchScalarFields targetFl targetScalars
+--   , ToRootObjectRelationalFieldWithArgs "" i typ target targetScalars resolve fieldRow
+--   ) => ToRootResolversDispatch (WithArgs (Record i)) typ RelationalField target resolve
+
+-- -- | ToRootObjectScalarField
+-- class ToRootObjectScalarFieldNoArg
+--   typ resolve (fieldRow :: # Type)
+--   | typ -> resolve
+--   , typ -> fieldRow
+--   where
+--     toRootObjectScalarFieldNoArg :: Proxy typ -> resolve -> Record fieldRow
+
+-- class ToRootObjectScalarFieldWithArgs
+--   (path :: Symbol) (i :: # Type) typ
+--   resolve
+--   (fieldRow :: # Type)
+--   | path i typ -> resolve
+--   , path i typ -> fieldRow
+--   where
+--     toRootObjectScalarFieldWithArgs
+--       :: SProxy path -> RProxy i -> Proxy typ
+--       -> resolve
+--       -> Record fieldRow
+
+-- -- | ToRootObjectRelationalField
+-- class ToRootObjectRelationalFieldNoArg
+--   typ target (targetScalars :: # Type)
+--   resolve
+--   (fieldRow :: # Type)
+--   | typ target targetScalars -> resolve
+--   , typ target targetScalars -> fieldRow
+--   where
+--     toRootObjectRelationalFieldNoArg
+--       :: Proxy typ -> Proxy target -> RProxy targetScalars
+--       -> resolve
+--       -> (Unit -> Nullable(GraphQLType (Maybe target)))
+--       -> Record fieldRow
+
+-- class ToRootObjectRelationalFieldWithArgs
+--   (path :: Symbol) (i :: # Type) typ target (targetScalars :: # Type)
+--   resolve
+--   (fieldRow :: # Type)
+--   | i typ target targetScalars -> resolve
+--   , i typ target targetScalars -> fieldRow
+--   where
+--     toRootObjectRelationalFieldWithArgs
+--       :: SProxy path -> RProxy i -> Proxy typ
+--          -> Proxy target -> RProxy targetScalars
+--       -> resolve
+--       -> (Unit -> Nullable(GraphQLType (Maybe target)))
+--       -> Record fieldRow
 
 -- | ToEntityObjects
 class ToEntityObjects (entityList :: List.List) (constructorRow :: # Type) (depRow :: # Type)
@@ -151,11 +379,11 @@ instance dependencyRecordFoldNil ::
 
 instance dependencyRecordFoldCons ::
   ( DependencyRecordFold restRl objectRow restTo
-  , Row.Cons name (Nullable (GraphQLType (Maybe spec))) restObjectRow objectRow
-  , Row.Cons name (Unit -> Nullable (GraphQLType (Maybe spec))) restTo to
+  , Row.Cons name dep restObjectRow objectRow
+  , Row.Cons name (Unit -> dep) restTo to
   , Row.Lacks name restTo
   , Symbol.IsSymbol name
-  ) => DependencyRecordFold (RowList.Cons name spec restRl) objectRow to
+  ) => DependencyRecordFold (RowList.Cons name dep restRl) objectRow to
   where
     dependencyRecordFold _ objects = do
       restBuilder <- dependencyRecordFold (RLProxy :: RLProxy restRl) objects
@@ -199,31 +427,6 @@ instance populateObjectRecordCons ::
                    deps
           gType = constructor args
       RST.modify (SProxy :: SProxy name) (const (notNull gType)) objects
-
--- instance populateObjectRecordNil ::
---   PopulateObjectRecord RowList.Nil h constructorRow depRow objectRow
---   where
---     populateObjectRecord _ _ _ objects = pure objects
--- instance populateObjectRecordCons ::
---   ( PopulateObjectRecord restRl h constructorRow depRow objectRow
---   , Row.Cons name constructor restConstructorRow constructorRow
---   , ConstructorDependency constructor depRow subset
---   , Symbol.IsSymbol name
---   ) => PopulateObjectRecord (RowList.Cons name constructor restRl) h constructorRow depRow objectRow
-  -- where
-  --   populateObjectRecord _ constructors deps objects = do
-  --     rest <- populateObjectRecord
-  --               (RLProxy :: RLProxy restRl)
-  --               constructors
-  --               deps
-  --               objects
-  --     let constructor = Record.get (SProxy :: SProxy name) constructors
-  --         dep = constructorDependency
-  --                 (Proxy :: Proxy constructor)
-  --                 deps
-  --         gType = constructor dep
-  --     RST.modify (SProxy :: SProxy name) (const (notNull gType)) rest
-  --     pure objects
 
 ---- | ConstructorDependency
 class ConstructorDependency (argRow :: # Type) (depRow :: # Type)
@@ -269,19 +472,6 @@ instance constructorDependencyFoldCons ::
       <<< constructorDependencyFold
             (RLProxy :: RLProxy restRl)
             depRecord
-
-
--- | ToConstructors
-class ToConstructors
-  (rootSpecFl :: List.List) (constructorRow :: # Type)
-  | rootSpecFl -> constructorRow
-
-instance toConstructorsImpl ::
-  ( FetchRelationalFieldList rootSpecFl rootRelationalSpecList
-  , CollectEntitiesTraverse rootRelationalSpecList entityList
-  , CollectConstructors entityList constructorRow
-  ) => ToConstructors rootSpecFl constructorRow
-
 
 -- | FetchRelationalFieldList
 class FetchRelationalFieldList (fieldList :: List.List) (relationalSpecList :: List.List) | fieldList -> relationalSpecList
