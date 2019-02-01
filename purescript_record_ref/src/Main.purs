@@ -139,15 +139,16 @@ main = do
 
   let output
         = ST.run do
+            -- InitObjectRecord
             let init = Builder.build
                         (   Builder.insert (SProxy :: SProxy "A") (null :: Nullable A)
                         >>> Builder.insert (SProxy :: SProxy "B") (null :: Nullable B)
                         >>> Builder.insert (SProxy :: SProxy "C") (null :: Nullable C)
                         )
                         {}
-
             deps <- RST.thaw init
 
+            -- DependencyRecord
             let stBuilder = identity :: Builder {} {}
             aRef <- RST.peekLazyRef (SProxy :: SProxy "A") deps
             let stBuilder0 = Builder.insert (SProxy :: SProxy "A") aRef <<< stBuilder
@@ -159,6 +160,7 @@ main = do
                         stBuilder2
                         {}
 
+            -- PopulateObjectRecord
             let aSt = Builder.build
                         (   Builder.insert
                               (SProxy :: SProxy "B")
