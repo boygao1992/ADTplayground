@@ -1,10 +1,13 @@
 module GraphQL.Type.Internal where
 
-import Data.Function.Uncurried
-import Prelude
-
-import Data.Maybe (Maybe(..))
+import Data.Argonaut.Core (Json)
+import Data.Function.Uncurried (Fn1, Fn6, runFn1, runFn6)
+import Data.Maybe (Maybe)
 import Data.NonEmpty (NonEmpty)
+import Data.Nullable (Nullable, toNullable)
+import Effect.Aff (Aff)
+import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
+import Prelude
 import Prim.TypeError (class Fail, Beside, Quote, Text)
 import Type.Data.Boolean as Bool
 
@@ -23,7 +26,9 @@ instance graphQLTypeListType :: GraphQLType (List f a)
 
 data GraphQLType spec
 
-data GraphQLRootType rootSpec
+data GraphQLRootType rootSpec rootSource
+
+data Schema rootSpec rootSource
 
 newtype Id = Id String
 
@@ -57,8 +62,30 @@ foreign import _objectType :: forall row g typ. Fn1 (Record row) (g typ)
 objectType :: forall row typ. Record row -> GraphQLType (Maybe typ)
 objectType config = runFn1 _objectType config
 
-rootObjectType :: forall row typ. Record row -> GraphQLRootType typ
+rootObjectType :: forall row rootSpec rootSource. Record row -> GraphQLRootType rootSpec rootSource
 rootObjectType config = runFn1 _objectType config
+
+foreign import _schema :: forall rootSpec rootSource. Fn1 (GraphQLRootType rootSpec rootSource)  (Schema rootSpec rootSource)
+
+schema
+  :: forall rootSpec rootSource
+   . GraphQLRootType rootSpec rootSource
+  -> Schema rootSpec rootSource
+schema root = runFn1 _schema root
+
+-- NOTE from purescript-graphql
+foreign import _graphql :: forall rootSpec rootSource ctx.
+  Fn6 (Schema rootSpec rootSource) String rootSource ctx (Nullable Json) (Nullable String) (EffectFnAff Json)
+-- NOTE from purescript-graphql
+graphql
+  :: forall rootSpec rootSource ctx
+   . Schema rootSpec rootSource -> String
+  -> rootSource -> ctx -> Maybe Json -> Maybe String -> Aff Json
+graphql s query root context variables operationName =
+  fromEffectFnAff $ runFn6 _graphql s query root context nVariables nOperation
+    where
+      nVariables = toNullable variables
+      nOperation = toNullable operationName
 
 -- | IsUnitPred
 -- NOTE output type can be Unit for mutations

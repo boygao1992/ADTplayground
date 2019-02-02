@@ -60,31 +60,30 @@
         - Bool.False target target target
           - nonNull (unsafeCoerce (depFn unit))
 
-- [ ] RootGraphQLObjectType
+- [x] RootGraphQLObjectType
   - [x] recursively collect all reachable entities from root node
     - [x] class CollectEntities
-  - [ ] collect semi-completed GraphQLType constructors
+  - [x] collect semi-completed GraphQLType constructors
     - [x] infer constructor types
       - class CollectEntityDependencies
-    - [ ] 
-  - [ ] inject dependencies
-    - [ ] circular reference
+  - [x] inject dependencies
+    - [x] circular reference
       - `../purescript_record_ref`
         - Record.ST.Nested (peekLazyRef)
         - Main (main), plan
       - NOTE need to hold an extra type variable for `Region` throughout the entire process
-      - [ ] construct a mutable object Record for all entities
-        - [ ] prepare a null instance for each entity
+      - [x] construct a mutable object Record for all entities
+        - [x] prepare a null instance for each entity
           - Nullable (GraphQLType (Maybe spec))
-      - [ ] construct its dependency Record
+      - [x] construct its dependency Record
         - a Record of lazyRef for all entities from the object Record
         - Record.ST.Nested (peekLazyRef)
           - Unit -> Nullable (GraphQLType (Maybe spec))
-      - [ ] mutate the object Record with the dependency Record
-        - [ ] prepare the corresponding subset of the dependency Record for each constructor
-        - [ ] execute each constructor with the subset of the dependency Record
+      - [x] mutate the object Record with the dependency Record
+        - [x] prepare the corresponding subset of the dependency Record for each constructor
+        - [x] execute each constructor with the subset of the dependency Record
         - Control.Monad.ST.Ref (modify)
-      - [ ] seal the object Record to be immutable
+      - [x] seal the object Record to be immutable
         - ST.run
   - ToObject without `source`
 

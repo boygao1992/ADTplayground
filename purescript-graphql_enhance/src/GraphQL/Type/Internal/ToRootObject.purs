@@ -8,9 +8,9 @@ import Control.Monad.ST (run) as ST
 import Data.Generic.Rep (class Generic, Constructor, Argument)
 import Data.Maybe (Maybe)
 import Data.Nullable (Nullable, null, notNull)
-import GraphQL.Type.Data.Field (Field, NoArg, WithArgs, RelationalField, ScalarField, kind ArgType, kind FieldType, AProxy (..), FTProxy (..))
+import GraphQL.Type.Data.Field (Field, RelationalField, ScalarField)
 import GraphQL.Type.Internal (GraphQLRootType, GraphQLType, rootObjectType)
-import GraphQL.Type.Internal.ToObject
+import GraphQL.Type.Internal.ToObject (class ToFieldList, class ToObject, class ToObjectRow, class ToResolvers, toObjectRow)
 import Prim.RowList (kind RowList)
 import Prim.RowList as RowList
 import Record as Record
@@ -25,7 +25,6 @@ import Type.Data.List as List
 import Type.Data.RowList (RLProxy(..))
 import Type.Data.Symbol (SProxy(..))
 import Type.Data.Symbol as Symbol
-import Type.Proxy (Proxy)
 import Type.Row (RProxy(..))
 import Type.Row as Row
 
@@ -34,13 +33,14 @@ import Type.Row as Row
 -- 2. no deps but constructors
 
 -- | ToRootObject
-class ToRootObject rootSpec (constructorRow :: # Type) (resolverRow :: # Type)
+class ToRootObject rootSpec (rootSource :: Type) (constructorRow :: # Type) (resolverRow :: # Type)
   | rootSpec -> constructorRow
-  , rootSpec -> resolverRow
+  , rootSpec rootSource -> resolverRow
   where
     toRootObject ::
-      Proxy rootSpec -> Record constructorRow -> Record resolverRow
-      -> GraphQLRootType rootSpec
+      Proxy rootSpec -> Record constructorRow
+      -> Proxy rootSource -> Record resolverRow
+      -> GraphQLRootType rootSpec rootSource
 
 instance toRootObjectImpl ::
     -- rootSpec -> rootSpecFl
@@ -53,26 +53,30 @@ instance toRootObjectImpl ::
   , CollectConstructors entityList constructorRow
   , ToEntityObjects entityList constructorRow depRow
     -- rootSpecFl -> resolverRow
-  , ToResolvers () rootSpecFl resolverRow -- NOTE source = ()
-  , ToObjectRow rootSpecFl rootSpecName () resolverRow depRow to -- NOTE source = ()
-  ) => ToRootObject rootSpec constructorRow resolverRow
+  , ToResolvers rootSource rootSpecFl resolverRow -- NOTE source = ()
+  , ToObjectRow rootSpecFl rootSpecName rootSource resolverRow depRow to -- NOTE source = ()
+  , Symbol.IsSymbol rootSpecName
+  ) => ToRootObject rootSpec rootSource constructorRow resolverRow
   where
-    toRootObject _ constructors resolvers =
+    toRootObject _ constructors rootSource resolvers =
       let
         deps = toEntityObjects
                 (LProxy :: LProxy entityList)
                 constructors
       in
         rootObjectType
-          ( Builder.build
-              ( toObjectRow -- NOTE reuse toObjectRow with an empty source for now
-                (LProxy :: LProxy rootSpecFl)
-                (SProxy :: SProxy rootSpecName)
-                (RProxy :: RProxy ())
-                resolvers
-                deps
-              )
-              {}
+          ( { name: Symbol.reflectSymbol (SProxy :: SProxy rootSpecName)
+            , fields:
+                Builder.build
+                ( toObjectRow -- NOTE reuse toObjectRow with an empty source for now
+                  (LProxy :: LProxy rootSpecFl)
+                  (SProxy :: SProxy rootSpecName)
+                  (Proxy :: Proxy rootSource)
+                  resolvers
+                  deps
+                )
+                {}
+            }
           )
 
 -- class ToRootObjectRow

@@ -1,6 +1,6 @@
 module GraphQL.Type.Internal.ToObject where
 
-import Prelude
+import Prelude (identity, (<<<), Unit, map, (<$>), unit, ($))
 
 import Control.Promise (Promise, fromAff)
 import Data.Function.Uncurried (Fn3, mkFn3)
@@ -8,8 +8,8 @@ import Data.Generic.Rep (class Generic, Constructor, Argument)
 import Data.Maybe (Maybe)
 import Data.NonEmpty (NonEmpty)
 import Data.Nullable (Nullable, toNullable)
-import Effect (Effect)
 import Effect.Aff (Aff)
+import Effect.Unsafe (unsafePerformEffect)
 import GraphQL.Type.Data.Field (AProxy(..), FTProxy(..), Field, NoArg, RelationalField, ScalarField, WithArgs, kind ArgType, kind FieldType)
 import GraphQL.Type.Internal (class IsList, class IsListPred, class IsScalar, class IsScalarPred, Id, GraphQLType, toList, toScalar, objectType, nonNull)
 import GraphQL.Type.Internal.NullableAndMaybe (class NullableAndMaybe, fromMaybeToNullable)
@@ -314,10 +314,10 @@ instance toObjectImpl ::
   , Symbol.IsSymbol specName
   , RowList.RowToList specRow specRl
   , ToFieldList specRl specFl
-  , FetchScalarFields specFl source
-  , ToResolvers source specFl resolvers
+  , FetchScalarFields specFl sourceRow
+  , ToResolvers (Record sourceRow) specFl resolvers
   , ToDeps specFl deps
-  , ToObjectRow specFl specName source resolvers deps to
+  , ToObjectRow specFl specName (Record sourceRow) resolvers deps to
   ) => ToObject spec resolvers deps
   where
     toObject _ rs ds =
@@ -328,7 +328,7 @@ instance toObjectImpl ::
             ( toObjectRow
               (LProxy :: LProxy specFl)
               (SProxy :: SProxy specName)
-              (RProxy :: RProxy source)
+              (Proxy :: Proxy (Record sourceRow))
               rs
               ds
             )
@@ -336,13 +336,13 @@ instance toObjectImpl ::
         }
 
 class ToObjectRow
-  (specFl :: List.List) (specName :: Symbol) (source :: # Type) (resolvers :: # Type) (deps :: # Type)
+  (specFl :: List.List) (specName :: Symbol) (source :: Type) (resolvers :: # Type) (deps :: # Type)
   (to :: # Type)
   | specFl specName source resolvers deps -> to
   where
     toObjectRow
       :: LProxy specFl -> SProxy specName
-         -> RProxy source -> Record resolvers -> Record deps
+         -> Proxy source -> Record resolvers -> Record deps
       -> Builder {} (Record to)
 
 instance toObjectRowNil ::
@@ -368,26 +368,26 @@ instance toObjectRowCons ::
               (Proxy :: Proxy typ)
               (FTProxy :: FTProxy fieldType)
               (Proxy :: Proxy target)
-              (RProxy :: RProxy source)
+              (Proxy :: Proxy source)
               rs
               ds
             )
       <<< toObjectRow
             (LProxy :: LProxy restFl)
             (SProxy :: SProxy specName)
-            (RProxy :: RProxy source)
+            (Proxy :: Proxy source)
             rs
             ds
 
 class ToObjectRowDispatch
   (specName :: Symbol) (name :: Symbol) (argType :: ArgType) typ (fieldType :: FieldType) target
-  (source :: # Type) (resolvers :: # Type) (deps :: # Type)
+  (source :: Type) (resolvers :: # Type) (deps :: # Type)
   (fieldRow :: # Type)
   | specName name argType typ fieldType target source resolvers deps -> fieldRow
   where
     toObjectRowDispatch
       :: SProxy specName -> SProxy name -> AProxy argType -> Proxy typ
-         -> FTProxy fieldType -> Proxy target -> RProxy source
+         -> FTProxy fieldType -> Proxy target -> Proxy source
       -> Record resolvers -> Record deps
       -> Record fieldRow
 
@@ -399,7 +399,7 @@ instance toObjectRowDispatchScalarNoArg ::
   where
     toObjectRowDispatch _ _ _ _ _ _ _ rs _ =
       toScalarObjectFieldNoArg
-        (RProxy :: RProxy source)
+        (Proxy :: Proxy source)
         (Proxy :: Proxy typ)
         (Record.get (SProxy :: SProxy name) rs)
 
@@ -414,7 +414,7 @@ instance toObjectRowDispatchScalarWithArgs ::
     toObjectRowDispatch _ _ _ _ _ _ _ rs _ =
       toScalarObjectFieldWithArgs
         (SProxy :: SProxy path)
-        (RProxy :: RProxy source)
+        (Proxy :: Proxy source)
         (RProxy :: RProxy i)
         (Proxy :: Proxy typ)
         (Record.get (SProxy :: SProxy name) rs)
@@ -433,7 +433,7 @@ instance toObjectRowDispatchRelationalNoArgs ::
   where
     toObjectRowDispatch _ _ _ _ _ _ _ rs ds =
       toRelationalObjectFieldNoArg
-        (RProxy :: RProxy source)
+        (Proxy :: Proxy source)
         (Proxy :: Proxy typ)
         (Proxy :: Proxy target)
         (RProxy :: RProxy targetScalars)
@@ -457,7 +457,7 @@ instance toObjectRowDispatchRelationalWithArgs ::
     toObjectRowDispatch _ _ _ _ _ _ _ rs ds =
       toRelationalObjectFieldWithArgs
         (SProxy :: SProxy path)
-        (RProxy :: RProxy source)
+        (Proxy :: Proxy source)
         (RProxy :: RProxy i)
         (Proxy :: Proxy typ)
         (Proxy :: Proxy target)
@@ -467,7 +467,7 @@ instance toObjectRowDispatchRelationalWithArgs ::
 
 
 ---- | ToResolvers
-class ToResolvers (source :: # Type) (fl :: List.List) (resolvers :: # Type)
+class ToResolvers (source :: Type) (fl :: List.List) (resolvers :: # Type)
   | source fl -> resolvers
 
 instance toResolversNil ::
@@ -480,7 +480,7 @@ instance toResolversCons ::
   ) => ToResolvers source (List.Cons (Field name argType typ fieldType target) restFl) resolvers
 
 class ToResolversDispatch
-  (source :: # Type) (argType :: ArgType) typ (fieldType :: FieldType) target
+  (source :: Type) (argType :: ArgType) typ (fieldType :: FieldType) target
   resolve
   | source argType typ fieldType target -> resolve
 
@@ -539,14 +539,14 @@ else instance toDepsImplDispatchIsRelational ::
 
 -- | ToScalarObjectField
 class ToScalarObjectFieldNoArg
-  (source :: # Type) typ
+  (source :: Type) typ
   resolve
   (fieldRow :: # Type)
   | source typ -> resolve
   , source typ -> fieldRow
   where
     toScalarObjectFieldNoArg
-      :: RProxy source -> Proxy typ
+      :: Proxy source -> Proxy typ
       -> Maybe resolve
       -> Record fieldRow
 
@@ -558,7 +558,7 @@ instance toScalarObjectFieldNoArgImpl ::
   ) => ToScalarObjectFieldNoArg
     source mTyp
     -- resolve
-    ({ source :: Record source } -> Aff mTyp)
+    ({ source :: source } -> Aff mTyp)
     -- ( "type" :: GraphQLType typ
     -- , resolve :: Nullable (resolve)
     -- )
@@ -566,12 +566,12 @@ instance toScalarObjectFieldNoArgImpl ::
     -- NOTE \source args context -> { source, args, context }
     , resolve :: Nullable
                  ( Fn3
-                    (Record source)
+                    (source)
                     noArg
                     noContext -- TODO add Context
-                    (Effect (Promise nTyp))
+                    (Promise nTyp)
                  )
-                 -- ( { source :: Record source } -> Effect (Promise nTyp))
+                 -- ( { source :: source } -> Effect (Promise nTyp))
     )
     where
       toScalarObjectFieldNoArg _ _ resolveFn =
@@ -582,17 +582,18 @@ instance toScalarObjectFieldNoArgImpl ::
         where
           trans f = mkFn3 \source _ _ ->
             -- NOTE Aff to Promise
-            fromAff <<< map fromMaybeToNullable <<< f $ { source }
+            unsafePerformEffect <<< fromAff <<< map fromMaybeToNullable <<< f
+            $ { source }
 
 class ToScalarObjectFieldWithArgs
-      (path :: Symbol) (source :: # Type) (i :: # Type) typ
+      (path :: Symbol) (source :: Type) (i :: # Type) typ
       resolve
       (fieldRow :: # Type)
   | path source i typ -> resolve
   , path source i typ -> fieldRow
   where
     toScalarObjectFieldWithArgs
-      :: SProxy path -> RProxy source -> RProxy i -> Proxy typ
+      :: SProxy path -> Proxy source -> RProxy i -> Proxy typ
       -> resolve
       -> Record fieldRow
 
@@ -605,17 +606,17 @@ instance toScalarObjectFieldWithArgsImpl ::
   , NullableAndMaybe nTyp mTyp
   ) => ToScalarObjectFieldWithArgs
   path source i mTyp
-  ({ source :: Record source, args :: Record mArgs} -> Aff mTyp)
+  ({ source :: source, args :: Record mArgs} -> Aff mTyp)
   ( "type" :: GraphQLType mTyp
   , args :: Record o
   -- NOTE \source args context -> { source, args, context }
   , resolve ::
        Fn3
-         (Record source)
+         (source)
          (Record nArgs)
          noContext -- TODO addContext
-         (Effect (Promise nTyp))
-      -- { source :: Record source, args :: Record nArgs} -> Effect (Promise nTyp)
+         (Promise nTyp)
+      -- { source :: source, args :: Record nArgs} -> Effect (Promise nTyp)
   )
   where
     toScalarObjectFieldWithArgs _ _ _ _ resolveFn =
@@ -626,7 +627,10 @@ instance toScalarObjectFieldWithArgsImpl ::
       , resolve:
           mkFn3 \source args _ ->
             -- NOTE Aff to Promise
-            fromAff <<< map fromMaybeToNullable <<< resolveFn
+                unsafePerformEffect
+            <<< fromAff
+            <<< map fromMaybeToNullable
+            <<< resolveFn
             $ { source
               , args: fromNullableToMaybeRec args
               }
@@ -670,14 +674,14 @@ else instance toScalarObjectFieldHandleListDispatchNotList ::
 
 -- | ToRelationalObjectField
 class ToRelationalObjectFieldNoArg
-  (source :: # Type) typ target (targetScalars :: # Type)
+  (source :: Type) typ target (targetScalars :: # Type)
   resolve
   (fieldRow :: # Type)
   | source typ target targetScalars -> resolve
   , source typ target targetScalars -> fieldRow
   where
     toRelationalObjectFieldNoArg
-      :: RProxy source -> Proxy typ -> Proxy target -> RProxy targetScalars
+      :: Proxy source -> Proxy typ -> Proxy target -> RProxy targetScalars
       -> resolve
       -> (Unit -> Nullable(GraphQLType (Maybe target)))
       -> Record fieldRow
@@ -690,18 +694,18 @@ instance toRelationalObjectFieldNoArgImpl ::
   , ToRelationalObjectFieldHandleOutputList typ mTargetScalars mOutput
   ) => ToRelationalObjectFieldNoArg
     source typ target mTargetScalars
-    ( { source :: Record source }
+    ( { source :: source }
       -> Aff mOutput
     )
     ( "type" :: GraphQLType gType
     , resolve ::
     -- NOTE \source args context -> { source, args, context }
         Fn3
-          (Record source)
+          (source)
           noArg
           noContext -- TODO add Context
-          (Effect (Promise nOutput))
-         -- { source :: Record source } -> Effect (Promise (Record nTargetScalars))
+          (Promise nOutput)
+         -- { source :: source } -> Effect (Promise (Record nTargetScalars))
     )
   where
     toRelationalObjectFieldNoArg _ _ _ _ resolveFn depFn =
@@ -709,19 +713,22 @@ instance toRelationalObjectFieldNoArgImpl ::
       , resolve:
           mkFn3 \source _ _ ->
             -- NOTE Aff to Promise
-            fromAff <<< map fromMaybeToNullable <<< resolveFn
+                unsafePerformEffect
+            <<< fromAff
+            <<< map fromMaybeToNullable
+            <<< resolveFn
             $ { source }
       }
 
 class ToRelationalObjectFieldWithArgs
-  (path :: Symbol) (source :: # Type) (i :: # Type) typ target (targetScalars :: # Type)
+  (path :: Symbol) (source :: Type) (i :: # Type) typ target (targetScalars :: # Type)
   resolve
   (fieldRow :: # Type)
   | source i typ target targetScalars -> resolve
   , source i typ target targetScalars -> fieldRow
   where
     toRelationalObjectFieldWithArgs
-      :: SProxy path -> RProxy source -> RProxy i -> Proxy typ
+      :: SProxy path -> Proxy source -> RProxy i -> Proxy typ
          -> Proxy target -> RProxy targetScalars
       -> resolve
       -> (Unit -> Nullable(GraphQLType (Maybe target)))
@@ -737,7 +744,7 @@ instance toRelationalObjectFieldWithArgsImpl ::
   , NullableAndMaybe nOutput mOutput
   ) => ToRelationalObjectFieldWithArgs
         path source i typ target mTargetScalars
-        ( { source :: Record source, args :: Record mArgs}
+        ( { source :: source, args :: Record mArgs}
           -> Aff mOutput
         )
         ( "type" :: GraphQLType gType
@@ -745,11 +752,11 @@ instance toRelationalObjectFieldWithArgsImpl ::
         , resolve ::
         -- NOTE \source args context -> { source, args, context }
             Fn3
-              (Record source)
+              (source)
               (Record nArgs)
               noContext -- TODO add Context
-              (Effect (Promise nOutput))
-        -- { source :: Record source, args :: Record nArgs} -> Effect (Promise (Record nTargetScalars))
+              (Promise nOutput)
+        -- { source :: source, args :: Record nArgs} -> Effect (Promise (Record nTargetScalars))
         )
   where
     toRelationalObjectFieldWithArgs _ _ _ _ _ _ resolveFn depFn =
@@ -760,7 +767,10 @@ instance toRelationalObjectFieldWithArgsImpl ::
       , resolve:
           mkFn3 \source args _ ->
             -- NOTE Aff to Promise
-            fromAff <<< map fromMaybeToNullable <<< resolveFn
+                unsafePerformEffect
+            <<< fromAff
+            <<< map fromMaybeToNullable
+            <<< resolveFn
             $ { source
               , args: fromNullableToMaybeRec args
               }
