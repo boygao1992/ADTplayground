@@ -7,7 +7,7 @@ import Data.Generic.Rep (class Generic, Constructor, Argument)
 import Data.Maybe (Maybe(..))
 import Data.Nullable (Nullable)
 import Effect.Class (liftEffect)
-import Effect.Console
+import Effect.Console (logShow)
 import Effect.Aff (Aff)
 import Examples.ForumExample.Model (Comment, Post, User)
 import GraphQL.Type.Internal (GraphQLRootType, GraphQLType, Id, Schema, schema)
@@ -27,24 +27,37 @@ newtype Query = Query
 
 derive instance genericQuery :: Generic Query _
 
-userConstructor ::
-  { comments :: { source :: { id :: String}
-              , args :: { limit :: Int}
+userConstructor :: { comments :: { source :: { id :: String
+                          }
+              , args :: { limit :: Int
+                        }
               }
-              -> Aff (Array { id :: String})
-  , id :: Maybe
-            ({ source :: { id :: String}}
-            -> Aff Id
-            )
-  , posts :: { source :: { id :: String}
-            , args :: { date :: String}
-            }
-            -> Aff (Array { id :: String})
-  }
-  ->  { "Comment" :: Unit -> Nullable (GraphQLType (Maybe Comment))
-      , "Post" :: Unit -> Nullable (GraphQLType (Maybe Post))
-      }
-  -> GraphQLType (Maybe User)
+              -> Aff
+                   (Array
+                      { id :: String
+                      }
+                   )
+, id :: Maybe
+          ({ source :: { id :: String
+                       }
+           }
+           -> Aff String
+          )
+, posts :: { source :: { id :: String
+                       }
+           , args :: { date :: String
+                     }
+           }
+           -> Aff
+                (Array
+                   { id :: String
+                   }
+                )
+}
+-> { "Comment" :: Unit -> Nullable (GraphQLType (Maybe Comment))
+   , "Post" :: Unit -> Nullable (GraphQLType (Maybe Post))
+   }
+   -> GraphQLType (Maybe User)
 userConstructor =
   toObject
     (Proxy :: Proxy User)
@@ -61,22 +74,33 @@ userConstructor' =
   , comments: \({source: {id}, args: { limit }}) -> pure []
   }
 
-postConstructor ::
-  { author :: { source :: { id :: String}}
-              -> Aff { id :: String}
-  , comments :: { source :: { id :: String}
-                , args :: { limit :: Int}
-                }
-                -> Aff (Array { id :: String})
-  , id :: Maybe
-            ( { source :: { id :: String}}
-              -> Aff Id
-            )
-  }
-  ->  { "Comment" :: Unit -> Nullable (GraphQLType (Maybe Comment))
-      , "User" :: Unit -> Nullable (GraphQLType (Maybe User))
-      }
-  -> GraphQLType (Maybe Post)
+postConstructor :: { author :: { source :: { id :: String
+                        }
+            }
+            -> Aff
+                 { id :: String
+                 }
+, comments :: { source :: { id :: String
+                          }
+              , args :: { limit :: Int
+                        }
+              }
+              -> Aff
+                   (Array
+                      { id :: String
+                      }
+                   )
+, id :: Maybe
+          ({ source :: { id :: String
+                       }
+           }
+           -> Aff String
+          )
+}
+-> { "Comment" :: Unit -> Nullable (GraphQLType (Maybe Comment))
+   , "User" :: Unit -> Nullable (GraphQLType (Maybe User))
+   }
+   -> GraphQLType (Maybe Post)
 postConstructor =
   toObject
   (Proxy :: Proxy Post)
@@ -93,20 +117,29 @@ postConstructor' =
   , comments: \({ source: { id }, args: { limit }}) -> pure []
   }
 
-commentConstructor ::
-  { author :: { source :: { id :: String}}
-              -> Aff { id :: String}
-  , id :: Maybe
-            ( { source :: { id :: String}}
-              -> Aff Id
-            )
-  , post :: { source :: { id :: String}}
-            -> Aff { id :: String}
-  }
-  ->  { "Post" :: Unit -> Nullable (GraphQLType (Maybe Post))
-      , "User" :: Unit -> Nullable (GraphQLType (Maybe User))
-      }
-  -> GraphQLType (Maybe Comment)
+commentConstructor :: { author :: { source :: { id :: String
+                        }
+            }
+            -> Aff
+                 { id :: String
+                 }
+, id :: Maybe
+          ({ source :: { id :: String
+                       }
+           }
+           -> Aff String
+          )
+, post :: { source :: { id :: String
+                      }
+          }
+          -> Aff
+               { id :: String
+               }
+}
+-> { "Post" :: Unit -> Nullable (GraphQLType (Maybe Post))
+   , "User" :: Unit -> Nullable (GraphQLType (Maybe User))
+   }
+   -> GraphQLType (Maybe Comment)
 commentConstructor =
   toObject (Proxy :: Proxy Comment)
 
@@ -122,7 +155,7 @@ commentConstructor' =
   , author: \({ source: {id}}) -> pure { id }
   }
 
-queryConstructor :: forall t764.
+queryConstructor :: forall t770.
   { "Comment" :: { "Post" :: Unit -> Nullable (GraphQLType (Maybe Post))
                  , "User" :: Unit -> Nullable (GraphQLType (Maybe User))
                  }
@@ -136,15 +169,17 @@ queryConstructor :: forall t764.
               }
               -> GraphQLType (Maybe User)
   }
-  -> Proxy t764
-     -> { post :: { source :: t764
+  -> Proxy t770
+     -> { post :: { source :: t770
                   , args :: { id :: String
                             }
                   }
                   -> Aff
-                       { id :: String
-                       }
-        , posts :: { source :: t764
+                       (Maybe
+                          { id :: String
+                          }
+                       )
+        , posts :: { source :: t770
                    , args :: { limit :: Int
                              }
                    }
@@ -153,15 +188,17 @@ queryConstructor :: forall t764.
                            { id :: String
                            }
                         )
-        , user :: { source :: t764
+        , user :: { source :: t770
                   , args :: { id :: String
                             }
                   }
                   -> Aff
-                       { id :: String
-                       }
+                       (Maybe
+                          { id :: String
+                          }
+                       )
         }
-        -> GraphQLRootType Query t764
+        -> GraphQLRootType Query t770
 queryConstructor =
   toRootObject
   (Proxy :: Proxy Query)
@@ -171,8 +208,10 @@ queryConstructor' :: { post :: { source :: Unit
                     }
           }
           -> Aff
-               { id :: String
-               }
+               (Maybe
+                  { id :: String
+                  }
+               )
 , posts :: { source :: Unit
            , args :: { limit :: Int
                      }
@@ -187,8 +226,10 @@ queryConstructor' :: { post :: { source :: Unit
                     }
           }
           -> Aff
-               { id :: String
-               }
+               (Maybe
+                  { id :: String
+                  }
+               )
 }
 -> GraphQLRootType Query Unit
 queryConstructor' =
@@ -202,8 +243,8 @@ queryConstructor' =
 query :: GraphQLRootType Query Unit
 query =
   queryConstructor'
-  { user: \({ args: {id}}) -> pure {id}
-  , post: \({ args: {id}}) -> pure {id}
+  { user: \({ args: {id}}) -> pure $ pure {id}
+  , post: \({ args: {id}}) -> pure $ pure {id}
   , posts: \({ args: {limit}}) -> do
       liftEffect $ logShow limit
       pure [ {id: "007"} ]

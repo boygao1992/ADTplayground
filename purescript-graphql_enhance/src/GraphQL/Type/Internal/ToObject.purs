@@ -554,11 +554,12 @@ instance toScalarObjectFieldNoArgImpl ::
   ( ToScalarObjectFieldHandleList mTyp
   -- TODO solve Id and String conversion
   -- NOTE solve Nullable and Maybe conversion
-  , NullableAndMaybe nTyp mTyp
+  , ToScalarObjectFieldHandleOutputList mTyp mTyp'
+  , NullableAndMaybe nTyp mTyp'
   ) => ToScalarObjectFieldNoArg
     source mTyp
     -- resolve
-    ({ source :: source } -> Aff mTyp)
+    ({ source :: source } -> Aff mTyp')
     -- ( "type" :: GraphQLType typ
     -- , resolve :: Nullable (resolve)
     -- )
@@ -603,10 +604,11 @@ instance toScalarObjectFieldWithArgsImpl ::
   -- TODO solve Id and String conversion
   -- NOTE solve Nullable and Maybe conversion
   , NullableAndMaybeRec (Record nArgs) (Record mArgs)
-  , NullableAndMaybe nTyp mTyp
+  , ToScalarObjectFieldHandleOutputList mTyp mTyp'
+  , NullableAndMaybe nTyp mTyp'
   ) => ToScalarObjectFieldWithArgs
   path source i mTyp
-  ({ source :: source, args :: Record mArgs} -> Aff mTyp)
+  ({ source :: source, args :: Record mArgs} -> Aff mTyp')
   ( "type" :: GraphQLType mTyp
   , args :: Record o
   -- NOTE \source args context -> { source, args, context }
@@ -671,6 +673,37 @@ else instance toScalarObjectFieldHandleListDispatchNotList ::
   ) => ToScalarObjectFieldHandleListDispatch Bool.False a
   where
     toScalarObjectFieldHandleListDispatch _ _ = toScalar
+
+-- | ToScalarObjectFieldHandleOutputList
+class ToScalarObjectFieldHandleOutputList i o | i -> o
+
+instance toScalarObjectFieldHandleOutputListIsListPred ::
+  ( IsListPred i isList
+  , ToScalarObjectFieldHandleOutputListDispatch isList i o
+  ) => ToScalarObjectFieldHandleOutputList i o
+
+class ToScalarObjectFieldHandleOutputListDispatch
+  (isList :: Bool.Boolean) i o
+  | isList i -> o
+
+instance toScalarObjectFieldHandleOutputListIsList ::
+  ( ToScalarObjectFieldHandleOutputList a restO
+  ) => ToScalarObjectFieldHandleOutputListDispatch Bool.True (f a) (f restO)
+
+instance toScalarObjectFieldHandleOutputListNotListId ::
+  ToScalarObjectFieldHandleOutputListDispatch Bool.False Id String
+else instance toScalarObjectFieldHandleOutputListNotListMaybeId ::
+  ToScalarObjectFieldHandleOutputListDispatch Bool.False (Maybe Id) (Maybe String)
+else instance toScalarObjectFieldHandleOutputListNotList ::
+  ToScalarObjectFieldHandleOutputListDispatch Bool.False a a
+
+-- instance toRelationalObjectFieldHandleOutputListIsList ::
+--   ( ToRelationalObjectFieldHandleOutputList a targetScalars restO
+--   ) => ToRelationalObjectFieldHandleOutputListDispatch
+--     Bool.True (f a) targetScalars (f restO)
+-- else instance toRelationalObjectFieldHandleOutputListNotList ::
+--   ToRelationalObjectFieldHandleOutputListDispatch
+--     Bool.False a targetScalars (Record targetScalars) -- NOTE replace a by targetScalars
 
 -- | ToRelationalObjectField
 class ToRelationalObjectFieldNoArg
@@ -798,7 +831,7 @@ class ToRelationalObjectFieldHandleDepListDispatch
     toRelationalObjectFieldHandleDepListDispatch
       :: BProxy isList -> Proxy i -> (Unit -> Nullable (GraphQLType (Maybe target))) -> GraphQLType o
 
-instance toRelationalObjectFieldHandleDepListDispatchIsList ::
+instance toRelationalObjectFieldHandleDepListIsList ::
   ( ToRelationalObjectFieldHandleDepList a target restO
   , IsList f restO
   ) => ToRelationalObjectFieldHandleDepListDispatch
@@ -810,13 +843,14 @@ instance toRelationalObjectFieldHandleDepListDispatchIsList ::
             (Proxy :: Proxy a)
             depFn
         )
-else instance toRelationalObjectFieldHandleDepListDispatchBaseCaseMaybe ::
+
+instance toRelationalObjectFieldHandleDepListNotListMaybe ::
   ToRelationalObjectFieldHandleDepListDispatch
     Bool.False (Maybe target) target (Maybe target) -- NOTE replace target by (Nullable (GraphQLType (Maybe target)))
   where
     toRelationalObjectFieldHandleDepListDispatch _ _ depFn
       = unsafeCoerce (depFn unit) -- HACK unsafely drop Nullable
-else instance toRelationalObjectFieldHandleDepListDispatchBaseCase ::
+else instance toRelationalObjectFieldHandleDepListNotListNotMaybe ::
   ToRelationalObjectFieldHandleDepListDispatch
     Bool.False target target target -- NOTE replace target by (Nullable (GraphQLType (Maybe target)))
   where
@@ -839,9 +873,12 @@ instance toRelationalObjectFieldHandleOutputListIsList ::
   ( ToRelationalObjectFieldHandleOutputList a targetScalars restO
   ) => ToRelationalObjectFieldHandleOutputListDispatch
     Bool.True (f a) targetScalars (f restO)
-else instance toRelationalObjectFieldHandleOutputListNotList ::
+instance toRelationalObjectFieldHandleOutputListNotListMaybe ::
   ToRelationalObjectFieldHandleOutputListDispatch
-    Bool.False a targetScalars (Record targetScalars) -- NOTE replace a by targetScalars
+    Bool.False (Maybe a) targetScalars (Maybe (Record targetScalars)) -- NOTE replace a by targetScalars
+else instance toRelationalObjectFieldHandleOutputListNotListNotMaybe ::
+  ToRelationalObjectFieldHandleOutputListDispatch
+  Bool.False a targetScalars (Record targetScalars) -- NOTE replace a by targetScalars
 
 -- | ParseFieldSpec
 class ParseFieldSpec
@@ -891,7 +928,7 @@ class ToFieldList (specRl :: RowList) (fieldList :: List.List)
 
 instance toFieldListNil ::
   ToFieldList RowList.Nil List.Nil
-else instance toFieldListCons ::
+instance toFieldListCons ::
   ( ToFieldList restSpecRl restFieldList
   , ParseFieldSpec fieldSpec args typ fieldType target
   ) => ToFieldList (RowList.Cons fieldName fieldSpec restSpecRl) (List.Cons (Field fieldName args typ fieldType target) restFieldList)
@@ -902,7 +939,8 @@ class FetchScalarFields (fieldList :: List.List) (scalarFields :: # Type)
 
 instance fetchScalarFieldsNil ::
   FetchScalarFields List.Nil ()
-else instance fetchScalarFieldsConsIsScalarId :: -- NOTE Id to String
+
+instance fetchScalarFieldsConsIsScalarId :: -- NOTE Id to String
   ( FetchScalarFields restList restFields
   , Row.Cons name String restFields fields
   ) => FetchScalarFields (List.Cons (Field name argType Id ScalarField target) restList) fields
@@ -914,7 +952,8 @@ else instance fetchScalarFieldsConsIsScalar ::
   ( FetchScalarFields restList restFields
   , Row.Cons name typ restFields fields
   ) => FetchScalarFields (List.Cons (Field name argType typ ScalarField target) restList) fields
-else instance fetchScalarFieldsConsNotScalar ::
+
+instance fetchScalarFieldsConsNotScalar ::
   ( FetchScalarFields restList fields
   ) => FetchScalarFields (List.Cons (Field name argType typ RelationalField target) restList) fields
 

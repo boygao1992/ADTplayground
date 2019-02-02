@@ -26,3 +26,4 @@ newtype Comment = Comment
   }
 
 derive instance genericComment :: Generic Comment _
+

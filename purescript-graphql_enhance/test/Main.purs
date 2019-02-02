@@ -13,7 +13,7 @@ import Effect.Class (liftEffect)
 import Effect.Console (error, log, logShow) as Console
 import GraphQL.Type.Internal (graphql)
 import HTTPure as HTTPure
-import Test.ToRootObject (testSchema)
+import Examples.ForumExample.Schema (schema) as Forum
 
 type GraphQLParams =
   { query :: String
@@ -39,7 +39,7 @@ createRouter { body, method: HTTPure.Post, path : [ "graphql" ]} =
     Right { query, variables, operationName } ->
       do
         (HTTPure.ok <<< stringify)
-          =<< graphql testSchema query unit unit variables operationName
+          =<< graphql Forum.schema query unit unit variables operationName
 createRouter { path } = do
   liftEffect $ Console.logShow path
   HTTPure.notFound
