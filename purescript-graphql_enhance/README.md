@@ -1,5 +1,73 @@
+# Code Organization
 
-
+- `src/GraphQL/`
+  - `Data/`
+    - `Field.purs`, type-level data type to hold type information of a parsed field
+    - `Relation.purs`, relational mapping
+  - `Internal/`
+    - `ToObject.purs`
+      - from type to non-root-level GraphQLObjectType
+    - `ToRootObject.purs`
+      - from type to root-level GraphQLObjectType
+    - `ToInputObject.purs`
+      - from type to GraphQLInputObjectType (Record in the arguments of a resolver)
+      - able to handle nested Record with auto naming based on paths
+    - `NullableAndMaybe.purs`
+      - single-layer `Nullable` and `Maybe` conversion
+    - `NullableAndMaybeRec.purs`
+      - nested `Nullable` and `Maybe` conversion
+- `src/Examples/`
+  - `ForumExample/`
+    - a simple example to demonstrate the usage of this library
+  - others are W.I.P.
+- `src/Record/ST/Nested.purs`
+  - imported from my another project `../purescript_record_ref` 
+    - provide path access and mutation for nested Record in `ST` effect (restricted/scoped mutation)
+    - only `peekLazyRef` is used in this project
+- `src/Type/`, type-level utilities
+  - `Type.Utils`
+    - `class IsEqualPred`
+    - `class IsEqual`
+    - `class IsIsomorphic`
+  - `Type.Function`
+    - `class IsFunctionPred`
+    - `class Cons`
+  - `Type.Symbol.Utils`
+    - `class RemoveSpace`
+    - `class ReverseSymbol`
+    - `class SwitchCaseFirstChar`
+    - `class SwitchCase`
+  - `Type.Symbol.Num`
+    - imported from my another project `../purescript_typelevel_arithmetic`
+  - `Type.Row.Utils`
+    - `class HasFieldPred`
+    - `class IsSubsetPred`
+    - `class IsSubset`
+    - `class FetchField`
+    - `class IsEmptyPred`
+    - `class IsRecordPred`
+  - `Type.Row.Validation`
+    - `class Validate`
+    - `class ValidateExclusive`
+  - `Type.Data.RowList.Utils`
+    - `class IsEmptyPred`
+  - `Type.Data.Boolean.Utils`
+    - `class IsTrue`
+    - `class IsFalse`
+  - `Type.Data.List`
+    - `kind List = Nil | Cons Type List`
+    - `data LProxy`
+    - `class ContainsPred`
+    - `class Remove`
+    - `class Set`
+  - `Type.Data.Result`
+    - `kind Result = Success | Failure Symbol`
+    - `data RSProxy`
+    - `class Append`
+  - `Type.Data.FuncList`
+    - `kind FuncList = Nil | Cons Type FuncList`
+    - `class FuncToFuncList`
+  
 # Status
 
 - [x] GraphQLScalarType
@@ -93,9 +161,11 @@
 
 # Usage
 
-the complete example is in `/src/Examples/ForumExample` and `/test/Main.purs`
+the complete example is in `src/Examples/ForumExample` and `/test/Main.purs`
 
 ## 1. Declare Domain Entities and Relations
+
+`src/Examples/ForumExample/Model.purs`
 
 ```purescript
 newtype User = User
@@ -130,6 +200,8 @@ derive instance genericComment :: Generic Comment _
 
 ## 2. Declare Root Query
 
+`src/Examples/ForumExample/Query.purs`
+
 ```purescript
 newtype Query = Query
   { user :: { id :: Id } -> Maybe User
@@ -143,6 +215,8 @@ derive instance genericQuery :: Generic Query _
 ```
 
 ## 3. Build Entity Constructors
+
+`src/Examples/ForumExample/Constructor/Query.purs`
 
 ### 3.1 provide entity type to `toObject`
 ```purescript
@@ -214,6 +288,8 @@ post ::
 
 ## 4. Build Root Query Object
 
+`src/Examples/ForumExample/Query.purs`
+
 ### 4.1 provide root query type to `toRootObject`
 ```purescript
 queryConstructor = 
@@ -276,6 +352,8 @@ queryConstructor =
 ```
 
 Behind the scene, `toRootObject` will construct circular references among entities' `GraphQLObjectType` by "tying the knot" with `ST` effect (restricted/scoped mutation).
+
+For how it exactly works, see `../purescript_record_ref/src/Main.purs`
 
 ### 4.4 let the compiler derive the types of required resolvers
 
@@ -381,6 +459,8 @@ query =
 
 ## 5. Provide Root Query Object to Schema
 
+`src/Examples/ForumExample/Schema.purs`
+
 ```purescript
 import Examples.ForumExample.Query (Query, query)
 
@@ -388,6 +468,10 @@ schema :: Schema Query Unit
 schema = G.schema query
 ```
 which is ready to use in GraphQL parser (`GraphQL.Type.Internal (graphql)`)
+
+## 6. GraphQL Server
+
+`test/Main.purs`
 
 # Value without type annotation can be ambiguous at type-level
 
@@ -432,3 +516,6 @@ getId = \{ id } -> id :: String
 getId { id: "robot000" } -- r = ()
 ```
 
+# Design
+
+image files in this directory
