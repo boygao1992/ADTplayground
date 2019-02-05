@@ -111,7 +111,7 @@ postsResolver :: forall source.
   }
   -> Aff (Array { id :: String})
 postsResolver { args: { limit }} =
-  pure $ (\n -> { id: show n <> "_posts" }) <$> range 0 limit
+  pure $ (\n -> { id: show n <> "_posts" }) <$> range 1 limit
 
 commentsResolver :: forall source.
   { source :: source
@@ -120,7 +120,7 @@ commentsResolver :: forall source.
   }
   -> Aff (Array { id :: String})
 commentsResolver { args: { limit }} =
-  pure $ (\n -> { id: show n <> "_comments"}) <$> range 0 limit
+  pure $ (\n -> { id: show n <> "_comments"}) <$> range 1 limit
 
 query :: GraphQLRootType Query Unit
 query =

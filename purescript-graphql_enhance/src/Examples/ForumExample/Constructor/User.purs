@@ -1,5 +1,6 @@
 module Examples.ForumExample.Constructor.User where
 
+import Data.Array (range)
 import Data.Maybe (Maybe(..))
 import Data.Nullable (Nullable)
 import Effect.Aff (Aff)
@@ -11,18 +12,34 @@ import Type.Proxy (Proxy (..))
 
 userConstructor ::
   { comments ::
-      { source :: { id :: String}
-      , args :: { limit :: Int}
+      { source :: { id :: String
+                  }
+      , args :: { limit :: Int
+                }
       }
-      -> Aff (Array { id :: String})
-  , id :: Maybe
-            ({ source :: { id :: String}}
-            -> Aff String
-            )
-  , posts :: { source :: { id :: String}
-            , args :: { date :: String}
-            }
-            -> Aff (Array { id :: String})
+      -> Aff
+          ( Array
+              { id :: String
+              }
+          )
+  , id ::
+      Maybe
+        ( { source :: { id :: String
+                      }
+          }
+          -> Aff String
+        )
+  , posts ::
+      { source :: { id :: String
+                  }
+      , args :: { date :: String
+                }
+      }
+      -> Aff
+          ( Array
+              { id :: String
+              }
+          )
   }
   ->  { "Comment" :: Unit -> Nullable (GraphQLType (Maybe Comment))
       , "Post" :: Unit -> Nullable (GraphQLType (Maybe Post))
@@ -32,6 +49,34 @@ userConstructor =
   toObject
   (Proxy :: Proxy User)
 
+commentsResolver ::
+  { source :: { id :: String
+              }
+  , args :: { limit :: Int
+            }
+  }
+  -> Aff
+      ( Array
+        { id :: String
+        }
+      )
+commentsResolver { source: { id }, args: { limit }} =
+  pure $ (\n -> { id: id <> "_comments_" <> show n}) <$> range 1 limit
+
+postsResolver ::
+  { source :: { id :: String
+              }
+  , args :: { date :: String
+            }
+  }
+  -> Aff
+      ( Array
+        { id :: String
+        }
+      )
+postsResolver { source: { id }, args: { date }} =
+  pure [ { id: id <> "_posts" } ]
+
 user ::
   { "Comment" :: Unit -> Nullable (GraphQLType (Maybe Comment))
   , "Post" :: Unit -> Nullable (GraphQLType (Maybe Post))
@@ -40,6 +85,6 @@ user ::
 user =
   userConstructor
   { id: Nothing
-  , posts: \({ source: { id }, args: { date }}) -> pure [ { id: id <> "_posts" } ]
-  , comments: \({source: {id}, args: { limit }}) -> pure [ { id: id <> "_comments" } ]
+  , posts: postsResolver
+  , comments: commentsResolver
   }

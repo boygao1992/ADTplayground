@@ -469,9 +469,37 @@ schema = G.schema query
 ```
 which is ready to use in GraphQL parser (`GraphQL.Type.Internal (graphql)`)
 
-## 6. GraphQL Server
+## 6. GraphQL Demo Server
 
 `test/Main.purs`
+
+`node dist/app` to try out, endpoint at `http://localhost:8080/graphql`
+
+able to handle recursive queries like the following
+```
+query testQuery {
+  posts(limit: 2) {
+    id
+    author {
+      id
+      comments (limit: 3){
+        id
+        author {
+          id
+          posts (date: "2077-01-01") {
+            id
+            author {
+              id
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+restriction on query depth can be enforced by stateful `Context`
 
 # Value without type annotation can be ambiguous at type-level
 

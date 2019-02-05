@@ -10,31 +10,53 @@ import GraphQL.Type.Internal (GraphQLType)
 import GraphQL.Type.Internal.ToObject (toObject)
 import Type.Proxy (Proxy(..))
 
-commentConstructor :: { author :: { source :: { id :: String
-                        }
+commentConstructor ::
+  { author ::
+      { source :: { id :: String
+                  }
+      }
+      -> Aff
+            { id :: String
             }
-            -> Aff
-                 { id :: String
-                 }
-, id :: Maybe
-          ({ source :: { id :: String
-                       }
-           }
-           -> Aff String
-          )
-, post :: { source :: { id :: String
+  , id ::
+      Maybe
+        ( { source :: { id :: String
                       }
           }
-          -> Aff
-               { id :: String
-               }
-}
--> { "Post" :: Unit -> Nullable (GraphQLType (Maybe Post))
-   , "User" :: Unit -> Nullable (GraphQLType (Maybe User))
-   }
-   -> GraphQLType (Maybe Comment)
+          -> Aff String
+        )
+  , post ::
+      { source :: { id :: String
+                  }
+      }
+      -> Aff
+          { id :: String
+          }
+  }
+  ->  { "Post" :: Unit -> Nullable (GraphQLType (Maybe Post))
+      , "User" :: Unit -> Nullable (GraphQLType (Maybe User))
+      }
+  -> GraphQLType (Maybe Comment)
 commentConstructor =
   toObject (Proxy :: Proxy Comment)
+
+postResolver ::
+  { source :: { id :: String
+              }
+  }
+  -> Aff
+      { id :: String
+      }
+postResolver { source: { id } } = pure { id: id <> "_post" }
+
+authorResolver ::
+  { source :: { id :: String
+              }
+  }
+  -> Aff
+      { id :: String
+      }
+authorResolver { source: { id } } = pure { id: id <> "_author" }
 
 comment ::
   { "Post" :: Unit -> Nullable (GraphQLType (Maybe Post))
@@ -44,6 +66,6 @@ comment ::
 comment =
   commentConstructor
   { id: Nothing
-  , post: \({ source: {id}}) -> pure { id: id <> "_post" }
-  , author: \({ source: {id}}) -> pure { id: id <> "_author" }
+  , post: postResolver
+  , author: authorResolver
   }

@@ -23,7 +23,8 @@
     "purescript-record": "^1.0.0",
     "purescript-unsafe-coerce": "^4.0.0",
     "purescript-argonaut-core": "^4.0.1",
-    "purescript-argonaut": "^5.0.0"
+    "purescript-argonaut": "^5.0.0",
+    "purescript-httpure": "^0.7.1"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
