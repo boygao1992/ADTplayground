@@ -1,4 +1,4 @@
-module MissingDependencies where
+module Deprecated.MissingDependencies where
 
 import Prelude
 

@@ -1,4 +1,4 @@
-module GraphQL.TypeToField where
+module Deprecated.TypeToField where
 
 
 -- NOTE
