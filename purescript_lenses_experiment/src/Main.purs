@@ -3,6 +3,7 @@ module Main where
 import Data.Lens (Lens, lens, view, over, set)
 import Data.Lens.At (at)
 import Data.Lens.Common (_1, _2)
+import Data.Lens.Traversal (traversed)
 import Data.Map as Map
 import Data.Set as Set
 import Data.Maybe (Maybe (..))
@@ -11,6 +12,7 @@ import Data.Tuple.Nested (Tuple4, tuple4)
 import Effect (Effect)
 import Effect.Console (log, logShow)
 import Prelude
+import Critter4Us.Model as C4
 
 _action :: forall a b r. Lens { action :: a | r } { action :: b | r } a b
 _action = lens _.action (_ { action = _ })
@@ -35,3 +37,9 @@ main = do
 
   logShow $ view (at 1) $ Set.fromFoldable [1, 2, 3]
   logShow $ view (at 0) $ Set.fromFoldable [1, 2, 3]
+
+  logShow $ over traversed (_ + 1) [0, 1, 2]
+
+  logShow $ C4.initialModel
+  logShow $ C4.addAnimal 0 "wenbo" $ C4.initialModel
+  logShow $ C4.addAnimalTag 0 "robot" $ C4.addAnimal 0 "wenbo" $ C4.initialModel
