@@ -1,5 +1,5 @@
 {
-  "name": "purescript_lenses",
+  "name": "purescript_lenses_experiment",
   "ignore": [
     "**/.*",
     "node_modules",
