@@ -11,7 +11,9 @@
     "purescript-console": "^4.2.0",
     "purescript-effect": "^2.0.0",
     "purescript-profunctor-lenses": "^5.0.0",
-    "purescript-strings": "^4.0.1"
+    "purescript-strings": "^4.0.1",
+    "purescript-colors": "^5.0.0",
+    "purescript-generics-rep": "^6.1.1"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
