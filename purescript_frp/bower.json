@@ -11,7 +11,9 @@
     "purescript-console": "^4.2.0",
     "purescript-effect": "^2.0.1",
     "purescript-tuples": "^5.1.0",
-    "purescript-arrays": "^5.2.0"
+    "purescript-arrays": "^5.2.0",
+    "purescript-leibniz": "^5.0.0",
+    "purescript-exists": "^4.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
