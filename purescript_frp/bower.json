@@ -15,7 +15,9 @@
     "purescript-leibniz": "^5.0.0",
     "purescript-exists": "^4.0.0",
     "purescript-unsafe-coerce": "^4.0.0",
-    "purescript-profunctor": "^4.0.0"
+    "purescript-profunctor": "^4.0.0",
+    "purescript-tailrec": "^4.0.0",
+    "purescript-refs": "^4.1.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
