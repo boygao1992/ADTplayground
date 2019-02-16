@@ -2,7 +2,7 @@ module FRP.TimeFlies.SignalFucntions where
 
 import FRP.TimeFlies.SignalVectors
 
-foreign import kind Status
-foreign import data Initialized :: Status
-foreign import data NonInitialized :: Status
+foreign import kind Initialization
+foreign import data Initialized :: Initialization
+foreign import data NonInitialized :: Initialization
 

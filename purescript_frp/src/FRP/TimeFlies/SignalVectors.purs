@@ -1,6 +1,8 @@
 module FRP.TimeFlies.SignalVectors where
 
-import Data.Exists (Exists, mkExists)
+import Data.Exists (Exists, mkExists, runExists)
+import Data.Tuple (Tuple(..))
+import Unsafe.Coerce (unsafeCoerce)
 
 foreign import kind SV
 foreign import data Empty :: SV
@@ -23,18 +25,25 @@ data Sample a svproxy
   | SVSampleEmpty
   | SVSampleBoth (Exists (Sample a)) (Exists (Sample a))
 
-svSample :: forall a. a -> Sample a (SVProxy (Signal a))
-svSample = SVSample
+sample :: forall a. a -> Sample a (SVProxy (Signal a))
+sample = SVSample
 
-svSampleEvent :: forall a. Sample a (SVProxy (Event a))
-svSampleEvent = SVSampleEvent
+sampleEvt :: forall a. Sample a (SVProxy (Event a))
+sampleEvt = SVSampleEvent
 
-svSampleEmpty :: forall a. Sample a (SVProxy Empty)
-svSampleEmpty = SVSampleEmpty
+sampleNothing :: forall a. Sample a (SVProxy Empty)
+sampleNothing = SVSampleEmpty
 
-svSampleBoth
+combineSamples
   :: forall a svLeft svRight
    . Sample a (SVProxy svLeft)
   -> Sample a (SVProxy svRight)
   -> Sample a (SVProxy (Append svLeft svRight))
-svSampleBoth l r = SVSampleBoth (mkExists l) (mkExists r)
+combineSamples l r = SVSampleBoth (mkExists l) (mkExists r)
+
+-- splitSamples
+--   :: forall a svLeft svRight
+--    . Sample a (SVProxy (Append svLeft svRight))
+--   -> Tuple (Sample a (SVProxy svLeft)) (Sample a (SVProxy svRight))
+-- splitSamples (SVSampleBoth l r) =
+--   Tuple (runExists unsafeCoerce l) (runExists unsafeCoerce r)
