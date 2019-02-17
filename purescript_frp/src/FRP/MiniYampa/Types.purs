@@ -4,7 +4,7 @@ import Prelude
 
 import Control.Monad.Rec.Class (Step (..), tailRecM3)
 import Data.Maybe (Maybe (..), fromMaybe)
-import Data.Profunctor (class Profunctor)
+import Data.Profunctor (class Profunctor, arr, lcmap, rmap)
 import Data.Profunctor.Strong (class Strong)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
@@ -53,6 +53,14 @@ instance profunctorSF :: Profunctor SF where
           t = g b
         in
           { sf: pst, output: t }
+
+rmap' :: forall a b c. SF a b -> (b -> c) -> SF a c
+rmap' = flap rmap
+infixr 1 rmap' as >>^
+
+lcmap' :: forall a b c. (a -> b) -> SF b c -> SF a c
+lcmap' = lcmap
+infixr 1 lcmap' as ^>>
 
 instance strongSF :: Strong SF where
   first :: forall a b c. SF a b -> SF (Tuple a c) (Tuple b c)
@@ -139,6 +147,9 @@ reactimate init sense actuate (SF sf0) = do
             pure $ Loop { a: r2.sf, b: a', c: r2.output }
 
 -- | General signal functions
+constant :: forall a b. b -> SF a b
+constant = arr <<< const
+
 edge :: SF Boolean (Event Unit)
 edge = SF (b2e true)
   where
