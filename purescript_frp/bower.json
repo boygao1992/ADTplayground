@@ -17,7 +17,12 @@
     "purescript-unsafe-coerce": "^4.0.0",
     "purescript-profunctor": "^4.0.0",
     "purescript-tailrec": "^4.0.0",
-    "purescript-refs": "^4.1.0"
+    "purescript-refs": "^4.1.0",
+    "purescript-transformers": "^4.2.0",
+    "purescript-filterable": "^3.0.1",
+    "purescript-partial": "^2.0.1",
+    "purescript-st": "^4.0.0",
+    "purescript-unsafe-reference": "^3.0.1"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
