@@ -36,13 +36,13 @@ var_dump((object) new class {}); // object(class@anonymous)#1 (0) {} NOTE empty 
 // TODO missing `resource` type
 
 // NOTE gettype to inspect value's type
-echo gettype(NULL); // NULL
-echo gettype(true); // boolean
-echo gettype(0); // integer
-echo gettype(0.0); // double
-echo gettype(""); // string
-echo gettype([]); // array
-echo gettype(new stdClass); // object
+echo gettype(NULL) . "\n"; // NULL
+echo gettype(true) . "\n"; // boolean
+echo gettype(0) . "\n"; // integer
+echo gettype(0.0) . "\n"; // double
+echo gettype("") . "\n"; // string
+echo gettype([]) . "\n"; // array
+echo gettype(new stdClass) . "\n"; // object
 // TODO missing `resource` type
 
 /* empty
@@ -79,6 +79,7 @@ function hello ($name){
 }
 hello("world");
 call_user_func("hello", "world2"); // NOTE call by name
+
 
 // function object: objects implementing __invoke method can be called as functions
 class Hello {
@@ -211,3 +212,17 @@ echo $sum, "\n";
 foreach($arr3 as $key => $value) {
     echo $key, " : ", $value, "\n";
 }
+
+$_hello = "Hello";
+$hello = new $_hello; // HACK able to instantiate class directly by its name
+$hello("World");
+call_user_func($hello, "World 2");
+
+$callback = function ($a) {
+    return $a * 2;
+};
+$callback_refFn = new ReflectionFunction($callback);
+var_dump($callback_refFn->isClosure() === true);
+var_dump(is_callable($callback));
+
+echo $callback(1,2); // NOTE surplus arguments will be ignored by default

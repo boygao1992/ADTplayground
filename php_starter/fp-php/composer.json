@@ -1,0 +1,24 @@
+{
+  "name": "spacemonkey/fp-php",
+  "description": "functional programming in PHP",
+  "type": "library",
+  "require": {
+      "php": ">=7.0.0"
+  },
+  "require-dev": {
+      "phpunit/phpunit": "6.*"
+  },
+  "license": "MIT",
+  "authors": [
+      {
+          "name": "boygao1992",
+          "email": "wg2313@columbia.edu"
+      }
+  ],
+  "autoload": {
+    "psr-4": { "FPPHP\\": "src/"}
+  },
+  "autoload-dev": {
+    "psr-4": { "FPPHP\\Tests\\": "tests/"}
+  }
+}
