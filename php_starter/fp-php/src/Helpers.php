@@ -7,7 +7,7 @@ use FPPHP\Predicates;
 
 class Helpers
 {
-    private static function curry(callable $fn): callable
+    public static function curry(callable $fn): callable
     {
         $refl = new ReflectionFunction($fn);
         $num_of_args = $refl->getNumberOfParameters();
@@ -24,5 +24,13 @@ class Helpers
                     };
             };
         return $apply_curry([]);
+    }
+
+    // Category p => compose :: p b c -> p a b -> p a c
+    public static function compose(callable $a, callable $b): callable
+    {
+        return function ($x) {
+            return $b($a($x));
+        };
     }
 }
