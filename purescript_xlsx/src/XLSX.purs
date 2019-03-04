@@ -1,4 +1,4 @@
-module Utils.XLSX where
+module XLSX where
 
 import Prelude
 
