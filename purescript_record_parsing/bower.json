@@ -1,0 +1,24 @@
+{
+  "name": "purescript_record_parsing",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.1.0",
+    "purescript-console": "^4.2.0",
+    "purescript-effect": "^2.0.1",
+    "purescript-typelevel-prelude": "^4.0.0",
+    "purescript-foldable-traversable": "^4.1.1",
+    "purescript-either": "^4.1.1",
+    "purescript-record": "^2.0.0",
+    "purescript-profunctor-lenses": "^6.0.0",
+    "purescript-integers": "^4.0.0",
+    "purescript-numbers": "^6.0.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^4.0.0"
+  }
+}
