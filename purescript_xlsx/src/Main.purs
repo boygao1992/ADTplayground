@@ -3,7 +3,8 @@ module Main where
 import Prelude
 
 import Data.Foldable (for_)
-import Data.List as List
+import Data.Traversable (for)
+import Data.Lens.Index.Recordable (toRecord)
 import Data.Map as Map
 import Effect (Effect)
 import Effect.Console (logShow)
@@ -12,7 +13,6 @@ import Node.FS.Sync (readTextFile) as FS
 import Text.Parsing.CSV (defaultParsers)
 import Text.Parsing.Parser (runParser)
 import XLSX (toCSV)
-
 
 -- data ColumnType
 --   = AttributeColumn
@@ -25,26 +25,28 @@ import XLSX (toCSV)
 --   | NumberAttribute
 --   | StringAttribute
 
--- type TableSchema =
---   { "SKU#" :: String
---   , "Product Name" :: String
---   , "EAN" :: String
---   -- , "Duty" :: Int
---   }
+type TableSchema =
+  { "SKU#" :: String
+  , "Product Name" :: String
+  , "EAN" :: String
+  , "Duty" :: Int
+  }
 
 main :: Effect Unit
 main = do
   xlsx <- FS.readTextFile Base64 inputFilePath
   eCSV <- toCSV xlsx
 
+  -- csv :: Map String String
   for_ eCSV \csv -> do
-    for_ (Map.lookup tableName csv) \table -> do
-      -- NOTE type Table = List (List (Tuple String String))
-      -- parsed :: Table
-      for_ (runParser table defaultParsers.fileHeaded) \parsed -> do
-        logShow $ List.head parsed
+    -- csv_table :: String
+    for_ (Map.lookup tableName csv) \csv_table -> do
+      -- table :: List (Map String String)
+      for_ (runParser csv_table defaultParsers.fileHeaded) \table -> do
+        -- row :: Map String String
+        for table \row -> do
+          logShow $ toRecord row :: TableSchema
     where
       inputFilePath = "./source/product-feed.xlsx"
       tableName = "Sheet1"
-      columnName = "SKU#"
 

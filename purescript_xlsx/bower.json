@@ -19,13 +19,13 @@
     "purescript-csv": "^3.0.0",
     "purescript-foldable-traversable": "^4.1.1",
     "purescript-tuples": "^5.1.0",
-    "purescript-argonaut-core": "^4.0.1",
-    "purescript-argonaut-codecs": "^5.1.3",
     "purescript-foreign": "^5.0.0",
-    "purescript-foreign-generic": "^8.1.0",
     "purescript-transformers": "^4.2.0",
     "purescript-exceptions": "^4.0.0",
-    "purescript-arrays": "^5.2.0"
+    "purescript-arrays": "^5.2.0",
+    "purescript-profunctor-lenses": "^6.0.0",
+    "purescript-integers": "^4.0.0",
+    "purescript-numbers": "^6.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
