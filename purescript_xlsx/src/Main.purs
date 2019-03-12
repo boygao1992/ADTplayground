@@ -42,7 +42,8 @@ main = do
     -- csv_table :: String
     for_ (Map.lookup tableName csv) \csv_table -> do
       -- table :: List (Map String String)
-      for_ (runParser csv_table defaultParsers.fileHeaded) \table -> do
+      -- table :: List (List (Tuple String String))
+      for_ (runParser csv_table defaultParsers.file) \table -> do
         -- row :: Map String String
         for table \row -> do
           logShow $ toRecord row :: TableSchema

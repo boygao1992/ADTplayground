@@ -1,9 +1,13 @@
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS -Wall #-}
 
 module Main where
+
+import qualified Control.Monad.ST as ST
+import qualified Data.STRef as STRef
 
 data Tree a
   = Empty
@@ -111,4 +115,12 @@ topMost zipper = do
 main :: IO ()
 main = do
   putStrLn "hello world"
+
+  let x = ST.runST
+          ( do
+              ref <- STRef.newSTRef (0 :: Integer)
+              STRef.modifySTRef ref (+ 1)
+              STRef.readSTRef ref
+          )
+  putStrLn $ show x
 
