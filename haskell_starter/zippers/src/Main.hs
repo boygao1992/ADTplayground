@@ -2,12 +2,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# OPTIONS -Wall #-}
 
 module Main where
 
 import qualified Control.Monad.ST as ST
 import qualified Data.STRef as STRef
+
+import qualified Data.List as List
+import Control.Monad.State.Strict
 
 data Tree a
   = Empty
@@ -112,6 +116,24 @@ topMost zipper = do
 --     )
 --   )
 
+tree :: Tree Int
+tree = Node 0
+       ( Node 1
+           Empty
+           (Node 3 Empty Empty)
+       )
+       ( Node 2
+           (Node 4 Empty Empty)
+           (Node 5 Empty Empty)
+       )
+
+-- TODO BFS
+-- normalize =
+-- Node x l r -> State { result :: [x], queue :: [l, r] }
+-- Empty -> State { result :: [], queue :: [] }
+-- foldMap normalize queue :: State a
+
+
 main :: IO ()
 main = do
   putStrLn "hello world"
@@ -123,4 +145,6 @@ main = do
               STRef.readSTRef ref
           )
   putStrLn $ show x
+
+  putStrLn $ show tree
 

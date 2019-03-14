@@ -4,7 +4,7 @@ import Prelude
 
 import Data.Lens (preview)
 import Data.Lens.Index (class Index, ix)
-import Data.Maybe (Maybe, maybe)
+import Data.Maybe (Maybe(..), maybe)
 import Data.String.Read (class Read, class Empty, read, fill, empty)
 import Prim.Row as Row
 import Prim.RowList (kind RowList)
@@ -43,8 +43,8 @@ instance recordableListNil ::
     toRecordList _ _ = identity
 
 instance recordableListConsOptional ::
-  ( Symbol.IsSymbol name
-  , Index m String String
+  ( Index m String (Maybe String)
+  , Symbol.IsSymbol name
   , Read typ
   , Row.Cons name (Maybe typ) restTo to
   , Row.Lacks name restTo
@@ -54,8 +54,9 @@ instance recordableListConsOptional ::
     toRecordList _ t =
           ( Builder.insert
               (SProxy :: SProxy name)
-              ( read
-                =<< preview (ix (Symbol.reflectSymbol (SProxy :: SProxy name))) t
+              ( case preview (ix (Symbol.reflectSymbol (SProxy :: SProxy name))) t of
+                   Just str -> str >>= read
+                   Nothing -> Nothing
               )
           )
       <<< ( toRecordList
@@ -63,8 +64,8 @@ instance recordableListConsOptional ::
               t
           )
 else instance readableListConsRequired ::
-  ( Symbol.IsSymbol name
-  , Index m String String
+  ( Index m String (Maybe String)
+  , Symbol.IsSymbol name
   , Read typ
   , Empty typ
   , Row.Cons name typ restTo to
@@ -75,7 +76,7 @@ else instance readableListConsRequired ::
     toRecordList _ t =
           ( Builder.insert
               (SProxy :: SProxy name)
-              ( maybe empty fill
+              ( maybe empty (maybe empty fill)
                 $ preview (ix (Symbol.reflectSymbol (SProxy :: SProxy name))) t
               )
           )
