@@ -24,6 +24,8 @@ export default class App extends React.Component {
   }
 
   componentDidMount() {
+    const data = window.mocked_data
+    console.log(data)
     this.setState(state => ({...state, data: randomData(10) }))
   }
 
