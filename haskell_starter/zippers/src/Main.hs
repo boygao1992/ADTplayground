@@ -11,7 +11,9 @@ import qualified Control.Monad.ST as ST
 import qualified Data.STRef as STRef
 
 import qualified Data.List as List
-import Control.Monad.State.Strict
+-- import Control.Monad.State.Strict
+import Control.Category ((<<<))
+import Data.Maybe (mapMaybe)
 
 data Tree a
   = Empty
@@ -133,6 +135,34 @@ tree = Node 0
 -- Empty -> State { result :: [], queue :: [] }
 -- foldMap normalize queue :: State a
 
+preOrderDFS :: forall a. Tree a -> [a]
+preOrderDFS Empty = []
+preOrderDFS (Node x l r) = [x] ++ preOrderDFS l ++ preOrderDFS r
+
+inOrderDFS :: forall a. Tree a -> [a]
+inOrderDFS Empty = []
+inOrderDFS (Node x l r) = inOrderDFS l ++ [x] ++ inOrderDFS r
+
+postOrderDFS :: forall a. Tree a -> [a]
+postOrderDFS Empty = []
+postOrderDFS (Node x l r) = postOrderDFS l ++ postOrderDFS r ++ [x]
+
+-- NOTE CoRecursion
+bfs :: forall a. Tree a -> [a]
+bfs = go <<< pure
+  where
+    go :: [Tree a] -> [a]
+    go [] = []
+    go nodes = mapMaybe nodeValue nodes ++ concatMap nodeChildren nodes
+
+    nodeValue :: Tree a -> Maybe a
+    nodeValue Empty = Nothing
+    nodeValue (Node x _ _) = Just x
+
+    nodeChildren :: Tree a -> [a]
+    nodeChildren Empty = []
+    nodeChildren (Node _ l r) = mapMaybe nodeValue [l, r] ++ nodeChildren l ++ nodeChildren r
+
 
 main :: IO ()
 main = do
@@ -144,7 +174,12 @@ main = do
               STRef.modifySTRef ref (+ 1)
               STRef.readSTRef ref
           )
-  putStrLn $ show x
+  print x
 
-  putStrLn $ show tree
+  print tree
+
+  print $ preOrderDFS tree
+  print $ inOrderDFS tree
+  print $ postOrderDFS tree
+  print $ bfs tree
 
