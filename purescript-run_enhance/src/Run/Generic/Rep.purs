@@ -48,6 +48,10 @@ NOTE Patterns
 
 maybe enforce nested products to be a single Record?
 
+[Comonads as Spaces](https://blog.functorial.com/posts/2016-08-07-Comonads-As-Spaces.html)
+> Functors and Pairings
+> Pairings of Monads and Comonads
+
 -}
 
 class ToOperators (queryF :: Type -> Type) (o :: # Type) | queryF -> o
