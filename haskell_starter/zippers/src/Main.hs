@@ -1,19 +1,34 @@
-{-# LANGUAGE ExplicitForAll #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# OPTIONS -Wall #-}
+{-# LANGUAGE
+  BlockArguments
+, DeriveDataTypeable
+, DeriveFoldable
+, DeriveFunctor
+, DeriveGeneric
+, DeriveTraversable
+, ExplicitForAll
+, FunctionalDependencies
+, FlexibleInstances
+, FlexibleContexts
+, GeneralizedNewtypeDeriving
+, MultiParamTypeClasses
+, NamedFieldPuns
+, NoImplicitPrelude
+, RankNTypes
+, StandaloneDeriving
+, ScopedTypeVariables
+#-}
 
 module Main where
 
 import qualified Control.Monad.ST as ST
 import qualified Data.STRef as STRef
-
 import qualified Data.List as List
 -- import Control.Monad.State.Strict
 import Control.Category ((<<<))
 import Data.Maybe (mapMaybe)
+import Prelude
+import Data.Foldable (foldl')
 
 data Tree a
   = Empty
@@ -163,6 +178,119 @@ bfs = go <<< pure
     nodeChildren Empty = []
     nodeChildren (Node _ l r) = mapMaybe nodeValue [l, r] ++ nodeChildren l ++ nodeChildren r
 
+-- | Matrix
+type Vector = [Double]
+type Matrix = [Vector]
+
+matrix0 :: Matrix
+matrix0 = [ [1.0, 2.0]
+          , [3.0, 4.0]
+          ]
+
+matrix1 :: Matrix
+matrix1 = [ [1.0, 0.0]
+          , [0.0, 1.0]
+          ]
+
+dot :: Vector -> Vector -> Maybe Double
+dot [] [] = Just 0.0
+dot [] _ = Nothing
+dot _ [] = Nothing
+dot (x: xs) (y: ys) = (x * y +) <$> dot xs ys
+
+fromRowVec :: Vector -> Matrix
+fromRowVec = pure
+
+fromColVec :: Vector -> Matrix
+fromColVec [] = []
+fromColVec (x:xs) = [x] : fromColVec xs
+
+transp :: Matrix -> Maybe Matrix
+transp [] = Just []
+transp (v : vs) = do
+  let m1 = fromColVec v
+  m2 <- transp vs
+  if m2 == []
+    then pure m1
+    else pure $ zipWith (++) m1 m2
+
+matrixMul :: Matrix -> Matrix -> Maybe Double
+matrixMul [] [] = Just 0.0
+matrixMul [] _ = Nothing
+matrixMul _ [] = Nothing
+matrixMul (x:xs) (y:ys) = pure (+) <*> x `dot` y <*> matrixMul xs ys
+
+-- | Mulitplicative
+class Semiring a where
+  zero :: a
+  add :: a -> a -> a
+  one :: a
+  mul :: a -> a -> a
+
+instance Semiring Double where
+  zero = 0.0
+  one = 1.0
+  add = (+)
+  mul = (*)
+
+class Semiring a => Ring a where
+  neg :: a -> a
+
+newtype Multiplicative a = Multiplicative a
+instance Semiring a => Semigroup (Multiplicative a) where
+  (Multiplicative x) <> (Multiplicative y) = Multiplicative $ x `mul` y
+instance Semiring a => Monoid (Multiplicative a) where
+  mempty = Multiplicative one
+
+-- | Heap
+data Heap a
+  = EmptyHP
+  | HP a Int (Heap a) (Heap a)
+  deriving (Show)
+
+emptyHeap :: forall a. Heap a
+emptyHeap = EmptyHP
+
+singletonHeap :: forall a. a -> Heap a
+singletonHeap x = HP x 1 EmptyHP EmptyHP
+
+nullHeap :: forall a. Heap a -> Bool
+nullHeap EmptyHP = True
+nullHeap _ = False
+
+findHeap :: forall a. Heap a -> Maybe a
+findHeap (HP x _ _ _ ) = Just x
+findHeap _ = Nothing
+
+rankHeap :: forall a. Heap a -> Int
+rankHeap EmptyHP = 0
+rankHeap (HP _ r _ _) = r
+
+makeHP :: forall a. a -> Heap a -> Heap a -> Heap a
+makeHP x l r =
+  let r1 = rankHeap l
+      r2 = rankHeap r
+  in
+    if r1 >= r2
+    then HP x (r2 + 1) l r
+    else HP x (r1 + 1) r l
+
+mergeHeap :: forall a. Ord a => Heap a -> Heap a -> Heap a
+mergeHeap l EmptyHP = l
+mergeHeap EmptyHP r = r
+mergeHeap l@(HP x _ ll lr) r@(HP y _ rl rr)
+  | x <= y = makeHP x ll (mergeHeap lr r)
+  | otherwise = makeHP y rl (mergeHeap l rr)
+
+insertHeap :: forall a. Ord a => Heap a -> a -> Heap a
+insertHeap h x = mergeHeap (singletonHeap x) h
+
+popHeap :: forall a. Ord a => Heap a -> Maybe (a, Heap a)
+popHeap EmptyHP = Nothing
+popHeap (HP x _ l r) = Just $ (x, mergeHeap l r)
+
+fromFoldable :: forall a f. (Ord a, Foldable f) => f a -> Heap a
+fromFoldable = foldl' insertHeap emptyHeap -- NOTE strict
 
 main :: IO ()
 main = do
@@ -183,3 +311,7 @@ main = do
   print $ postOrderDFS tree
   print $ bfs tree
 
+  print $ matrix0
+  print $ transp matrix0
+
+  print $ matrixMul matrix0 matrix1
