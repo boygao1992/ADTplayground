@@ -29,6 +29,8 @@ import Control.Category ((<<<))
 import Data.Maybe (mapMaybe)
 import Prelude
 import Data.Foldable (foldl')
+import qualified Data.Map.Strict as Map
+import qualified Data.Sequence as Seq
 
 data Tree a
   = Empty
@@ -178,6 +180,47 @@ bfs = go <<< pure
     nodeChildren Empty = []
     nodeChildren (Node _ l r) = mapMaybe nodeValue [l, r] ++ nodeChildren l ++ nodeChildren r
 
+bfs2 :: forall a. Tree a -> Map.Map Int [a]
+bfs2 root = vertical Map.empty [root]
+  where
+
+    vertical :: Map.Map Int [a] -> [Tree a] -> Map.Map Int [a]
+    vertical dict [] = dict
+    vertical dict nodes =
+      let
+        l = length nodes
+        values = mapMaybe nodeValue nodes
+        branches = concatMap nodeBranches nodes
+      in
+        vertical
+          ( Seq.foldlWithIndex
+              (\acc idx x ->
+                 let i =
+                   if -- TODO
+                 in
+                  if Map.member i acc
+                  then
+                    Map.update (Just <<< (x :)) i acc
+                  else
+                    Map.insert i [x] acc
+              )
+              dict
+              (Seq.fromList values)
+          )
+          branches
+
+    nodeValue :: Tree a -> Maybe a
+    nodeValue Empty = Nothing
+    nodeValue (Node x _ _) = Just x
+
+    nodeBranches :: Tree a -> [Tree a]
+    nodeBranches Empty = []
+    nodeBranches (Node _ Empty Empty) = []
+    nodeBranches (Node _ l Empty) = [l]
+    nodeBranches (Node _ Empty r) = [r]
+    nodeBranches (Node _ l r) = [l, r]
+
+
 -- | Matrix
 type Vector = [Double]
 type Matrix = [Vector]
@@ -315,3 +358,5 @@ main = do
   print $ transp matrix0
 
   print $ matrixMul matrix0 matrix1
+
+  print $ bfs2 tree

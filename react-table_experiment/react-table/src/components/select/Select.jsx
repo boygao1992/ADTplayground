@@ -1,7 +1,25 @@
 import React from 'react'
 import * as R from 'ramda'
 import SelectItem from 'react-select'
+import 'whatwg-fetch'
 
+/* API */
+
+/* Utils */
+const getJson = url =>
+  fetch(url).then( response => response.json() )
+
+const postJson = ( url, body ) =>
+  fetch( url
+    , { method: 'POST'
+      , headers:
+           { 'Accept': 'application/json'
+             , 'Content-Type': 'application/json'
+           }
+      , body: JSON.stringify(body)
+    }
+  )
+  .then( response => response.json() )
 
 /* const MODEL_ID = "id" */
 const MODEL_NAME = "name"
@@ -13,8 +31,6 @@ const A = {
   // nub :: forall a. Array a -> Array a
   nub: arr => { return R.union(arr, [])}
 }
-
-/* Lens */
 
 // foreign_getMakeName :: Array Car -> Maybe String
 const foreign_getMakeName = R.compose(R.prop(MODEL_MAKE), R.head)
@@ -50,7 +66,8 @@ const foreign_getYears = (makeId, modelName) =>
 // foreign_getTrims :: String -> String -> String -> Array Car -> Array String
 const foreign_getTrims = (makeId, modelName, year) =>
   R.compose (
-      R.map ( R.prop(MODEL_TRIM) )
+      R.filter(R.compose(R.not, R.isEmpty))
+    , R.map ( R.compose(R.trim, R.prop(MODEL_TRIM)) )
     , R.filter(
       R.allPass (
         [ R.propEq(MODEL_NAME, modelName)
@@ -74,10 +91,12 @@ const _make = R.lensProp("make")
 const _model = R.lensProp("model")
 const _year = R.lensProp("year")
 const _trim = R.lensProp("trim")
+const _submit = R.lensProp("submit")
 
 const _disabled = R.lensProp("disabled")
 const _options = R.lensProp("options")
 const _selection = R.lensProp("selection")
+const _visible = R.lensProp("visible")
 
 export default class Select extends React.Component {
   defaultState = {
@@ -85,7 +104,8 @@ export default class Select extends React.Component {
     make: { disabled: true, options: [], selection: null },
     model: { disabled: true, options: [], selection: null },
     year: { disabled: true, options: [], selection: null },
-    trim: { disabled: true, options: [], selection: null }
+    trim: { disabled: true, options: [], selection: null, visible: true },
+    submit: { disabled: false }
   }
 
   constructor(props) {
@@ -134,6 +154,7 @@ export default class Select extends React.Component {
           , R.set(R.compose(_trim, _options), [])
           , R.set(R.compose(_trim, _disabled), true)
           , R.set(R.compose(_trim, _selection), null)
+          , R.set(R.compose(_submit, _disabled), true)
         )(state)
       })
     }
@@ -157,6 +178,7 @@ export default class Select extends React.Component {
           , R.set(R.compose(_year, _disabled), false)
           , R.set(R.compose(_trim, _options), [])
           , R.set(R.compose(_trim, _disabled), true)
+          , R.set(R.compose(_submit, _disabled), true)
         )(state)
       })
     }
@@ -167,18 +189,41 @@ export default class Select extends React.Component {
       const year = selectedOption.value
 
       this.setState(state => {
-        const trim_options =
+        /* const trim_options =
+         *   R.compose(
+         *     toOptions
+         *     , foreign_getTrims(state.make.selection.value, state.model.selection.value, year)
+         *     , R.view(_foreignData)
+         *   )(state)
+         */
+
+        const trims =
           R.compose(
-            toOptions
-            , foreign_getTrims(state.make.selection.value, state.model.selection.value, year)
+              foreign_getTrims(state.make.selection.value, state.model.selection.value, year)
             , R.view(_foreignData)
           )(state)
 
-        return R.compose(
+        if (R.isEmpty(trims)) {
+          // NOTE no trim
+
+          return R.compose(
+              R.set(R.compose(_year, _selection), selectedOption)
+            , R.set(R.compose(_trim, _visible), false)
+            , R.set(R.compose(_submit, _disabled), false)
+          )(state)
+
+        } else {
+          // NOTE has trims
+
+          const trim_options = toOptions(trims)
+
+          return R.compose(
             R.set(R.compose(_year, _selection), selectedOption)
-          , R.set(R.compose(_trim, _options), trim_options)
-          , R.set(R.compose(_trim, _disabled), false)
-        )(state)
+            , R.set(R.compose(_trim, _options), trim_options)
+            , R.set(R.compose(_trim, _disabled), false)
+            , R.set(R.compose(_submit, _disabled), true)
+          )(state)
+        }
       })
     }
   }
@@ -187,10 +232,27 @@ export default class Select extends React.Component {
     if (selectedOption !== this.state.trim.selection) {
       this.setState(state => {
         return R.compose(
-          R.set(R.compose(_trim, _selection), selectedOption)
+            R.set(R.compose(_trim, _selection), selectedOption)
+          , R.set(R.compose(_submit, _disabled), false)
         )(state)
       })
     }
+  }
+
+  submit = _ => {
+    this.setState(
+      R.compose(
+          R.set(R.compose(_make, _disabled), true)
+        , R.set(R.compose(_model, _disabled), true)
+        , R.set(R.compose(_year, _disabled), true)
+        , R.set(R.compose(_trim, _disabled), true)
+      )
+    )
+
+    setTimeout(_ => {
+      window.location.assign("https://google.com")
+    }, 1000)
+
   }
 
   render () {
@@ -224,16 +286,24 @@ export default class Select extends React.Component {
               onChange={this.selectYear}
             />
           </li>
-          <li className="form__inputs__trim">
-            <h3>Vehicle Trim*</h3>
-            <SelectItem
-              options={R.view(R.compose(_trim, _options), this.state)}
-              isDisabled={R.view(R.compose(_trim, _disabled), this.state)}
-              value={R.view(R.compose(_trim, _selection), this.state)}
-              onChange={this.selectTrim}
-            />
-          </li>
+          { this.state.trim.visible &&
+            <li className="form__inputs__trim">
+              <h3>Vehicle Trim*</h3>
+              <SelectItem
+                options={R.view(R.compose(_trim, _options), this.state)}
+                isDisabled={R.view(R.compose(_trim, _disabled), this.state)}
+                value={R.view(R.compose(_trim, _selection), this.state)}
+                onChange={this.selectTrim}
+              />
+            </li>
+          }
         </ul>
+        <button
+          onClick={this.submit}
+          disabled={this.state.submit.disabled}
+        >
+          Submit
+        </button>
       </div>
     )
   }
