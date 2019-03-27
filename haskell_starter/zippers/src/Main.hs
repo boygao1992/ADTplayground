@@ -29,8 +29,11 @@ import Control.Category ((<<<))
 import Data.Maybe (mapMaybe)
 import Prelude
 import Data.Foldable (foldl')
+import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
+import Control.Monad.State (State)
+import qualified Control.Monad.State as State
 
 data Tree a
   = Empty
@@ -172,55 +175,72 @@ bfs = go <<< pure
     go [] = []
     go nodes = mapMaybe nodeValue nodes ++ concatMap nodeChildren nodes
 
-    nodeValue :: Tree a -> Maybe a
-    nodeValue Empty = Nothing
-    nodeValue (Node x _ _) = Just x
+nodeValue :: forall a. Tree a -> Maybe a
+nodeValue Empty = Nothing
+nodeValue (Node x _ _) = Just x
 
-    nodeChildren :: Tree a -> [a]
-    nodeChildren Empty = []
-    nodeChildren (Node _ l r) = mapMaybe nodeValue [l, r] ++ nodeChildren l ++ nodeChildren r
+nodeChildren :: forall a. Tree a -> [a]
+nodeChildren Empty = []
+nodeChildren (Node _ l r) = mapMaybe nodeValue [l, r] ++ nodeChildren l ++ nodeChildren r
 
-bfs2 :: forall a. Tree a -> Map.Map Int [a]
-bfs2 root = vertical Map.empty [root]
+snoc :: forall a. [a] -> a -> [a]
+xs `snoc` x = xs ++ [x]
+
+insert :: forall a. Int -> a -> Map Int [a] -> Map Int [a]
+insert n x dict =
+  if (Map.member n dict)
+  then Map.update (Just <<< (`snoc` x)) n dict
+  else Map.insert n [x] dict
+
+vertical :: forall a. Tree a -> Map Int [a]
+vertical root = go 0 root Map.empty
   where
+  go :: Int -> Tree a -> Map Int [a] -> Map Int [a]
+  go _ Empty dict = dict
+  go n (Node x l r) dict =
+    let dict' = go (n - 1) l dict
+        dict'' = insert n x dict'
+        dict''' = go (n + 1) r dict''
+    in
+      dict'''
 
-    vertical :: Map.Map Int [a] -> [Tree a] -> Map.Map Int [a]
-    vertical dict [] = dict
-    vertical dict nodes =
-      let
-        l = length nodes
-        values = mapMaybe nodeValue nodes
-        branches = concatMap nodeBranches nodes
+children :: forall a. (Int, Tree a) -> [(Int, Tree a)]
+children (n, Empty) = [(n - 1, Empty), (n + 1, Empty)]
+children (n, Node _ l r) = [(n - 1, l), (n + 1, r)]
+
+branching :: forall a. [(Int, Tree a)] -> [(Int, Tree a)]
+branching = concatMap children
+
+reducer :: forall a. ([(Int, Tree a)], Map Int [a]) -> (Int, Tree a) -> ([(Int, Tree a)], Map Int [a])
+reducer (xs, dict) (_, Empty) = (xs, dict)
+reducer (xs, dict) (n, Node x l r) = (xs ++ [(n - 1, l), (n + 1, r)], insert n x dict)
+
+level :: forall a. [(Int, Tree a)] -> Map Int [a] -> ([(Int, Tree a)], Map Int [a])
+level xs dict = foldl' reducer ([], dict) xs
+
+vertical' :: forall a. Tree a -> Map Int [a]
+vertical' root = go [(0, root)] Map.empty
+  where
+    go :: [(Int, Tree a)] -> Map Int [a] -> Map Int [a]
+    go xs dict =
+      let (xs', dict') = level xs dict
       in
-        vertical
-          ( Seq.foldlWithIndex
-              (\acc idx x ->
-                 let i =
-                   if -- TODO
-                 in
-                  if Map.member i acc
-                  then
-                    Map.update (Just <<< (x :)) i acc
-                  else
-                    Map.insert i [x] acc
-              )
-              dict
-              (Seq.fromList values)
-          )
-          branches
+        if length xs' == 0
+        then dict'
+        else go xs' dict'
 
-    nodeValue :: Tree a -> Maybe a
-    nodeValue Empty = Nothing
-    nodeValue (Node x _ _) = Just x
+{-
+           0
+     -1          1
+  -2    0     0    +2
+-3 -1 -1 +1 -1 +1 +1 +3
 
-    nodeBranches :: Tree a -> [Tree a]
-    nodeBranches Empty = []
-    nodeBranches (Node _ Empty Empty) = []
-    nodeBranches (Node _ l Empty) = [l]
-    nodeBranches (Node _ Empty r) = [r]
-    nodeBranches (Node _ l r) = [l, r]
+       0
+   0       1
+ 0   1   2   3
+0 1 2 3 4 5 6 7
 
-
+-}
 -- | Matrix
 type Vector = [Double]
 type Matrix = [Vector]
@@ -359,4 +379,6 @@ main = do
 
   print $ matrixMul matrix0 matrix1
 
-  print $ bfs2 tree
+  print $ vertical tree
+
+  print $ vertical' tree

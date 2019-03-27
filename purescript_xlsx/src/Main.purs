@@ -10,9 +10,10 @@ import Effect (Effect)
 import Effect.Console (logShow)
 import Node.Encoding (Encoding(Base64))
 import Node.FS.Sync (readTextFile) as FS
-import Text.Parsing.CSV (defaultParsers)
+import Text.Parsing.CSV.Enhance (defaultParsers')
 import Text.Parsing.Parser (runParser)
 import XLSX (toCSV)
+import Data.List as List
 
 -- data ColumnType
 --   = AttributeColumn
@@ -41,13 +42,15 @@ main = do
   for_ eCSV \csv -> do
     -- csv_table :: String
     for_ (Map.lookup tableName csv) \csv_table -> do
-      -- table :: List (Map String String)
-      -- table :: List (List (Tuple String String))
-      for_ (runParser csv_table defaultParsers.file) \table -> do
-        -- row :: Map String String
-        for table \row -> do
-          logShow $ toRecord row :: TableSchema
+      -- for_ (runParser csv_table defaultParsers.fileHeaded) \table -> do
+      --   -- row :: Map String String
+      --   for table \row -> do
+      --     logShow $ toRecord row :: TableSchema
+
+      -- table :: List (Map String (NonEmptyList String))
+      for_ (runParser csv_table defaultParsers'.fileHeadedDup) \table -> do
+        logShow $ Map.lookup "SKU#" =<< List.head table
+
     where
       inputFilePath = "./source/product-feed.xlsx"
       tableName = "Sheet1"
-
