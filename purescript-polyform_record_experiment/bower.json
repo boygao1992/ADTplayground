@@ -1,0 +1,15 @@
+{
+  "name": "record-backend",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-console": "^4.2.0",
+    "purescript-polyform": "^0.7.0",
+    "purescript-prelude": "^4.1.0",
+    "purescript-random": "^4.0.0"
+  }
+}

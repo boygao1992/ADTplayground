@@ -5,31 +5,34 @@ import Prelude
 import Color (Color)
 import Color as Color
 import Critter4Us.Model as C4
+import Data.Either (Either(..))
 import Data.Foldable (foldMap)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Lens (Lens, lens, over, set, view)
+import Data.Lens (Lens, _Left, _Right, lens, over, set, view)
 import Data.Lens.At (at)
-import Data.Lens.Common (_1, _2, _Just)
+import Data.Lens.Common (_1, _2, _Just, _Left)
 import Data.Lens.Fold (preview)
 import Data.Lens.Index (ix)
 import Data.Lens.Prism (prism', review, only, nearly, is)
+import Data.Lens.Record (prop)
 import Data.Lens.Traversal (traversed, element)
 import Data.Lens.Types (Prism')
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
-import Data.Monoid.Additive (Additive (..))
-import Data.Monoid.Endo (Endo (..))
-import Data.Monoid.Multiplicative (Multiplicative (..))
+import Data.Monoid.Additive (Additive(..))
+import Data.Monoid.Endo (Endo(..))
+import Data.Monoid.Multiplicative (Multiplicative(..))
 import Data.Newtype (ala, alaF)
 import Data.Set as Set
 import Data.String (length) as String
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (Tuple4, tuple4)
 import Effect (Effect)
-import Effect.Console (logShow)
+import Effect.Console (log, logShow)
 import Math (abs) as Math
+import Type.Data.Symbol (SProxy(..))
 
 _action :: forall a b r. Lens { action :: a | r } { action :: b | r } a b
 _action = lens _.action (_ { action = _ })
@@ -78,6 +81,9 @@ _solidFillWhite' =
       Solid color -> color == Color.white
       _ -> false
 
+_first = prop (SProxy :: SProxy "first")
+_second = prop (SProxy :: SProxy "second")
+
 main :: Effect Unit
 main = do
 
@@ -125,4 +131,6 @@ main = do
   logShow $ C4.addAnimal 0 "wenbo" $ C4.initialModel
   logShow $ C4.addAnimalTag 0 "robot" $ C4.addAnimal 0 "wenbo" $ C4.initialModel
 
-
+  log $ show $ view _Left (Right 1 :: Either String Int)
+  logShow $ is (_Left <<< _Left) (Left $ Left 1) :: Boolean
+  logShow $ preview (_first <<< _Right <<< _second <<< _Just ) { first : Right { second : Just 2 }}

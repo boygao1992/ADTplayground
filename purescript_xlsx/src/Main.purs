@@ -8,7 +8,7 @@ import Data.Lens.Index.Recordable (toRecord)
 import Data.Map as Map
 import Effect (Effect)
 import Effect.Console (logShow)
-import Node.Encoding (Encoding(Base64))
+import Node.Encoding (Encoding(..))
 import Node.FS.Sync (readTextFile) as FS
 import Text.Parsing.CSV.Enhance (defaultParsers')
 import Text.Parsing.Parser (runParser)
