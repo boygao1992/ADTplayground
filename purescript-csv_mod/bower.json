@@ -1,0 +1,28 @@
+{
+  "name": "purescript-csv",
+  "moduleType": [
+    "node"
+  ],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nwolverson/purescript-csv.git"
+  },
+  "dependencies": {
+    "purescript-arrays": "^5.0.0",
+    "purescript-ordered-collections": "^1.0.0",
+    "purescript-parsing": "^5.0.1",
+    "purescript-profunctor": "^4.0.0"
+  },
+  "devDependencies": {
+    "purescript-console": "^4.1.0",
+    "purescript-quickcheck": "^5.0.0",
+    "purescript-test-unit": "^14.0.0"
+  }
+}

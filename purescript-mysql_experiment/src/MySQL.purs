@@ -8,6 +8,9 @@ module MySQL
 , query_
 , execute
 , execute_
+, createPool
+, closePool
+, withPool
 ) where
 
 import MySQL.Connection
@@ -22,9 +25,6 @@ import MySQL.Pool
   ( PoolInfo
   , Pool
   , defaultPoolInfo
-  , createPool
-  , closePool
-  , withPool
   ) as Exports
 
 import MySQL.QueryValue
@@ -35,8 +35,10 @@ import MySQL.QueryValue
 
 import Prelude
 
-import MySQL.Connection as SQL
-import MySQL.QueryValue as SQL
+import Effect.Aff (Aff)
+import MySQL.Connection (Connection, ConnectionInfo, QueryOptions, closeConnection, createConnection, execute, queryWithOptions) as SQL
+import MySQL.Pool (Pool, PoolInfo, closePool, createPool, withPool) as SQL
+import MySQL.QueryValue (QueryValue) as SQL
 import Run (Run, AFF, EFFECT)
 import Run as Run
 import Run.Reader (READER)
@@ -134,9 +136,41 @@ execute_
   :: forall eff
      . String
     -> Run
-      ( reader :: READER SQL.Connection
-      , aff :: AFF
+        ( reader :: READER SQL.Connection
+        , aff :: AFF
+        | eff
+        )
+        Unit
+execute_ sql = execute sql []
+
+createPool
+  :: forall eff
+   . SQL.ConnectionInfo
+  -> SQL.PoolInfo
+  -> Run
+      ( effect :: EFFECT
+      | eff
+      )
+      SQL.Pool
+createPool = (Run.liftEffect <<< _) <<< SQL.createPool
+
+closePool
+  :: forall eff
+   . SQL.Pool
+   -> Run
+      ( effect :: EFFECT
       | eff
       )
       Unit
-execute_ sql = execute sql []
+closePool = Run.liftEffect <<< SQL.closePool
+
+withPool
+  :: forall a eff
+   . (SQL.Connection -> Aff a)
+  -> SQL.Pool
+  -> Run
+      ( aff :: AFF
+      | eff
+      )
+      a
+withPool = (Run.liftAff <<< _) <<< SQL.withPool
