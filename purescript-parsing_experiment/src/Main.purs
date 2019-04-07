@@ -3,6 +3,7 @@ module Main where
 import Prelude
 
 import Control.Alt ((<|>))
+import Control.Alternative (class Alternative)
 import Effect (Effect)
 import Effect.Console (logShow)
 import Text.Parsing.Parser (ParseError, ParseState(..), ParserT(..), runParser) as PS
@@ -15,6 +16,7 @@ import Control.Monad.Except.Trans (ExceptT(..), runExceptT)
 import Data.Newtype (unwrap)
 import Data.Either (Either(..))
 import Data.Tuple (Tuple(..))
+import Control.Lazy (class Lazy, defer)
 
 runParserTWithState
   :: forall m i a
@@ -39,9 +41,28 @@ alt' p1 p2 = PS.ParserT <<< ExceptT <<< StateT $
         | not c' -> runParserTWithState s p2
       _ -> pure (Tuple e s')
 
+some
+  :: forall f t a
+   . Alternative f
+   => Lazy (f (t a))
+   => Applicative t
+   => Monoid (t a)
+   => f a -> f (t a)
+some v = ((<>) <<< pure) <$> v <*> defer (\_ -> many v)
+
+many
+  :: forall f t a
+   . Alternative f
+  => Lazy (f (t a))
+  => Applicative t
+  => Monoid (t a)
+  => f a -> f (t a)
+many v = some v <|> pure mempty
+
 main :: Effect Unit
 main = do
   logShow
-      $ PS.runParser "fafafbc"
+      $ PS.runParser "bc"
       $ String.fromCharArray
-    <$> Array.some (PS.char 'a' <|> PS.char 'f')
+ -- <$> Array.many (PS.char 'a' <|> PS.char 'f')
+    <$> some (PS.char 'a' `alt'` PS.char 'f')
