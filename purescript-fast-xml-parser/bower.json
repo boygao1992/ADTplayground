@@ -10,7 +10,9 @@
     "purescript-prelude": "^4.1.0",
     "purescript-console": "^4.2.0",
     "purescript-effect": "^2.0.1",
-    "purescript-foreign": "^5.0.0"
+    "purescript-foreign": "^5.0.0",
+    "purescript-simple-json": "^5.0.0",
+    "purescript-node-fs": "^5.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"

@@ -1,8 +1,14 @@
 "use strict";
 
-var XML = require( "fast-xml-parser" );
-var jsonParser = new XML.j2xParser()
+var Parser = require( "fast-xml-parser" );
 
-exports._xml2json = XML.parse;
+var json2xmlOptions = {
+  supressEmptyNode: true
+};
+var jsonParser = new Parser.j2xParser( json2xmlOptions );
 
-exports._json2xml = jsonParser.parse;
+exports._xml2json = Parser.parse;
+
+exports._json2xml = function ( json ) {
+  return jsonParser.parse( json );
+}
