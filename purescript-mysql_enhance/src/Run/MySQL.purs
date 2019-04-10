@@ -1,6 +1,5 @@
-module MySQL
-( module Exports
-, createConnection
+module Run.MySQL
+( createConnection
 , closeConnection
 , queryWithOptions
 , queryWithOptions_
@@ -13,36 +12,15 @@ module MySQL
 , withPool
 ) where
 
-import MySQL.Connection
-  ( ConnectionInfo
-  , QueryOptions
-  , Connection
-  , defaultConnectionInfo
-  , format
-  ) as Exports
-
-import MySQL.Pool
-  ( PoolInfo
-  , Pool
-  , defaultPoolInfo
-  ) as Exports
-
-import MySQL.QueryValue
-  ( QueryValue
-  , class Queryable
-  , toQueryValue
-  ) as Exports
-
 import Prelude
 
-import Effect.Aff (Aff)
 import MySQL.Connection (Connection, ConnectionInfo, QueryOptions, closeConnection, createConnection, execute, queryWithOptions) as SQL
-import MySQL.Pool (Pool, PoolInfo, closePool, createPool, withPool) as SQL
+import MySQL.Pool (Pool, PoolInfo, closePool, createPool, getConnection, releaseConnection) as SQL
 import MySQL.QueryValue (QueryValue) as SQL
 import Run (Run, AFF, EFFECT)
 import Run as Run
 import Run.Reader (READER)
-import Run.Reader (ask) as Reader
+import Run.Reader (ask, runReader) as Reader
 import Simple.JSON (class ReadForeign)
 
 createConnection
@@ -166,11 +144,20 @@ closePool = Run.liftEffect <<< SQL.closePool
 
 withPool
   :: forall a eff
-   . (SQL.Connection -> Aff a)
-  -> SQL.Pool
+   . SQL.Pool
+  -> Run
+      ( aff :: AFF
+      , reader :: READER SQL.Connection
+      | eff
+      )
+      a
   -> Run
       ( aff :: AFF
       | eff
       )
       a
-withPool = (Run.liftAff <<< _) <<< SQL.withPool
+withPool pool r = do
+  conn <- Run.liftAff $ SQL.getConnection pool
+  result <- Reader.runReader conn r
+  Run.liftAff $ SQL.releaseConnection conn
+  pure result

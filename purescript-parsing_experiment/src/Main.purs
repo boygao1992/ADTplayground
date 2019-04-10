@@ -4,6 +4,7 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Control.Alternative (class Alternative)
+import Control.Monad.Rec.Class (class MonadRec, Step(..), tailRecM)
 import Effect (Effect)
 import Effect.Console (logShow)
 import Text.Parsing.Parser (ParseError, ParseState(..), ParserT(..), runParser) as PS
@@ -41,6 +42,7 @@ alt' p1 p2 = PS.ParserT <<< ExceptT <<< StateT $
         | not c' -> runParserTWithState s p2
       _ -> pure (Tuple e s')
 
+-- strictly > 0, if = 0 then throw
 some
   :: forall f t a
    . Alternative f
@@ -50,6 +52,7 @@ some
    => f a -> f (t a)
 some v = ((<>) <<< pure) <$> v <*> defer (\_ -> many v)
 
+-- >= 0, if = 0, provide monoidal unit as default
 many
   :: forall f t a
    . Alternative f
@@ -58,6 +61,33 @@ many
   => Monoid (t a)
   => f a -> f (t a)
 many v = some v <|> pure mempty
+
+someRec
+  :: forall f t a
+   . MonadRec f
+  => Alternative f
+  => Applicative t
+  => Monoid (t a)
+  => f a -> f (t a)
+someRec v = ((<>) <<< pure) <$> v <*> manyRec v
+
+manyRec
+  :: forall f t a
+   . MonadRec f
+  => Alternative f
+  => Applicative t
+  => Monoid (t a)
+  => f a -> f (t a)
+manyRec v = tailRecM go mempty
+  where
+    go :: t a -> f (Step (t a) (t a))
+    go acc
+      -- NOTE right append for List is expensive (O(n))
+      -- original implementation of `manyRec` for List uses left append (`Cons`, O(1)) and applies `reverse` on termination (`Done`)
+      -- NOTE both left and right append for Array is expensive (O(n)) because it makes a new copy to preserve immutability
+      -- NOTE Sequence has better concatenation performance (O(log(min(n1,n2)))
+      = (Loop <<< (acc <> _) <<< pure ) <$> v
+      <|> pure (Done acc)
 
 main :: Effect Unit
 main = do

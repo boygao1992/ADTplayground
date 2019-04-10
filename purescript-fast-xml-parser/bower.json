@@ -1,5 +1,5 @@
 {
-  "name": "purescript-mysql_experiment",
+  "name": "purescript-fast-xml-parser",
   "ignore": [
     "**/.*",
     "node_modules",
@@ -10,9 +10,7 @@
     "purescript-prelude": "^4.1.0",
     "purescript-console": "^4.2.0",
     "purescript-effect": "^2.0.1",
-    "purescript-mysql": "^2.0.1",
-    "purescript-record-format": "^1.0.0",
-    "purescript-run": "^3.0.0"
+    "purescript-foreign": "^5.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
