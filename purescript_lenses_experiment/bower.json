@@ -13,7 +13,8 @@
     "purescript-profunctor-lenses": "^5.0.0",
     "purescript-strings": "^4.0.1",
     "purescript-colors": "^5.0.0",
-    "purescript-generics-rep": "^6.1.1"
+    "purescript-generics-rep": "^6.1.1",
+    "purescript-generics-rep-optics": "^1.1.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"

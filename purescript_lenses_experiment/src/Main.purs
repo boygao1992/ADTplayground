@@ -31,6 +31,7 @@ import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (Tuple4, tuple4)
 import Effect (Effect)
 import Effect.Console (log, logShow)
+import Generic.Optic (_Ctor')
 import Math (abs) as Math
 import Type.Data.Symbol (SProxy(..))
 
@@ -61,6 +62,9 @@ instance eqFill :: Eq Fill where
   eq x = genericEq x
 instance showFill :: Show Fill where
   show x = genericShow x
+
+_solid :: Prism' Fill Color
+_solid = _Ctor' (SProxy :: SProxy "Solid")
 
 _solidFill :: Prism' Fill Color
 _solidFill =
@@ -134,3 +138,5 @@ main = do
   log $ show $ view _Left (Right 1 :: Either String Int)
   logShow $ is (_Left <<< _Left) (Left $ Left 1) :: Boolean
   logShow $ preview (_first <<< _Right <<< _second <<< _Just ) { first : Right { second : Just 2 }}
+
+  logShow $ is _solid (Solid Color.white) :: Boolean
