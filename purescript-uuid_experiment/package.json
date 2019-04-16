@@ -1,0 +1,10 @@
+{
+  "name": "purescript-uuid_experiment",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "uuid": "^3.3.2",
+    "uuid-validate": "^0.0.3"
+  }
+}

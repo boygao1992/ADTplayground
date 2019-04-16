@@ -345,6 +345,25 @@ var Aff = function () {
   var PENDING = 4; // An async effect is running.
   var RETURN = 5; // The current stack has returned.
   var COMPLETED = 6; // The entire fiber has completed.
+  /*
+    data FiberStatus
+      = Suspended
+      | Continue
+      | StepBind
+      | StepResult
+      | Pending
+      | Return
+      | Completed
+
+    type FiberState a =
+      { runTick :: Int
+      , status :: FiberStatus
+      , step :: Aff a
+      }
+
+    StepBind -> Continue
+    StepResult -> step :: Aff a -> Return | StepBind
+   */
 
   function Fiber( util, supervisor, aff ) {
     // Monotonically increasing tick, increased on each asynchronous turn.

@@ -1,0 +1,20 @@
+{
+  "name": "purescript-uuid_experiment",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.1.0",
+    "purescript-console": "^4.2.0",
+    "purescript-effect": "^2.0.1",
+    "purescript-uuid": "^5.2.2",
+    "purescript-maybe": "^4.0.1",
+    "purescript-safely": "^4.0.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^4.0.0"
+  }
+}
