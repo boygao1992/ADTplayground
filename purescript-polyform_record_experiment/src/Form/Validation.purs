@@ -2,16 +2,19 @@ module Form.Validation where
 
 import Prelude
 
-import Control.Alt (class Alt, (<|>))
+import Control.Alt (class Alt, (<|>), alt)
 import Control.Apply (lift2)
+import Control.Parallel.Class (class Parallel, parallel, sequential)
 import Control.Plus (class Plus, empty)
 import Data.Bifunctor (class Bifunctor, bimap, lmap, rmap)
 import Data.Either (Either(..))
+import Data.Foldable (class Foldable)
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Prism', prism')
 import Data.Maybe (Maybe(..))
-import Data.Newtype (class Newtype, unwrap, under)
+import Data.Newtype (class Newtype, unwrap, under, wrap)
 import Data.Profunctor (class Profunctor)
+import Data.Traversable (class Traversable)
 import Data.Tuple (Tuple(..))
 import Generic.Optic (_Ctor')
 import Type.Data.Symbol (SProxy(..))
@@ -65,6 +68,23 @@ instance semigroupV :: (Semigroup r, Semigroup a) => Semigroup (V r a) where
 instance monoidV :: (Monoid r, Monoid a) => Monoid (V r a) where
   mempty = pure mempty
 
+instance foldableV :: Foldable (V r) where
+  foldMap f (Invalid _) = mempty
+  foldMap f (Valid _ a) = f a
+
+  foldr f b (Invalid _) = b
+  foldr f b (Valid _ a) = f a b
+
+  foldl f b (Invalid _) = b
+  foldl f b (Valid _ a) = f b a
+
+instance traversableV :: Traversable (V r) where
+  sequence (Invalid r) = pure (Invalid r)
+  sequence (Valid r a) = Valid r <$> a
+
+  traverse _ (Invalid r) = pure (Invalid r)
+  traverse f (Valid r a) = Valid r <$> f a
+
 _Valid :: forall r a. Prism' (V r a) (Tuple r a)
 _Valid =
   prism'
@@ -79,6 +99,10 @@ _Invalid = _Ctor' (SProxy :: SProxy "Invalid")
 fromEither :: forall r a. Monoid r => Either r a -> V r a
 fromEither (Left r) = Invalid r
 fromEither (Right a) = Valid mempty a
+
+fromMaybe :: forall r a. Monoid r => Maybe a -> V r a
+fromMaybe Nothing = Invalid mempty
+fromMaybe (Just a) = Valid mempty a
 
 toEither :: forall r a. V r a -> Either r a
 toEither (Invalid r) = Left r
@@ -154,6 +178,17 @@ instance categoryValidation
   where
     identity = Validation $ pure <<< pure
 
+hoistFn :: forall m r i o. Monad m => Monoid r => (i -> o) -> Validation m r i o
+hoistFn f = Validation $ pure <<< pure <<< f
+
+hoistFnV
+  :: forall m r i o. Monad m => Monoid r => (i -> V r o) -> Validation m r i o
+hoistFnV k = Validation $ pure <<< k
+
+hoistFnMV
+  :: forall m r i o. Monad m => Monoid r => (i -> m (V r o)) -> Validation m r i o
+hoistFnMV = Validation
+
 -- | BifunctorValidation
 newtype BifunctorValidation m i r o = BifunctorValidation (Validation m r i o)
 derive instance newtypeBifunctorValidation :: Newtype (BifunctorValidation m i r o) _
@@ -192,13 +227,40 @@ rmapValidation
   -> Validation m r i o2
 rmapValidation r = under BifunctorValidation (rmap r)
 
--- | API
+-- | ParValidation
 
-hoistFn :: forall m r i o. Monad m => Monoid r => (i -> o) -> Validation m r i o
-hoistFn f = Validation $ pure <<< pure <<< f
+newtype ParValidation m r i o = ParValidation (Validation m r i o)
+derive instance newtypeParValidation :: Newtype (ParValidation m r i o) _
+derive instance functorParValidation :: Functor m => Functor (ParValidation m r i)
 
-hoistFnV :: forall m r i o. Monad m => Monoid r => (i -> V r o) -> Validation m r i o
-hoistFnV k = Validation $ pure <<< k
+instance applyParValidation
+  :: (Monad m, Parallel f m, Semigroup r) => Apply (ParValidation m r i)
+  where
+    apply (ParValidation (Validation vf)) (ParValidation (Validation va))
+      = ParValidation <<< Validation $ \i ->
+          sequential $ apply <$> parallel (vf i) <*> parallel (va i)
 
-hoistFnMV :: forall m r i o. Monad m => Monoid r => (i -> m (V r o)) -> Validation m r i o
-hoistFnMV = Validation
+instance applicativeParValidation
+  :: (Monad m, Parallel f m, Monoid r) => Applicative (ParValidation m r i)
+  where
+    pure = ParValidation <<< pure
+
+instance altParValidation
+  :: (Monad m, Parallel f m, Semigroup r) => Alt (ParValidation m r i)
+  where
+    alt (ParValidation (Validation mv1)) (ParValidation (Validation mv2))
+      = ParValidation <<< Validation $ \i ->
+          sequential $ alt <$> parallel (mv1 i) <*> parallel (mv2 i)
+
+instance plusParValidation
+  :: (Monad m, Parallel f m, Monoid r) => Plus (ParValidation m r i)
+  where
+    empty = ParValidation empty
+
+instance parallelParValidation
+  :: (Monad m, Parallel f m, Monoid r)
+  => Parallel (ParValidation m r i) (Validation m r i)
+  where
+    parallel = wrap
+    sequential = unwrap
+
