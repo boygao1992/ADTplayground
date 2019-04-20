@@ -10,6 +10,7 @@
     "purescript-console": "^4.2.0",
     "purescript-polyform": "^0.7.0",
     "purescript-prelude": "^4.1.0",
-    "purescript-random": "^4.0.0"
+    "purescript-random": "^4.0.0",
+    "purescript-generics-rep-optics": "^1.1.0"
   }
 }

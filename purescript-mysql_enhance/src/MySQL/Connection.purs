@@ -13,15 +13,21 @@ module MySQL.Connection
   , createConnection
   , closeConnection
   , _query
+
+  , queryWithOptions'
+  , queryWithOptions'_
+  , query'
+  , query'_
   ) where
 
 import Prelude
 
+import Data.Bifunctor (lmap)
+import Data.Either (Either, either)
+import Data.Function.Uncurried (Fn3, runFn3)
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
-import Data.Either (either)
-import Data.Function.Uncurried (Fn3, runFn3)
 import Foreign (Foreign)
 import MySQL.Internal (liftError)
 import MySQL.QueryValue (QueryValue)
@@ -80,7 +86,16 @@ queryWithOptions opts vs conn = do
   rows <- _query opts vs conn
   either liftError pure  $ read rows
 
-
+queryWithOptions'
+  :: forall a
+   . ReadForeign a
+  => QueryOptions
+  -> Array QueryValue
+  -> Connection
+  -> Aff (Either String (Array a))
+queryWithOptions' opts vs conn = do
+  rows <- _query opts vs conn
+  pure <<< lmap show $ read rows
 
 queryWithOptions_
   :: forall a
@@ -91,6 +106,13 @@ queryWithOptions_
 queryWithOptions_ opts = queryWithOptions opts []
 
 
+queryWithOptions'_
+  :: forall a
+   . ReadForeign a
+  => QueryOptions
+  -> Connection
+  -> Aff (Either String (Array a))
+queryWithOptions'_ opts = queryWithOptions' opts []
 
 query
   :: forall a
@@ -100,6 +122,15 @@ query
   -> Connection
   -> Aff (Array a)
 query sql = queryWithOptions { sql, nestTables: false }
+
+query'
+  :: forall a
+   . ReadForeign a
+  => String
+  -> Array QueryValue
+  -> Connection
+  -> Aff (Either String (Array a))
+query' sql = queryWithOptions' { sql, nestTables: false }
 
 
 
@@ -111,6 +142,14 @@ query_
   -> Aff (Array a)
 query_ sql = query sql []
 
+query'_
+  :: forall a
+   . ReadForeign a
+  => String
+  -> Connection
+  -> Aff (Either String (Array a))
+query'_ sql = query' sql []
+
 
 
 execute
@@ -120,8 +159,6 @@ execute
   -> Aff Unit
 execute sql vs conn =
   void $ _query { sql, nestTables: false } vs conn
-
-
 
 execute_
   :: String

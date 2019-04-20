@@ -1,7 +1,5 @@
 module MySQL.Stream where
 
-import Prelude
-
 import Effect.Uncurried (EffectFn4, runEffectFn4)
 import MySQL.Connection (QueryOptions, Connection)
 import MySQL.QueryValue (QueryValue)

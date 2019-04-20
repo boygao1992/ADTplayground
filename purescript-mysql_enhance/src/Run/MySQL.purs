@@ -10,11 +10,17 @@ module Run.MySQL
 , createPool
 , closePool
 , withPool
+
+, queryWithOptions'
+, queryWithOptions'_
+, query'
+, query'_
 ) where
 
 import Prelude
 
-import MySQL.Connection (Connection, ConnectionInfo, QueryOptions, closeConnection, createConnection, execute, queryWithOptions) as SQL
+import Data.Either (Either)
+import MySQL.Connection (Connection, ConnectionInfo, QueryOptions, closeConnection, createConnection, execute, queryWithOptions, queryWithOptions') as SQL
 import MySQL.Pool (Pool, PoolInfo, closePool, createPool, getConnection, releaseConnection) as SQL
 import MySQL.QueryValue (QueryValue) as SQL
 import Run (Run, AFF, EFFECT)
@@ -83,7 +89,6 @@ query
       (Array a)
 query sql = queryWithOptions { sql, nestTables: false }
 
-
 query_
   :: forall a eff
    . ReadForeign a
@@ -95,6 +100,58 @@ query_
        )
        (Array a)
 query_ sql = query sql []
+
+queryWithOptions'
+  :: forall a eff
+   . ReadForeign a
+  => SQL.QueryOptions
+  -> Array SQL.QueryValue
+  -> Run
+      ( reader :: READER SQL.Connection
+      , aff :: AFF
+      | eff
+      )
+      (Either String (Array a))
+queryWithOptions' opts vs = do
+  conn <- Reader.ask
+  Run.liftAff $ SQL.queryWithOptions' opts vs conn
+
+queryWithOptions'_
+  :: forall a eff
+   . ReadForeign a
+  => SQL.QueryOptions
+  -> Run
+      ( reader :: READER SQL.Connection
+      , aff :: AFF
+      | eff
+      )
+      (Either String (Array a))
+queryWithOptions'_ opts = queryWithOptions' opts []
+
+query'
+  :: forall a eff
+   . ReadForeign a
+  => String
+  -> Array SQL.QueryValue
+  -> Run
+      ( reader :: READER SQL.Connection
+      , aff :: AFF
+      | eff
+      )
+      (Either String (Array a))
+query' sql = queryWithOptions' { sql, nestTables: false }
+
+query'_
+  :: forall a eff
+   . ReadForeign a
+  => String
+  -> Run
+       ( reader :: READER SQL.Connection
+       , aff :: AFF
+       | eff
+       )
+      (Either String (Array a))
+query'_ sql = query' sql []
 
 execute
   :: forall eff

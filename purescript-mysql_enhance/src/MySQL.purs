@@ -17,6 +17,11 @@ import MySQL.Connection
   , createConnection
   , closeConnection
   , _query
+
+  , queryWithOptions'
+  , queryWithOptions'_
+  , query'
+  , query'_
   ) as Exports
 
 import MySQL.Pool

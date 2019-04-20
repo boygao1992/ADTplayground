@@ -1,16 +1,15 @@
 module MySQL.Transaction
   ( withTransaction
+  , withTransaction'
   ) where
 
 import Prelude
 
-import Effect.Aff (Aff, attempt)
+import Effect.Aff (Aff, attempt, message)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Control.Monad.Error.Class (throwError)
 import Data.Either (Either(..))
 import MySQL.Connection (Connection)
-
-
 
 withTransaction
   :: forall a
@@ -27,6 +26,23 @@ withTransaction handler conn = do
     Right r' -> do
       commit conn
       pure r'
+
+
+withTransaction'
+  :: forall a
+  .  (Connection -> Aff a)
+  -> Connection
+  -> Aff (Either String a)
+withTransaction' handler conn = do
+  begin conn
+  r <- attempt $ handler conn
+  case r of
+    Left e -> do
+      rollback conn
+      pure <<< Left <<< message $ e
+    Right r' -> do
+      commit conn
+      pure <<< Right $ r'
 
 
 

@@ -12,8 +12,8 @@ import Data.Variant as Variant
 import Effect (Effect)
 import Effect.Console (log, logShow)
 import Effect.Random (random)
-import Polyform.Validation (V(..), Validation(..), runValidation)
-import Polyform.Validation as Validation
+import Form.Validation (V(..), Validation(..), runValidation)
+import Form.Validation as Validation
 import Prim.RowList (kind RowList)
 import Type.Prelude (RProxy(..), SProxy)
 import Type.Row (type (+))
