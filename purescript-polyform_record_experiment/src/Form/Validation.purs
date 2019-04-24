@@ -238,7 +238,7 @@ instance applyParValidation
   where
     apply (ParValidation (Validation vf)) (ParValidation (Validation va))
       = ParValidation <<< Validation $ \i ->
-          sequential $ apply <$> parallel (vf i) <*> parallel (va i)
+ sequential $ apply <$> parallel (vf i) <*> parallel (va i)
 
 instance applicativeParValidation
   :: (Monad m, Parallel f m, Monoid r) => Applicative (ParValidation m r i)
