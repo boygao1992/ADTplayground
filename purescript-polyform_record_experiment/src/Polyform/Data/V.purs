@@ -37,13 +37,13 @@ instance applyV :: Semigroup r => Apply (V r) where
 instance applicativeV :: Monoid r => Applicative (V r) where
   pure = Valid mempty
 
-instance bindV :: Semigroup r => Bind (V r) where
-  bind (Valid r1 x) k = case k x of
-    Invalid r2 -> Invalid (r1 <> r2)
-    Valid r2 y -> Valid (r1 <> r2) y
-  bind (Invalid r) _ = Invalid r
-
-instance monadV :: Monoid r => Monad (V r)
+-- NOTE behaviors of apply and bind don't agree
+-- instance bindV :: Semigroup r => Bind (V r) where
+--   bind (Valid r1 x) k = case k x of
+--     Invalid r2 -> Invalid (r1 <> r2)
+--     Valid r2 y -> Valid (r1 <> r2) y
+--   bind (Invalid r) _ = Invalid r
+-- instance monadV :: Monoid r => Monad (V r)
 
 instance altV :: Semigroup r => Alt (V r) where
   alt (Valid r1 x) (Valid r2 _) = Valid (r1 <> r2) x

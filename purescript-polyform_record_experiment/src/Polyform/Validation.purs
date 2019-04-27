@@ -3,7 +3,8 @@ module Polyform.Validation where
 import Prelude
 
 import Control.Alt (class Alt, (<|>), alt)
-import Control.Parallel.Class (class Parallel, parallel, sequential)
+import Control.Parallel.Class (class Parallel)
+import Control.Parallel.Class (parallel, sequential) as Par
 import Control.Plus (class Plus, empty)
 import Data.Bifunctor (class Bifunctor, bimap, lmap, rmap)
 import Data.Newtype (class Newtype, unwrap, under, wrap)
@@ -33,18 +34,18 @@ instance applicativeValidation
   where
     pure = Validation <<< const <<< pure <<< pure
 
-instance bindValidation
-  :: (Monad m, Monoid r) => Bind (Validation m r i)
-  where
-    bind v1 k = Validation \i ->
-      runValidation v1 i >>= case _ of
-        Invalid r1 -> pure $ Invalid r1
-        Valid r1 x ->
-          runValidation (k x) i >>= case _ of
-            Invalid r2 -> pure $ Invalid (r1 <> r2)
-            Valid r2 y -> pure $ Valid (r1 <> r2) y
+-- instance bindValidation
+--   :: (Monad m, Monoid r) => Bind (Validation m r i)
+--   where
+--     bind v1 k = Validation \i ->
+--       runValidation v1 i >>= case _ of
+--         Invalid r1 -> pure $ Invalid r1
+--         Valid r1 x ->
+--           runValidation (k x) i >>= case _ of
+--             Invalid r2 -> pure $ Invalid (r1 <> r2)
+--             Valid r2 y -> pure $ Valid (r1 <> r2) y
 
-instance monadValidation :: (Monad m, Monoid r) => Monad (Validation m r i)
+-- instance monadValidation :: (Monad m, Monoid r) => Monad (Validation m r i)
 
 instance altValidation :: (Monad m, Semigroup r) => Alt (Validation m r i) where
   alt (Validation l1) (Validation l2) = Validation \i -> do
@@ -55,9 +56,24 @@ instance altValidation :: (Monad m, Semigroup r) => Alt (Validation m r i) where
 instance plusValidation :: (Monad m, Monoid r) => Plus (Validation m r i) where
   empty = Validation <<< const <<< pure $ empty
 
+{- NOTE
+newtype Star f a b = Star (a -> f b)
+instance Functor f => Profunctor (Star f)
+
+ValidationT i r m o
+---------------------------
+i -> ValidationResultT r m o
+---------------------------
+Star (ValidationResultT r m)
+
+instance Functor m => Profunctor (Star (ValidationResultT r m))
+-}
 instance profunctorValidation :: Functor m => Profunctor (Validation m r) where
   dimap f g (Validation v) = Validation $ map (map g) <<< v <<< f
 
+{- NOTE
+instance Bind m => Semigroupoid (Star (ValidationResultT r m))
+-}
 instance semigroupoidValidation
   :: (Monad m, Monoid r) => Semigroupoid (Validation m r)
   where
@@ -71,6 +87,9 @@ instance semigroupoidValidation
             Invalid r2 -> pure $ Invalid (r1 <> r2)
             Valid r2 c -> pure $ Valid (r1 <> r2) c
 
+{- NOTE
+instance Monad m => Category (Star (ValidationResultT r m))
+-}
 instance categoryValidation
   :: (Monad m, Monoid r) => Category (Validation m r)
   where
@@ -136,7 +155,7 @@ instance applyParValidation
   where
     apply (ParValidation (Validation vf)) (ParValidation (Validation va))
       = ParValidation <<< Validation $ \i ->
- sequential $ apply <$> parallel (vf i) <*> parallel (va i)
+      Par.sequential $ apply <$> Par.parallel (vf i) <*> Par.parallel (va i)
 
 instance applicativeParValidation
   :: (Monad m, Parallel f m, Monoid r) => Applicative (ParValidation m r i)
@@ -148,17 +167,18 @@ instance altParValidation
   where
     alt (ParValidation (Validation mv1)) (ParValidation (Validation mv2))
       = ParValidation <<< Validation $ \i ->
-          sequential $ alt <$> parallel (mv1 i) <*> parallel (mv2 i)
+          Par.sequential $ alt <$> Par.parallel (mv1 i) <*> Par.parallel (mv2 i)
 
 instance plusParValidation
   :: (Monad m, Parallel f m, Monoid r) => Plus (ParValidation m r i)
   where
     empty = ParValidation empty
 
-instance parallelParValidation
-  :: (Monad m, Parallel f m, Monoid r)
-  => Parallel (ParValidation m r i) (Validation m r i)
-  where
-    parallel = wrap
-    sequential = unwrap
+-- instance parallelParValidation
+--   :: (Monad m, Parallel f m, Monoid r)
+--   => Parallel (ParValidation m r i) (Validation m r i)
+--   where
+--     parallel = wrap
+--     sequential = unwrap
+
 
