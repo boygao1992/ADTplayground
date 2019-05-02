@@ -15,9 +15,9 @@ import Effect.Random (random)
 import Form.Validation (V(..), Validation(..), runValidation)
 import Form.Validation as Validation
 import Prim.RowList (kind RowList)
-import Type.Prelude (RProxy(..), SProxy)
+import Type.Prelude (RProxy(..))
 import Type.Row (type (+))
-import Type.Row.MkLabels (mkLabels)
+import Type.Row.MkLabels (SProxies, mkLabels)
 
 -- | Types
 
@@ -38,10 +38,7 @@ type EmailErrors r =
   + EmailIsUsed
   + r
   )
-_emailErrors ::
-  { emailFormat :: SProxy "emailFormat"
-  , emailIsUsed :: SProxy "emailIsUsed"
-  }
+_emailErrors :: SProxies (EmailErrors ())
 _emailErrors = mkLabels (RProxy ::RProxy (EmailErrors ()))
 
 displayEmailError
@@ -101,11 +98,7 @@ type PasswordErrors r =
   + MinLength
   + r
   )
-_passwordErrors ::
-  { hasDigit :: SProxy "hasDigit"
-  , maxLength :: SProxy "maxLength"
-  , minLength :: SProxy "minLength"
-  }
+_passwordErrors :: SProxies (PasswordErrors ())
 _passwordErrors = mkLabels (RProxy :: RProxy (PasswordErrors ()))
 
 displayPasswordError

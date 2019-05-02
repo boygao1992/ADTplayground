@@ -10,6 +10,8 @@ import Record.Builder as Builder
 import Type.Data.Symbol as Symbol
 import Prim.Row as Row
 
+type SProxies i = forall o. MkLabels i o => Record o
+
 class MkLabels (i :: # Type) (o :: # Type) | i -> o where
   mkLabels :: RProxy i -> Record o
 
