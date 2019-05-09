@@ -56,20 +56,22 @@ eval (Search s next) = next <$ do
   case debouncer of
     Nothing -> do
       channel <- H.liftAff AVar.empty
-      fiber <- H.liftAff $ Aff.forkAff do
-        Aff.delay debounceTime
-        AVar.put unit channel
+      fiber <- mkFiber debounceTime channel
       _ <- H.fork do
         _ <- H.liftAff $ AVar.take channel
         text <- H.gets _.inputText
         H.modify_ _ { debouncer = Nothing, search = text }
       H.modify_ _ { debouncer = Just { channel, fiber } }
     Just { channel, fiber } -> do
-      _ <- H.liftAff $ Aff.killFiber (Aff.error "renew timer") fiber
-      newFiber <- H.liftAff $ Aff.forkAff do
+      H.liftAff $ Aff.killFiber (Aff.error "renew timer") fiber
+      newFiber <- mkFiber debounceTime channel
+      H.modify_ _ { debouncer = Just { channel, fiber : newFiber } }
+  where
+    mkFiber :: Milliseconds -> AVar Unit -> H.ComponentDSL State Query Output IO (Fiber Unit)
+    mkFiber debounceTime channel =
+      H.liftAff $ Aff.forkAff do
         Aff.delay debounceTime
         AVar.put unit channel
-      H.modify_ _ { debouncer = Just { channel, fiber : newFiber } }
 
 render :: State -> H.ComponentHTML Query
 render { search } =
