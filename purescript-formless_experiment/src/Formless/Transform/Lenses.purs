@@ -2,19 +2,22 @@ module Formless.Type.Lenses where
 
 import Prelude
 
-import Data.Lens (Lens', Traversal', _Just)
+import Data.Lens (Lens')
 import Data.Lens.At (at)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
 import Data.Map (Map)
 import Data.Maybe (Maybe)
-import Effect.Ref (Ref)
-import Formless.Types.Component (Canceller, Debouncer, DebouncerField, InternalState, InternalStateRow, State)
+import Formless.Types.Component (DebouncerField, InternalState, InternalStateRow, State)
+import Formless.Validation (FormValidators, FormFields)
 import Type.Data.Symbol (SProxy(..))
 
 
 _internal :: forall form m. Lens' (State form m) (InternalState form m)
 _internal = prop (SProxy :: SProxy "internal")
+
+_form :: forall form m. Lens' (State form m) (FormFields form)
+_form = prop (SProxy :: SProxy "form")
 
 _InternalState :: forall form m. Lens' (State form m) (Record (InternalStateRow form m))
 _InternalState = _internal <<< _Newtype
@@ -22,21 +25,12 @@ _InternalState = _internal <<< _Newtype
 _debouncerFields :: forall form m. Lens' (State form m) (Map String (DebouncerField m))
 _debouncerFields = _InternalState <<< prop (SProxy :: SProxy "debouncerFields")
 
-_debouncerField :: forall form m. String -> Lens' (State form m) (Maybe (DebouncerField m))
-_debouncerField label = _debouncerFields <<< at label
+_validators :: forall form m. Lens' (State form m) (FormValidators form m)
+_validators = _InternalState <<< prop (SProxy :: SProxy "validators")
 
-_debouncerM :: forall form m. String -> Traversal' (State form m) (Maybe (Ref (Maybe Debouncer)))
-_debouncerM label = _debouncerField label <<< _Just <<< prop (SProxy :: SProxy "debouncer")
-
-_debouncerRef :: forall form m. String -> Traversal' (State form m) (Ref (Maybe Debouncer))
-_debouncerRef label = _debouncerM label <<< _Just
-
-_cancellerM :: forall form m. String -> Traversal' (State form m) (Maybe (Ref (Maybe (Canceller m))))
-_cancellerM label = _debouncerField label <<< _Just <<< prop (SProxy :: SProxy "canceller")
-
-_cancellerRef :: forall form m. String -> Traversal' (State form m) (Ref (Maybe (Canceller m)))
-_cancellerRef label = _cancellerM label <<< _Just
-
+_debouncerFieldM
+  :: forall form m. String -> Lens' (State form m) (Maybe (DebouncerField m))
+_debouncerFieldM label = _debouncerFields <<< at label
 
 {-
 type State form m =
@@ -57,12 +51,12 @@ newtype InternalState form m = InternalState
   }
 
 type DebouncerField m =
-  { debouncer :: Maybe (Ref (Maybe Debouncer))
-  , canceller :: Maybe (Ref (Maybe (Canceller m)))
+  { debouncer :: Ref (Maybe Debouncer)
+  , canceller :: Ref (Maybe (Canceller m))
   }
 
 type Debouncer =
-  { var :: AVar Unit
+  { channel :: AVar Unit
   , fiber :: Fiber Unit
   }
 

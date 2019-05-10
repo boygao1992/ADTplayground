@@ -106,16 +106,14 @@ type InternalStateRow form m =
 type DebouncerField m = Record (DebouncerFieldRow m)
 
 type DebouncerFieldRow m =
-  ( debouncer :: Maybe (Ref (Maybe Debouncer))
-  , canceller :: Maybe (Ref (Maybe (Canceller m)))
+  ( debouncer :: Ref (Maybe Debouncer)
+  , canceller :: Ref (Maybe (Canceller m))
   )
 
-type Debouncer = Record DebouncerRow
-
-type DebouncerRow =
-  ( var :: AVar Unit
+type Debouncer =
+  { channel :: AVar Unit
   , fiber :: Fiber Unit
-  )
+  }
 
 type Canceller m = Error -> m Unit
 

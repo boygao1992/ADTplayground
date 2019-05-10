@@ -13,6 +13,7 @@ import Control.Monad.State.Class (class MonadState)
 import Control.Monad.State (get, modify, modify_, put)
 import Control.Comonad.Store (Store, runStore, seeks, store)
 import Data.Tuple (fst, snd)
+import Data.Lens (Getter, Setter, over, set, (^.))
 
 -- | We are working within the `State` monad as is always the case
 -- | in Halogen. However, the state type we really want to access
@@ -26,8 +27,20 @@ import Data.Tuple (fst, snd)
 -- | -- New
 -- | st <- getState
 -- | ```
-getState :: ∀ m s a. MonadState (Store s a) m => m s
+getState :: ∀ m state html. MonadState (Store state html) m => m state
 getState = pure <<< snd <<< runStore =<< get
+
+getsState :: forall m s h a. MonadState (Store s h) m => (s -> a) -> m a
+getsState f = pure <<< f <<< snd <<< runStore =<< get
+
+useState :: forall m h s t a b. MonadState (Store s h) m => Getter s t a b -> m a
+useState p = getsState (_ ^. p)
+
+assignState :: forall m h s a b. MonadState (Store s h) m => Setter s s a b -> b -> m Unit
+assignState p b = void (modifyState (set p b))
+
+modifyingState :: forall m h s a b. MonadState (Store s h) m => Setter s s a b -> (a -> b) -> m Unit
+modifyingState p f = void (modifyState (over p f))
 
 -- | You can also retrieve the render function, if you need to,
 -- | from within the `Store` comonad.
@@ -35,7 +48,7 @@ getState = pure <<< snd <<< runStore =<< get
 -- | ```purescript
 -- | renderFunction <- getRender
 -- | ```
-getRender :: ∀ m s a. MonadState (Store s a) m => m (s -> a)
+getRender :: ∀ m s h. MonadState (Store s h) m => m (s -> h)
 getRender = pure <<< fst <<< runStore =<< get
 
 -- | When you are modifying the state type, you need to apply a function
@@ -49,13 +62,13 @@ getRender = pure <<< fst <<< runStore =<< get
 -- | -- with helpers
 -- | modifyState_ \st -> st { field = newValue }
 -- | ```
-modifyState :: ∀ m s a. MonadState (Store s a) m => (s -> s) -> m s
+modifyState :: ∀ m s h. MonadState (Store s h) m => (s -> s) -> m s
 modifyState f = pure <<< snd <<< runStore =<< modify (seeks f)
 
-modifyState_ :: ∀ m s a. MonadState (Store s a) m => (s -> s) -> m Unit
+modifyState_ :: ∀ m s h. MonadState (Store s h) m => (s -> s) -> m Unit
 modifyState_ = modify_ <<< seeks
 
-putState :: ∀ m s a. MonadState (Store s a) m => s -> m Unit
+putState :: ∀ m s h. MonadState (Store s h) m => s -> m Unit
 putState s = put <<< (store <@> s) =<< getRender
 
 -- | In rare cases you will actually want to update the
@@ -70,11 +83,12 @@ putState s = put <<< (store <@> s) =<< getRender
 -- | You almost never need to use this except in your `Receiver`
 -- | query, where it is necessary to update the render function
 -- | with the new one passed via `Input`.
-updateStore :: ∀ state html
+updateStore
+  :: ∀ state html
   . (state -> html)
- -> (state -> state)
- -> Store state html
- -> Store state html
+  -> (state -> state)
+  -> Store state html
+  -> Store state html
 updateStore r f
   = store r <<< snd <<< runStore <<< seeks f
 
@@ -85,11 +99,11 @@ updateStore r f
 -- | newStore <- modifyStore render stateTransform
 -- | putStore render state
 -- | ```
-modifyStore :: ∀ m s a. MonadState (Store s a) m => (s -> a) -> (s -> s) -> m (Store s a)
+modifyStore :: ∀ m s h. MonadState (Store s h) m => (s -> h) -> (s -> s) -> m (Store s h)
 modifyStore r f = modify (updateStore r f)
 
-modifyStore_ :: ∀ m s a. MonadState (Store s a) m => (s -> a) -> (s -> s) -> m Unit
+modifyStore_ :: ∀ m s h. MonadState (Store s h) m => (s -> h) -> (s -> s) -> m Unit
 modifyStore_ r f = modify_ (updateStore r f)
 
-putStore :: ∀ m s a. MonadState (Store s a) m => (s -> a) -> s -> m Unit
+putStore :: ∀ m s h. MonadState (Store s h) m => (s -> h) -> s -> m Unit
 putStore r s = put (store r s)

@@ -1,5 +1,6 @@
 module Formless.Component where
 
+import Formless.Type.Lenses
 import Prelude
 
 import Control.Comonad (extract)
@@ -7,26 +8,29 @@ import Control.Comonad.Store (store)
 import Control.Monad.Free (liftF)
 import Data.Coyoneda (liftCoyoneda)
 import Data.Eq (class EqRecord)
+import Data.Lens ((^.), (^?), is, _Just, _Nothing)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, over, unwrap)
 import Data.Symbol (SProxy(..))
-import Data.Traversable (traverse_)
+import Data.Traversable (traverse_, for_)
 import Data.Variant (Variant)
 import Data.Variant.Internal (VariantRep(..))
 import Effect.Aff as Aff
 import Effect.Aff.AVar as AVar
 import Effect.Aff.Class (class MonadAff)
 import Effect.Console (log)
+import Effect.Ref (Ref)
+import Effect.Ref as Ref
 import Formless.Data.FormFieldResult (FormFieldResult)
 import Formless.Internal.Transform as Internal
-import Formless.Types.Component (Component, DSL, DebouncerField, Input, InternalState(..), Message(..), PublicState, Query(..), State, StateStore, ValidStatus(..))
+import Formless.Types.Component (Component, DSL, DebouncerField, Input, InternalState(..), Message(..), PublicState, Query(..), State, StateStore, ValidStatus(..), Debouncer, Canceller)
 import Formless.Validation (FormFields, FormInputField, FormInputFields, FormInputFunction, FormInputFunctions, FormOutputFields, FormValidationAction, FormValidators)
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Prim.RowList as RL
 import Record as Record
-import Renderless.State (getState, modifyState, modifyState_, modifyStore_)
+import Renderless.State (assignState, getState, modifyState, modifyState_, modifyStore_, modifyingState, useState)
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | The Formless component
@@ -154,72 +158,88 @@ component =
       _ <- validate
       eval (SyncFormData a)
 
-    ModifyValidateAsync ms variant a -> do
+    ModifyValidateAsync ms variant a -> a <$ do
+      -- NOTE Signal: Field_Update
+
       -- NOTE debug
       H.liftEffect $ log "ModifyValidateAsync"
 
-      state <- getState
+      modifyingState _form (Internal.unsafeModifyInputVariant identity variant)
 
       let
         label :: String
         label = case unsafeCoerce (unwrap variant) of
           VariantRep x -> x.type
 
-        debouncerFieldM :: Maybe (DebouncerField m)
-        debouncerFieldM = Map.lookup label (unwrap state.internal).debouncerFields
+      (debouncerFieldM :: Maybe (DebouncerField m))
+        <- useState (_debouncerFieldM label)
 
-        -- readRef :: forall x n. MonadAff n => Maybe (Ref.Ref (Maybe x)) -> n (Maybe x)
-        -- readRef = H.liftEffect <<< map join <<< traverse Ref.read
+      debouncerField <- case debouncerFieldM of
+        Nothing -> do
+          debouncer <- H.liftEffect $ Ref.new Nothing
+          canceller <- H.liftEffect $ Ref.new Nothing
+          let debouncerFieldRow = { debouncer, canceller }
+          assignState (_debouncerFieldM label) (Just debouncerFieldRow)
+          pure debouncerFieldRow
+        Just df -> do
+          pure df
 
-        mkFiber
+      let
+        debouncerRef :: Ref (Maybe Debouncer)
+        debouncerRef = debouncerField.debouncer
+
+        cancellerRef :: Ref (Maybe (Canceller m))
+        cancellerRef = debouncerField.canceller
+
+        scheduleDebounceSignal
           :: AVar.AVar Unit
           -> DSL parent_query child_query child_slots form m (Aff.Fiber Unit)
-        mkFiber avar = H.liftAff $ Aff.forkAff do
+        scheduleDebounceSignal channel = H.liftAff $ Aff.forkAff do
           Aff.delay ms
-          AVar.put unit avar
+          AVar.put unit channel
 
-      case debouncerFieldM of
+        interceptDebounceSignal
+          :: Aff.Fiber Unit
+          -> DSL parent_query child_query child_slots form m Unit
+        interceptDebounceSignal =
+          void <<< H.liftAff <<< Aff.killFiber (Aff.error "renew delayed signal")
+
+      debouncerM <- H.liftEffect $ Ref.read debouncerRef
+      cancellerM <- H.liftEffect $ Ref.read cancellerRef
+
+      -- NOTE Field_Update -> intercept validation
+      for_ cancellerM \canceller ->
+        H.lift $ canceller (Aff.error "intercept validation")
+
+      case debouncerM of
         Nothing -> do
-          pure unit
-        Just df -> pure unit
+          -- NOTE debug
+          H.liftEffect $ log "initialize debouncer"
 
-      -- traverse_ (\f -> H.lift $ f $ Aff.error "times' up") =<< readRef mvdRef
-      -- mdebouncer <- readRef mdbRef
+          channel <- H.liftAff AVar.empty
+          fiber <- scheduleDebounceSignal channel
+          H.liftEffect $ Ref.write (Just { channel, fiber }) debouncerRef
 
-      -- case mdebouncer of
-      --   Nothing -> do
-      --     -- NOTE debug
-      --     H.liftEffect $ log "initialize debouncer"
+          void $ H.fork do
+            void <<< H.liftAff $ AVar.take channel
+            H.liftEffect $ Ref.write Nothing debouncerRef
 
-      --     var <- H.liftAff AVar.empty
-      --     fiber <- mkFiber var
+            -- NOTE Signal: Debouncer_Timer_Expired
+            -- NOTE debug
+            H.liftEffect $ log "debouncer timer expired, fork validation"
 
-      --     dbRef <- H.liftEffect $ Ref.new $ Just { var, fiber }
+            canceller <- H.fork do
+              eval $ H.action $ Validate (unsafeCoerce variant)
+            H.liftEffect $ Ref.write (Just canceller) cancellerRef
 
-      --     modifyState_ \st ->
-      --       st { internal
-      --             = (over InternalState <@> st.internal)
-      --                 _ { debounceRef
-      --                       = Map.insert label dbRef
-      --                           (unwrap st.internal).debounceRef
-      --                   }
-      --          }
+        Just { channel, fiber } -> do
+          -- NOTE debug
+          H.liftEffect $ log "renew debouncer"
 
-
-      --     _ <- H.fork do
-      --       void <<< H.liftAff <<< AVar.take $ var
-      --       H.liftEffect $ Ref.write Nothing dbRef
-      --       -- TODO
-
-
-      --     pure unit
-      --   Just dbRef -> do
-      --     -- NOTE debug
-      --     H.liftEffect $ log "renew debouncer"
-
-      --     pure unit
-
-      pure a
+          -- NOTE Field_Update -> renew debouncer
+          interceptDebounceSignal fiber
+          newFiber <- scheduleDebounceSignal channel
+          H.liftEffect $ Ref.write (Just {channel, fiber: newFiber}) debouncerRef
 
     Reset variant a -> do
       -- NOTE debug
