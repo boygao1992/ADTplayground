@@ -1,6 +1,5 @@
 module Formless.Component where
 
-import Formless.Type.Lenses
 import Prelude
 
 import Control.Comonad (extract)
@@ -8,7 +7,6 @@ import Control.Comonad.Store (store)
 import Control.Monad.Free (liftF)
 import Data.Coyoneda (liftCoyoneda)
 import Data.Eq (class EqRecord)
-import Data.Lens ((^.), (^?), is, _Just, _Nothing)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, over, unwrap)
@@ -22,8 +20,8 @@ import Effect.Aff.Class (class MonadAff)
 import Effect.Console (log)
 import Effect.Ref (Ref)
 import Effect.Ref as Ref
-import Formless.Data.FormFieldResult (FormFieldResult)
 import Formless.Internal.Transform as Internal
+import Formless.Type.Lenses (_debouncerFieldM, _form)
 import Formless.Types.Component (Component, DSL, DebouncerField, Input, InternalState(..), Message(..), PublicState, Query(..), State, StateStore, ValidStatus(..), Debouncer, Canceller)
 import Formless.Validation (FormFields, FormInputField, FormInputFields, FormInputFunction, FormInputFunctions, FormOutputFields, FormValidationAction, FormValidators)
 import Halogen as H
@@ -130,33 +128,11 @@ component =
       H.liftEffect $ log "ModifyValidate"
 
       let
-        modifyWith
-          :: (forall e o. FormFieldResult e o -> FormFieldResult e o)
-          -> DSL parent_query child_query child_slots form m (FormFields form)
-        modifyWith modifyResult =
-          _.form
-          <$> modifyState
-                \st -> st { form = Internal.unsafeModifyInputVariant
-                                    modifyResult variant st.form }
+        action :: FormValidationAction form
+        action = unsafeCoerce variant -- NOTE it's ok to forget value types since only its label is used to pick out the correct validator from vs
 
-        validate
-          :: DSL parent_query child_query child_slots form m (FormFields form)
-        validate = do
-          st <- getState
-          let
-            vs :: FormValidators form m
-            vs = (unwrap st.internal).validators
-
-            action :: FormValidationAction form
-            action = unsafeCoerce variant -- NOTE it's ok to forget value types since only its label is used to pick out the correct validator from vs
-
-          form <- H.lift $ Internal.unsafeRunValidationVariant action vs st.form
-          modifyState_ _ { form = form }
-          pure form
-
-      _ <- modifyWith identity
-      _ <- validate
-      eval (SyncFormData a)
+      modifyingState _form (Internal.unsafeModifyInputVariant identity variant)
+      eval (Validate action a)
 
     ModifyValidateAsync ms variant a -> a <$ do
       -- NOTE Signal: Field_Update
@@ -228,8 +204,12 @@ component =
             -- NOTE debug
             H.liftEffect $ log "debouncer timer expired, fork validation"
 
+            let
+              action :: FormValidationAction form
+              action = unsafeCoerce variant
+
             canceller <- H.fork do
-              eval $ H.action $ Validate (unsafeCoerce variant)
+              eval $ H.action $ Validate action
             H.liftEffect $ Ref.write (Just canceller) cancellerRef
 
         Just { channel, fiber } -> do
