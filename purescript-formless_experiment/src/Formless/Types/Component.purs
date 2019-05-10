@@ -12,7 +12,7 @@ import Data.Newtype (class Newtype)
 import Effect.Aff (Error, Fiber, Milliseconds)
 import Effect.Aff.AVar (AVar)
 import Effect.Ref (Ref)
-import Formless.Validation (FormFields, FormInputFields, FormInputFunction, FormInputFunctions, FormOutputFields, FormValidationAction, FormValidators, FormDebouncerFields)
+import Formless.Validation (FormFields, FormInputFields, FormInputFunction, FormInputFunctions, FormOutputFields, FormValidationAction, FormValidators)
 import Halogen as H
 import Halogen.HTML as HH
 
@@ -73,13 +73,15 @@ type DSL parent_query child_query child_slots form m
       m
 
 -- | The component local state
-type State form m = Record (StateRow form (internal :: InternalState form m))
+type State form m = Record (StateRow form m)
+
+type StateRow form m = PublicStateRow form (internal :: InternalState form m)
 
 -- | The component's public state
-type PublicState form = Record (StateRow form ())
+type PublicState form = Record (PublicStateRow form ())
 
 -- | The component's public state
-type StateRow form r =
+type PublicStateRow form r =
   ( validity :: ValidStatus
   , dirty :: Boolean
   , submitting :: Boolean
@@ -91,13 +93,31 @@ type StateRow form r =
 
 -- | A newtype to make easier type errors for end users to
 -- | read by hiding internal fields
-newtype InternalState form m = InternalState
-  { initialInputs :: FormInputFields form
+newtype InternalState form m = InternalState (Record (InternalStateRow form m))
+derive instance newtypeInternalState :: Newtype (InternalState form m) _
+
+type InternalStateRow form m =
+  ( initialInputs :: FormInputFields form
   , validators :: FormValidators form m
   , allTouched :: Boolean
-  , debouncerFields :: FormDebouncerFields form m
-  }
-derive instance newtypeInternalState :: Newtype (InternalState form m) _
+  , debouncerFields :: Map.Map String (DebouncerField m)
+  )
+
+type DebouncerField m = Record (DebouncerFieldRow m)
+
+type DebouncerFieldRow m =
+  ( debouncer :: Maybe (Ref (Maybe Debouncer))
+  , canceller :: Maybe (Ref (Maybe (Canceller m)))
+  )
+
+type Debouncer = Record DebouncerRow
+
+type DebouncerRow =
+  ( var :: AVar Unit
+  , fiber :: Fiber Unit
+  )
+
+type Canceller m = Error -> m Unit
 
 -- | A type to represent validation status
 data ValidStatus

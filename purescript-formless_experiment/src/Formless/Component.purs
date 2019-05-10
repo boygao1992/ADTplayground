@@ -11,19 +11,17 @@ import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, over, unwrap)
 import Data.Symbol (SProxy(..))
-import Data.Traversable (traverse, traverse_)
+import Data.Traversable (traverse_)
 import Data.Variant (Variant)
 import Data.Variant.Internal (VariantRep(..))
 import Effect.Aff as Aff
 import Effect.Aff.AVar as AVar
 import Effect.Aff.Class (class MonadAff)
 import Effect.Console (log)
-import Effect.Ref as Ref
 import Formless.Data.FormFieldResult (FormFieldResult)
 import Formless.Internal.Transform as Internal
-import Formless.Transform.Row (class MakeDebouncerFieldsFromRow, mkDebouncerFields)
-import Formless.Types.Component (Component, DSL, Input, InternalState(..), Message(..), PublicState, Query(..), State, StateStore, ValidStatus(..))
-import Formless.Validation (FormFields, FormInputField, FormInputFields, FormInputFunction, FormInputFunctions, FormOutputFields, FormValidationAction, FormValidators, FormDebouncerFields)
+import Formless.Types.Component (Component, DSL, DebouncerField, Input, InternalState(..), Message(..), PublicState, Query(..), State, StateStore, ValidStatus(..))
+import Formless.Validation (FormFields, FormInputField, FormInputFields, FormInputFunction, FormInputFunctions, FormOutputFields, FormValidationAction, FormValidators)
 import Halogen as H
 import Halogen.HTML.Events as HE
 import Prim.RowList as RL
@@ -49,7 +47,6 @@ component
   => Internal.ModifyAll ifs fxs fs fs
   => Internal.ValidateAll vs fxs fs fs m
   => Internal.FormFieldToMaybeOutput fxs fs os
-  => MakeDebouncerFieldsFromRow form m
   => Newtype (FormInputField form) (Variant ivs)
   => Newtype (FormInputFields form) { | is }
   => Newtype (FormOutputFields form) { | os }
@@ -84,7 +81,7 @@ component =
         { allTouched: false
         , initialInputs
         , validators
-        , debouncerFields: mkDebouncerFields
+        , debouncerFields: Map.empty
         }
     }
 
@@ -161,28 +158,30 @@ component =
       -- NOTE debug
       H.liftEffect $ log "ModifyValidateAsync"
 
-      -- state <- getState
+      state <- getState
 
-      -- let
-      --   label :: String
-      --   label = case unsafeCoerce (unwrap variant) of
-      --     VariantRep x -> x.type
+      let
+        label :: String
+        label = case unsafeCoerce (unwrap variant) of
+          VariantRep x -> x.type
 
-      --   mvdRef :: Maybe (Ref.Ref (Maybe (Aff.Error -> m Unit)))
-      --   mvdRef = Map.lookup label (unwrap state.internal).validationCancellerRef
+        debouncerFieldM :: Maybe (DebouncerField m)
+        debouncerFieldM = Map.lookup label (unwrap state.internal).debouncerFields
 
-      --   mdbRef :: Maybe (Ref.Ref (Maybe Debouncer))
-      --   mdbRef = Map.lookup label (unwrap state.internal).debounceRef
+        -- readRef :: forall x n. MonadAff n => Maybe (Ref.Ref (Maybe x)) -> n (Maybe x)
+        -- readRef = H.liftEffect <<< map join <<< traverse Ref.read
 
-      --   readRef :: forall x n. MonadAff n => Maybe (Ref.Ref (Maybe x)) -> n (Maybe x)
-      --   readRef = H.liftEffect <<< map join <<< traverse Ref.read
+        mkFiber
+          :: AVar.AVar Unit
+          -> DSL parent_query child_query child_slots form m (Aff.Fiber Unit)
+        mkFiber avar = H.liftAff $ Aff.forkAff do
+          Aff.delay ms
+          AVar.put unit avar
 
-      --   mkFiber
-      --     :: AVar.AVar Unit
-      --     -> DSL parent_query child_query child_slots form m (Aff.Fiber Unit)
-      --   mkFiber avar = H.liftAff $ Aff.forkAff do
-      --     Aff.delay ms
-      --     AVar.put unit avar
+      case debouncerFieldM of
+        Nothing -> do
+          pure unit
+        Just df -> pure unit
 
       -- traverse_ (\f -> H.lift $ f $ Aff.error "times' up") =<< readRef mvdRef
       -- mdebouncer <- readRef mdbRef

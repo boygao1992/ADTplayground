@@ -5,7 +5,7 @@ import Prelude
 import Control.Alt (class Alt, (<|>))
 import Data.Either (Either(..), either)
 import Data.Newtype (class Newtype, unwrap, wrap)
-import Formless.Types.Form (DebouncerField, FormField, InputField, InputFunction, OutputField, U)
+import Formless.Types.Form (FormField, InputField, InputFunction, OutputField, U)
 import Heterogeneous.Mapping (class MapRecordWithIndex, class Mapping, ConstMapping, hmap)
 import Prim.RowList (class RowToList)
 import Data.Variant (Variant)
@@ -26,8 +26,6 @@ type FormInputFunctions form = form Record InputFunction
 type FormFields form = form Record FormField
 
 type FormValidators form m = form Record (Validation form m)
-
-type FormDebouncerFields form m = form Record (DebouncerField m)
 
 ----------
 -- Core type

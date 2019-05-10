@@ -2,10 +2,7 @@ module Formless.Types.Form where
 
 import Prelude
 
-import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
-import Effect.AVar (AVar)
-import Effect.Aff (Fiber, Error)
 import Formless.Data.FormFieldResult (FormFieldResult)
 
 -- | Create a proxy for your form type, for use with functions that generate records from
@@ -42,19 +39,6 @@ type FormFieldRow error input output =
   , touched :: Boolean
   , result :: FormFieldResult error output
   )
-
-newtype DebouncerField m e i o = DebouncerField (Record (DebouncerFieldRow m e i o))
-derive instance newtypeDebounceField :: Newtype (DebouncerField m e i o) _
-
-type DebouncerFieldRow m e i o =
-  ( debouncer :: Maybe Debouncer
-  , canceller :: Maybe (Error -> m Unit)
-  )
-
-type Debouncer =
-  { var :: AVar Unit
-  , fiber :: Fiber Unit
-  }
 
 ----------
 -- Helpers

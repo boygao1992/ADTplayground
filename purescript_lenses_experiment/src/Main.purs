@@ -10,14 +10,14 @@ import Data.Foldable (foldMap)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Lens (Lens, _Left, _Right, lens, over, set, view)
+import Data.Lens (Lens', Lens, _Left, _Right, lens, over, set, view)
 import Data.Lens.At (at)
 import Data.Lens.Common (_1, _2, _Just, _Left)
 import Data.Lens.Fold (preview)
 import Data.Lens.Index (ix)
 import Data.Lens.Prism (prism', review, only, nearly, is)
 import Data.Lens.Record (prop)
-import Data.Lens.Traversal (traversed, element)
+import Data.Lens.Traversal (Traversal', element, traversed)
 import Data.Lens.Types (Prism')
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
@@ -88,6 +88,16 @@ _solidFillWhite' =
 _first = prop (SProxy :: SProxy "first")
 _second = prop (SProxy :: SProxy "second")
 
+_Maybe :: forall a. Traversal' (Maybe a) a
+_Maybe = traversed
+
+_space :: forall a. String -> Lens' (Map.Map String { monkey :: String }) (Maybe { monkey :: String})
+_space name = at name
+
+_monkey :: Lens' { monkey :: String } String
+_monkey = prop (SProxy :: SProxy "monkey")
+
+
 main :: Effect Unit
 main = do
 
@@ -140,3 +150,6 @@ main = do
   logShow $ preview (_first <<< _Right <<< _second <<< _Just ) { first : Right { second : Just 2 }}
 
   logShow $ is _solid (Solid Color.white) :: Boolean
+
+  logShow $ set _Maybe 1 Nothing
+  logShow $ set _Maybe 2 (Just 1)

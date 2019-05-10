@@ -2,13 +2,11 @@ module Formless.Transform.Row where
 
 import Prelude
 
-import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, wrap)
 import Data.Symbol (class IsSymbol, SProxy(..))
 import Formless.Class.Initial (class Initial, initial)
 import Formless.Internal.Transform (class Row1Cons, FromScratch, fromScratch)
-import Formless.Types.Form (DebouncerField(..), FormProxy, InputField(..))
-import Formless.Validation (FormDebouncerFields)
+import Formless.Types.Form (FormProxy, InputField(..))
 import Prim.Row as Row
 import Prim.RowList as RL
 import Record.Builder as Builder
@@ -102,39 +100,39 @@ instance makeSProxiesCons
       rest = makeSProxiesBuilder (RLProxy :: RLProxy tail)
       first = Builder.insert (SProxy :: SProxy name) (SProxy :: SProxy name)
 
--- | MakeDebouncerFieldsFromRow
+-- | DEPRECATED MakeDebouncerFieldsFromRow
 
-class MakeDebouncerFieldsFromRow form m where
-  mkDebouncerFields :: FormDebouncerFields form m
+-- class MakeDebouncerFieldsFromRow form m where
+--   mkDebouncerFields :: FormDebouncerFields form m
 
-instance makeDebouncerFieldsFromRow
-  :: ( Newtype (FormDebouncerFields form m) (Record debouncers)
-    , RL.RowToList debouncers xs
-    , MakeDebouncerFieldsFromRowImpl xs debouncers
-    )
-  => MakeDebouncerFieldsFromRow form m
-  where
-    mkDebouncerFields =
-      wrap $ fromScratch (makeDebouncerFieldsFromRowImpl (RLProxy :: RLProxy xs))
+-- instance makeDebouncerFieldsFromRow
+--   :: ( Newtype (FormDebouncerFields form m) (Record debouncers)
+--     , RL.RowToList debouncers xs
+--     , MakeDebouncerFieldsFromRowImpl xs debouncers
+--     )
+--   => MakeDebouncerFieldsFromRow form m
+--   where
+--     mkDebouncerFields =
+--       wrap $ fromScratch (makeDebouncerFieldsFromRowImpl (RLProxy :: RLProxy xs))
 
-class MakeDebouncerFieldsFromRowImpl (xs :: RL.RowList) (to :: # Type) | xs -> to where
-  makeDebouncerFieldsFromRowImpl :: RLProxy xs -> FromScratch to
+-- class MakeDebouncerFieldsFromRowImpl (xs :: RL.RowList) (to :: # Type) | xs -> to where
+--   makeDebouncerFieldsFromRowImpl :: RLProxy xs -> FromScratch to
 
-instance makeDebouncerFieldsFromRowNil
-  :: MakeDebouncerFieldsFromRowImpl RL.Nil ()
-  where
-    makeDebouncerFieldsFromRowImpl _ = identity
+-- instance makeDebouncerFieldsFromRowNil
+--   :: MakeDebouncerFieldsFromRowImpl RL.Nil ()
+--   where
+--     makeDebouncerFieldsFromRowImpl _ = identity
 
-instance makeDebouncerFieldsFromRowCons
-  :: ( MakeDebouncerFieldsFromRowImpl restRl restTo
-    , IsSymbol label
-    , Row1Cons label (DebouncerField m e i o) restTo to
-    )
-  => MakeDebouncerFieldsFromRowImpl (RL.Cons label (DebouncerField m e i o) restRl) to
-  where
-    makeDebouncerFieldsFromRowImpl _ =
-      Builder.insert
-        (SProxy :: SProxy label)
-        (DebouncerField { debouncer : Nothing, canceller : Nothing })
-      <<< makeDebouncerFieldsFromRowImpl (RLProxy :: RLProxy restRl)
+-- instance makeDebouncerFieldsFromRowCons
+--   :: ( MakeDebouncerFieldsFromRowImpl restRl restTo
+--     , IsSymbol label
+--     , Row1Cons label (DebouncerField m e i o) restTo to
+--     )
+--   => MakeDebouncerFieldsFromRowImpl (RL.Cons label (DebouncerField m e i o) restRl) to
+--   where
+--     makeDebouncerFieldsFromRowImpl _ =
+--       Builder.insert
+--         (SProxy :: SProxy label)
+--         (DebouncerField { debouncer : Nothing, canceller : Nothing })
+--       <<< makeDebouncerFieldsFromRowImpl (RLProxy :: RLProxy restRl)
 
