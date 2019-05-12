@@ -147,7 +147,7 @@ component =
         label = case unsafeCoerce (unwrap variant) of
           VariantRep x -> x.type
 
-      (debouncerFieldM :: Maybe (DebouncerField m))
+      debouncerFieldM :: Maybe (DebouncerField m)
         <- useState (_debouncerFieldM label)
 
       debouncerField <- case debouncerFieldM of
@@ -184,8 +184,12 @@ component =
       cancellerM <- H.liftEffect $ Ref.read cancellerRef
 
       -- NOTE Field_Update -> intercept validation
-      for_ cancellerM \canceller ->
+      for_ cancellerM \canceller -> do
+        -- NOTE debug
+        H.liftEffect $ log "validation intercepted"
+
         H.lift $ canceller (Aff.error "intercept validation")
+        H.liftEffect $ Ref.write Nothing cancellerRef
 
       case debouncerM of
         Nothing -> do
@@ -209,7 +213,14 @@ component =
               action = unsafeCoerce variant
 
             canceller <- H.fork do
+              -- NOTE debug
+              H.liftEffect $ log "validation begins"
+
               eval $ H.action $ Validate action
+
+              -- NOTE debug
+              H.liftEffect $ log "validation ends"
+
             H.liftEffect $ Ref.write (Just canceller) cancellerRef
 
         Just { channel, fiber } -> do
