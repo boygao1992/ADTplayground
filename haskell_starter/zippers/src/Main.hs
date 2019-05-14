@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE
   BlockArguments
@@ -23,17 +24,79 @@ module Main where
 
 import qualified Control.Monad.ST as ST
 import qualified Data.STRef as STRef
-import qualified Data.List as List
--- import Control.Monad.State.Strict
 import Control.Category ((<<<))
 import Data.Maybe (mapMaybe)
 import Prelude
 import Data.Foldable (foldl')
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import qualified Data.Sequence as Seq
-import Control.Monad.State (State)
-import qualified Control.Monad.State as State
+
+-- Clown and Joker
+
+data Expr
+  = Val Int
+  | Add Expr Expr
+ deriving (Eq, Ord, Show)
+
+exprExample :: Expr
+exprExample =
+  ((Val 1) `Add` (Val 2)) `Add` (Val 3)
+
+type ExprStack = [Expr -- NOTE suspended
+                  `Either`
+                  Int -- NOTE evaluated
+                 ]
+
+eval :: Expr -> Int
+eval e = load e []
+
+load :: Expr -> ExprStack -> Int -- NOTE destructure Expr
+load (Val v) stk = unload v stk
+load (Add e1 e2) stk = load e1 (Left e2 : stk)
+
+unload :: Int -> ExprStack -> Int -- NOTE destructure ExprStack
+unload v [] = v
+unload v1 (Left e2 : stk) = load e2 (Right v1 : stk)
+unload v2 (Right v1 : stk) = unload (v1 + v2) stk
+
+
+-- XMonad
+data XMonadStack a
+  = XMonadEmpty
+  | XMonadNode
+      { focus :: a
+      , left :: [a] -- clowns to the left
+      , right :: [a] -- jokers to the right
+      }
+
+data XMonadWorkspace a = XMonadWorkspace
+  { tag :: Int
+  , stack :: XMonadStack a
+  }
+
+data XMonadStackSet a = XMonadStackSet
+  { current :: XMonadWorkspace a -- NOTE force StackSet to be non-empty
+  , prev :: [XMonadWorkspace a]
+  , next :: [XMonadWorkspace a]
+  }
+
+
+-- Zipper
+
+data ZList a = ZList [a] [a]
+  deriving (Eq, Ord, Show, Functor)
+
+zLeft :: ZList a -> Either String (ZList a)
+zLeft (ZList (l : ls) rs) = Right $ ZList ls (l : rs)
+zLeft _ = Left "Invalid move"
+
+zRight :: ZList a -> Either String (ZList a)
+zRight (ZList ls (r : rs)) = Right $ ZList (r : ls) rs
+zRight _ = Left "Invalid move"
+
+zSet :: a -> ZList a -> Either String (ZList a)
+zSet x (ZList ls (_ : rs)) = Right $ ZList ls (x : rs)
+zSet _ _ = Left "Invalid move"
 
 data Tree a
   = Empty

@@ -2,6 +2,8 @@ module Main where
 
 import RIO
 import System.IO (openBinaryFile)
+import System.Environment (getArgs)
+import Prelude (print)
 
 withBinaryFile :: FilePath -> IOMode -> (Handle -> IO a) -> IO a
 withBinaryFile path mode = bracket (openBinaryFile path mode) hClose
@@ -49,8 +51,8 @@ main2 = runSimpleApp do
   res4 <- try $ throwString "This will *not* be caught"
   logInfo $ displayShow (res4 :: Either IOException ())
 
-main :: IO ()
-main = runSimpleApp do
+main3 :: IO ()
+main3 = runSimpleApp do
   result1 <- tryAny $ error "This will be caught"
   case result1 of
     Left e -> logInfo $ "Exception was caught: " <> displayShow e
@@ -65,3 +67,8 @@ main = runSimpleApp do
   case result3 of
     Left e -> logInfo $ "Exception was caught" <> displayShow e
     Right () -> logInfo "How was this successful?!?"
+
+main :: IO ()
+main = do
+  args <- getArgs
+  print args

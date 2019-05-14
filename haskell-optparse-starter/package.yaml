@@ -1,0 +1,106 @@
+name:                haskell-optparse-starter
+version:             0.1.0.0
+github:              boygao1992/haskell-optparse-starter
+license:             BSD3
+author:              wenbo
+maintainer:          wg2313@columbia.edu
+copyright:           MIT
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/boygao1992/haskell-optparse-starter#readme>
+
+dependencies:
+- base >= 4.11 && < 10
+- rio >= 0.1.8.0
+- optparse-applicative >= 0.14
+- mysql >= 0.17
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Widentities
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wpartial-fields
+- -Wredundant-constraints
+
+default-extensions:
+- AutoDeriveTypeable
+- BangPatterns
+- BinaryLiterals
+- ConstraintKinds
+- DataKinds
+- DefaultSignatures
+- DeriveDataTypeable
+- DeriveFoldable
+- DeriveFunctor
+- DeriveGeneric
+- DeriveTraversable
+- DerivingStrategies
+- DoAndIfThenElse
+- EmptyDataDecls
+- ExistentialQuantification
+- ExplicitForAll
+- FlexibleContexts
+- FlexibleInstances
+- FunctionalDependencies
+- GADTs
+- GeneralizedNewtypeDeriving
+- InstanceSigs
+- KindSignatures
+- LambdaCase
+- MonadFailDesugaring
+- MultiParamTypeClasses
+- MultiWayIf
+- NamedFieldPuns
+- NoImplicitPrelude
+- OverloadedStrings
+- PartialTypeSignatures
+- PatternGuards
+- PolyKinds
+- RankNTypes
+- ScopedTypeVariables
+- StandaloneDeriving
+- TupleSections
+- TypeFamilies
+- TypeSynonymInstances
+- ViewPatterns
+
+library:
+  source-dirs: src
+
+executables:
+  haskell-optparse-starter-exe:
+    main:                Main.hs
+    source-dirs:         app
+    dependencies:
+    - haskell-optparse-starter
+    - optparse-simple
+
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+
+tests:
+  haskell-optparse-starter-test:
+    main:                Spec.hs
+    source-dirs:         test
+    dependencies:
+    - haskell-optparse-starter
+    - hspec
+
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
