@@ -1,8 +1,8 @@
 module Tonatona.Logger.Config where
 
-import Import
-import Options.Applicative
-import Tonatona.Options.Parser
+import RIO
+import Options.Applicative (option, auto, long, metavar, value, help)
+import Tonatona.Options.Parser (HasParser, parser)
 
 class HasLoggerConfig env where
   loggerConfig :: Lens' env LoggerConfig

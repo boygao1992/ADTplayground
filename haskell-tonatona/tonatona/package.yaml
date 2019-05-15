@@ -1,0 +1,88 @@
+name: tonatona
+version: "0.1.0.1"
+category: "Framework, Library, Tonatona, Web"
+synopsis: meta application framework
+description:
+  Tonatona is a **meta** application framework. It handles lots of boring tasks that are needed for real-world development such as reading in values defined in environment variables, setting up logging, sending emails, accessing databases, etc.
+license: "MIT"
+author: "Kadzuya Okamoto, Dennis Gosnell"
+copyright: "2018 Kadzuya Okamoto"
+maintainer: "arow.okamoto+github@gmail.com"
+
+extra-source-files:
+  - README.md
+
+ghc-options: -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+default-extensions:
+  - AutoDeriveTypeable
+  - BangPatterns
+  - BinaryLiterals
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveDataTypeable
+  - DeriveFoldable
+  - DeriveFunctor
+  - DeriveGeneric
+  - DeriveTraversable
+  - DoAndIfThenElse
+  - DuplicateRecordFields
+  - EmptyDataDecls
+  - ExistentialQuantification
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - GeneralizedNewtypeDeriving
+  - InstanceSigs
+  - KindSignatures
+  - LambdaCase
+  - MonadFailDesugaring
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - PartialTypeSignatures
+  - PatternGuards
+  - PolyKinds
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - Strict
+  - StrictData
+  - TupleSections
+  - TypeFamilies
+  - TypeSynonymInstances
+  - ViewPatterns
+
+dependencies:
+  - base >= 4.7 && < 5
+  - rio >= 0.1
+  - tonaparser >= 0.1
+
+library:
+  source-dirs:
+    - src
+  exposed-modules:
+    - Tonatona
+
+tests:
+  spec:
+    main: "Spec.hs"
+    other-modules: []
+    source-dirs:
+      - test
+    dependencies:
+      - tonatona
+  doctest:
+    main: "DocTest.hs"
+    other-modules: []
+    source-dirs:
+      - test
+    dependencies:
+      - doctest
+      - Glob
+
+github: tonatona-project/tonatona

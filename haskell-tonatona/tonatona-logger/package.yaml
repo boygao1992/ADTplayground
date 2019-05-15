@@ -1,0 +1,87 @@
+name: tonatona-logger
+version: "0.2.0.1"
+category: "System, Library, Tonatona"
+synopsis: tonatona plugin for logging.
+description:
+  Tonatona plugin for logging.
+  This package provides a tonatona plugin for logging.
+license: "MIT"
+author: "Kadzuya Okamoto, Dennis Gosnell"
+copyright: "2018 Kadzuya Okamoto"
+maintainer: "arow.okamoto+github@gmail.com"
+
+extra-source-files:
+  - README.md
+
+ghc-options: -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+default-extensions:
+  - AutoDeriveTypeable
+  - BangPatterns
+  - BinaryLiterals
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveDataTypeable
+  - DeriveFoldable
+  - DeriveFunctor
+  - DeriveGeneric
+  - DeriveTraversable
+  - DoAndIfThenElse
+  - EmptyDataDecls
+  - ExistentialQuantification
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - GeneralizedNewtypeDeriving
+  - InstanceSigs
+  - KindSignatures
+  - LambdaCase
+  - MonadFailDesugaring
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - PartialTypeSignatures
+  - PatternGuards
+  - PolyKinds
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - TupleSections
+  - TypeFamilies
+  - TypeSynonymInstances
+  - ViewPatterns
+
+dependencies:
+  - base >= 4.7 && < 5
+  - rio >= 0.1
+  - tonatona >= 0.1
+  - tonaparser >= 0.1
+
+library:
+  source-dirs:
+    - src
+  exposed-modules:
+    - Tonatona.Logger
+
+tests:
+  spec:
+    main: "Spec.hs"
+    other-modules: []
+    source-dirs:
+      - test
+    dependencies:
+      - tonatona
+  doctest:
+    main: "DocTest.hs"
+    other-modules: []
+    source-dirs:
+      - test
+    dependencies:
+      - doctest
+      - Glob
+
+github: tonatona-project/tonatona

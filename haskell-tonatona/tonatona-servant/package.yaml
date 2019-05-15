@@ -1,0 +1,98 @@
+name: tonatona-servant
+version: "0.1.0.2"
+category: "Library, Tonatona, Servant, Web"
+synopsis: tonatona plugin for servant.
+description:
+  Tonatona plugin for @servant@.
+  This package provides a tonatona plugin for @servant@.
+license: "MIT"
+author: "Kadzuya Okamoto, Dennis Gosnell"
+copyright: "2018 Kadzuya Okamoto"
+maintainer: "arow.okamoto+github@gmail.com"
+
+extra-source-files:
+  - README.md
+
+ghc-options: -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+default-extensions:
+  - AutoDeriveTypeable
+  - BangPatterns
+  - BinaryLiterals
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveDataTypeable
+  - DeriveFoldable
+  - DeriveFunctor
+  - DeriveGeneric
+  - DeriveTraversable
+  - DoAndIfThenElse
+  - EmptyDataDecls
+  - ExistentialQuantification
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - GeneralizedNewtypeDeriving
+  - InstanceSigs
+  - KindSignatures
+  - LambdaCase
+  - MonadFailDesugaring
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - PartialTypeSignatures
+  - PatternGuards
+  - PolyKinds
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - Strict
+  - StrictData
+  - TupleSections
+  - TypeFamilies
+  - TypeSynonymInstances
+  - ViewPatterns
+
+dependencies:
+  - base >= 4.7 && < 5
+  - exceptions >= 0.8
+  - http-types >= 0.12
+  - monad-logger >= 0.3
+  - rio >= 0.1
+  - servant >= 0.13
+  - servant-server >= 0.13
+  - tonaparser >= 0.1
+  - tonatona >= 0.1
+  - tonatona-logger >= 0.1
+  - wai >= 3.2
+  - wai-extra >= 3.0
+  - warp >= 3.2
+
+library:
+  source-dirs:
+    - src
+  exposed-modules:
+    - Tonatona.Servant
+
+tests:
+  spec:
+    main: "Spec.hs"
+    other-modules: []
+    source-dirs:
+      - test
+    dependencies:
+      - tonatona
+  doctest:
+    main: "DocTest.hs"
+    other-modules: []
+    source-dirs:
+      - test
+    dependencies:
+      - doctest
+      - Glob
+
+github: tonatona-project/tonatona

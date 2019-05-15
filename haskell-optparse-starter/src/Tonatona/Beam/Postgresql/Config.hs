@@ -1,8 +1,8 @@
 module Tonatona.Beam.Postgresql.Config where
 
-import Import
-import Options.Applicative
-import Tonatona.Options.Parser
+import RIO
+import Options.Applicative (strOption, option, auto, long, metavar, value, help)
+import Tonatona.Options.Parser (HasParser, parser)
 
 class HasBeamPostgresqlConfig env where
   beamPostgresqlConfig :: Lens' env BeamPostgresqlConfig

@@ -1,8 +1,8 @@
 module Tonatona.Persist.Postgresql.Config where
 
-import Import
-import Options.Applicative
-import Tonatona.Options.Parser
+import RIO
+import Options.Applicative (strOption, option, auto, long, metavar, value, help)
+import Tonatona.Options.Parser (HasParser, parser)
 
 class HasPersistPostgresqlConfig env where
   persistPostgresqlConfig :: Lens' env PersistPostgresqlConfig

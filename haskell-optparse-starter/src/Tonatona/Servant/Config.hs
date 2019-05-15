@@ -1,8 +1,8 @@
 module Tonatona.Servant.Config where
 
-import Import
-import Options.Applicative
-import Tonatona.Options.Parser
+import RIO
+import Options.Applicative (strOption, option, auto, long, metavar, value, help)
+import Tonatona.Options.Parser (HasParser, parser)
 
 class HasServantConfig env where
   servantConfig :: Lens' env ServantConfig
@@ -26,7 +26,7 @@ instance HasParser Host where
     $ long "host"
     <> metavar "HOST"
     <> value (Host "localhost")
-    <> help "Servant Host name to serve"
+    <> help "Servant Host"
 
 newtype Protocol = Protocol { unProtocol :: Text }
   deriving newtype (Eq, Ord, IsString, Read, Show)
@@ -37,7 +37,7 @@ instance HasParser Protocol where
     $ long "protocol"
     <> metavar "PROTOCOL"
     <> value (Protocol "http")
-    <> help "Servant Protocol to serve"
+    <> help "Servant Protocol"
 
 newtype Port = Port { unPort :: Int }
   deriving newtype (Eq, Ord, Read, Show)
@@ -48,4 +48,4 @@ instance HasParser Port where
     $ long "port"
     <> metavar "PORT"
     <> value (Port 8000)
-    <> help "Servant Port to serve"
+    <> help "Servant Port"
