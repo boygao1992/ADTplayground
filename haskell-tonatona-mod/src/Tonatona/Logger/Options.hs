@@ -2,6 +2,7 @@ module Tonatona.Logger.Options where
 
 import RIO
 import Options.Applicative (option, auto, long, metavar, value, help)
+
 import Tonatona.Options.Parser (HasParser, parser)
 
 -- API
@@ -31,11 +32,10 @@ defaultVerbosity mode (Verbose v) =
   case (mode, v) of
     (Development, _) -> True
     _ -> v
-
 -- Option Parser
 
-class HasLoggerOptions env where
-  loggerOptions :: Lens' env LoggerOptions
+class HasLoggerOptions options where
+  loggerOptions :: Lens' options LoggerOptions
 
 data LoggerOptions = LoggerOptions
   { mode :: !DeployMode

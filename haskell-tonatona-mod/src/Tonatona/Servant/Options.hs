@@ -4,8 +4,8 @@ import RIO
 import Options.Applicative (strOption, option, auto, long, metavar, value, help)
 import Tonatona.Options.Parser (HasParser, parser)
 
-class HasServantOptions env where
-  servantOptions :: Lens' env ServantOptions
+class HasServantOptions options where
+  servantOptions :: Lens' options ServantOptions
 
 data ServantOptions = ServantOptions
   { host :: !Host

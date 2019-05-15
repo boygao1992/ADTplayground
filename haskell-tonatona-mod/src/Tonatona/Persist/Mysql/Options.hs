@@ -4,8 +4,8 @@ import RIO
 import Options.Applicative (strOption, option, auto, long, metavar, value, help)
 import Tonatona.Options.Parser (HasParser, parser)
 
-class HasPersistMysqlOptions env where
-  persistMysqlOptions :: Lens' env PersistMysqlOptions
+class HasPersistMysqlOptions options where
+  persistMysqlOptions :: Lens' options PersistMysqlOptions
 
 data PersistMysqlOptions = PersistMysqlOptions
   { host :: !Host

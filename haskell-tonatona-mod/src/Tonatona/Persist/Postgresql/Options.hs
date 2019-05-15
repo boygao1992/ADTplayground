@@ -4,8 +4,8 @@ import RIO
 import Options.Applicative (strOption, option, auto, long, metavar, value, help)
 import Tonatona.Options.Parser (HasParser, parser)
 
-class HasPersistPostgresqlOptions env where
-  persistPostgresqlOptions :: Lens' env PersistPostgresqlOptions
+class HasPersistPostgresqlOptions options where
+  persistPostgresqlOptions :: Lens' options PersistPostgresqlOptions
 
 data PersistPostgresqlOptions = PersistPostgresqlOptions
   { connectionString :: !ConnectionString

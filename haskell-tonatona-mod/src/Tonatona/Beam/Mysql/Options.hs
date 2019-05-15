@@ -25,8 +25,8 @@ data SSLInfo = SSLInfo {
 } deriving (Eq, Read, Show, Typeable)
 -}
 
-class HasBeamMysqlOptions env where
-  beamMysqlOptions :: Lens' env BeamMysqlOptions
+class HasBeamMysqlOptions options where
+  beamMysqlOptions :: Lens' options BeamMysqlOptions
 
 data BeamMysqlOptions = BeamMysqlOptions
   { host :: !Host

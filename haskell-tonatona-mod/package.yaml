@@ -24,11 +24,15 @@ dependencies:
 - http-types >= 0.12
 - optparse-applicative >= 0.14
 - rio >= 0.1.8.0
-- servant >= 0.16
-- servant-server >= 0.16
+- servant >= 0.13
+- servant-server >= 0.13
 - wai >= 3.2
 - wai-extra >= 3.0
 - warp >= 3.2
+- transformers >= 0.5
+- beam-core >= 0.8
+- beam-postgres
+
 
 ghc-options:
 - -Wall
