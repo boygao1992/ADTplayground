@@ -7,24 +7,24 @@ import Tonatona.Options.Parser (HasParser, parser)
 
 -- API
 
-defaultWithLogFunc
-  :: ( MonadUnliftIO m
-    , HasLoggerOptions options
-    )
+defaultWithLogFunc ::
+  ( MonadUnliftIO m
+  , HasLoggerOptions options
+  )
   => options
   -> (LogFunc -> m a) -> m a
 defaultWithLogFunc options action = do
   logOptions <- defaultLogOptions options
   withLogFunc logOptions action
 
-defaultLogOptions
-  :: ( MonadIO m
-    , HasLoggerOptions options
-    )
+defaultLogOptions ::
+  ( MonadIO m
+  , HasLoggerOptions options
+  )
   => options
   -> m LogOptions
 defaultLogOptions options = do
-  let LoggerOptions { mode, verbose } = view loggerOptions options
+  let LoggerOptions { mode, verbose } = view loggerOptionsL options
   logOptionsHandle stderr $ defaultVerbosity mode verbose
 
 defaultVerbosity :: DeployMode -> Verbose -> Bool
@@ -35,7 +35,7 @@ defaultVerbosity mode (Verbose v) =
 -- Option Parser
 
 class HasLoggerOptions options where
-  loggerOptions :: Lens' options LoggerOptions
+  loggerOptionsL :: Lens' options LoggerOptions
 
 data LoggerOptions = LoggerOptions
   { mode :: !DeployMode
@@ -44,7 +44,7 @@ data LoggerOptions = LoggerOptions
 instance HasParser LoggerOptions where
   parser = LoggerOptions <$> parser <*> parser
 instance HasLoggerOptions LoggerOptions where
-  loggerOptions = id
+  loggerOptionsL = id
 
 data DeployMode
   = Development

@@ -8,7 +8,7 @@ import Tonatona.Options.Parser (HasParser, parser)
 -- Option Parser
 
 class HasBeamPostgresOptions options where
-  beamPostgresOptions :: Lens' options BeamPostgresOptions
+  beamPostgresOptionsL :: Lens' options BeamPostgresOptions
 
 data BeamPostgresOptions = BeamPostgresOptions
   { host :: !Host
@@ -20,7 +20,7 @@ data BeamPostgresOptions = BeamPostgresOptions
 instance HasParser BeamPostgresOptions where
   parser = BeamPostgresOptions <$> parser <*> parser <*> parser <*> parser <*> parser
 instance HasBeamPostgresOptions BeamPostgresOptions where
-  beamPostgresOptions = id
+  beamPostgresOptionsL = id
 
 newtype Host = Host { unHost :: String }
   deriving newtype (Eq, Ord, IsString, Read, Show)

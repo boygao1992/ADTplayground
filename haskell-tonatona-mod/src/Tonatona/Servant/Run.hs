@@ -11,20 +11,20 @@ import qualified Network.Wai.Handler.Warp as Warp
 import Network.Wai.Middleware.RequestLogger (logStdout, logStdoutDev)
 import Servant (Application, Handler, HasServer, ServantErr, ServerT, errHeaders, err302, hoistServer, serve, throwError)
 
-import Tonatona.Servant.Options (HasServantOptions, servantOptions, _port)
-import Tonatona.Logger.Options (HasLoggerOptions, LoggerOptions(..), loggerOptions, defaultVerbosity)
+import Tonatona.Servant.Options (HasServantOptions, servantOptionsL, _port)
+import Tonatona.Logger.Options (HasLoggerOptions, LoggerOptions(..), loggerOptionsL, defaultVerbosity)
 
 run
-  :: forall (api :: *) env
-  . ( HasServer api '[]
-    , HasServantOptions env
-    , HasLoggerOptions env
-    )
+  :: forall (api :: *) env.
+  ( HasServer api '[]
+  , HasServantOptions env
+  , HasLoggerOptions env
+  )
   => ServerT api (RIO env)
   -> RIO env ()
 run servantServer = do
   env <- ask
-  port <- view (servantOptions . _port)
+  port <- view (servantOptionsL . _port)
   loggingMiddleware <- reqLogMiddleware
   let
     app = loggingMiddleware $ runServant env
@@ -50,7 +50,7 @@ run servantServer = do
 
     reqLogMiddleware :: RIO env Middleware
     reqLogMiddleware = do
-      LoggerOptions { mode, verbose } <- view loggerOptions
+      LoggerOptions { mode, verbose } <- view loggerOptionsL
       pure $ if defaultVerbosity mode verbose
         then logStdoutDev
         else logStdout

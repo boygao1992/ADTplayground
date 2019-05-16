@@ -26,7 +26,7 @@ data SSLInfo = SSLInfo {
 -}
 
 class HasBeamMysqlOptions options where
-  beamMysqlOptions :: Lens' options BeamMysqlOptions
+  beamMysqlOptionsL :: Lens' options BeamMysqlOptions
 
 data BeamMysqlOptions = BeamMysqlOptions
   { host :: !Host
@@ -38,7 +38,7 @@ data BeamMysqlOptions = BeamMysqlOptions
 instance HasParser BeamMysqlOptions where
   parser = BeamMysqlOptions <$> parser <*> parser <*> parser <*> parser <*> parser
 instance HasBeamMysqlOptions BeamMysqlOptions where
-  beamMysqlOptions = id
+  beamMysqlOptionsL = id
 
 newtype Host = Host { unHost :: String }
   deriving newtype (Eq, IsString, Read, Show)

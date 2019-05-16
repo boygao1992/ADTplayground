@@ -5,7 +5,7 @@ import Options.Applicative (strOption, option, auto, long, metavar, value, help)
 import Tonatona.Options.Parser (HasParser, parser)
 
 class HasPersistPostgresqlOptions options where
-  persistPostgresqlOptions :: Lens' options PersistPostgresqlOptions
+  persistPostgresqlOptionsL :: Lens' options PersistPostgresqlOptions
 
 data PersistPostgresqlOptions = PersistPostgresqlOptions
   { connectionString :: !ConnectionString
@@ -14,7 +14,7 @@ data PersistPostgresqlOptions = PersistPostgresqlOptions
 instance HasParser PersistPostgresqlOptions where
   parser = PersistPostgresqlOptions <$> parser <*> parser
 instance HasPersistPostgresqlOptions PersistPostgresqlOptions where
-  persistPostgresqlOptions = id
+  persistPostgresqlOptionsL = id
 
 newtype ConnectionString = ConnectionString { unConnectionString :: ByteString }
   deriving newtype (Eq, IsString, Read, Show)

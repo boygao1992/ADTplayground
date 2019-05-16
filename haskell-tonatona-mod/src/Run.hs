@@ -4,6 +4,6 @@ module Run (run) where
 
 import Import
 
-run :: RIO App ()
+run :: RIO Resources ()
 run = do
   logInfo "We're inside the application!"

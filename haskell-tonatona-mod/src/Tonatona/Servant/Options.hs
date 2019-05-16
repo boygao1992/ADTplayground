@@ -2,10 +2,11 @@ module Tonatona.Servant.Options where
 
 import RIO
 import Options.Applicative (strOption, option, auto, long, metavar, value, help)
+
 import Tonatona.Options.Parser (HasParser, parser)
 
 class HasServantOptions options where
-  servantOptions :: Lens' options ServantOptions
+  servantOptionsL :: Lens' options ServantOptions
 
 data ServantOptions = ServantOptions
   { host :: !Host
@@ -15,9 +16,9 @@ data ServantOptions = ServantOptions
 instance HasParser ServantOptions where
   parser = ServantOptions <$> parser <*> parser <*> parser
 instance HasServantOptions ServantOptions where
-  servantOptions = id
+  servantOptionsL = id
 
-newtype Host = Host { unHost :: Text }
+newtype Host = Host { unHost :: Text}
   deriving newtype (Eq, Ord, IsString, Read, Show)
 _host :: Lens' ServantOptions Text
 _host = lens (unHost . host) (\x y -> x { host = Host y })

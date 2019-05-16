@@ -1,7 +1,7 @@
 module Tonatona.Beam.Postgres.Resources where
 
 import RIO
-import Database.Beam.Postgres (ConnectInfo(..), Connection, connect, defaultConnectInfo)
+import Database.Beam.Postgres (ConnectInfo(..), Connection, connect, close, defaultConnectInfo)
 
 import Tonatona.WithResource (With, withResource, hoistWithResource)
 import Tonatona.Beam.Postgres.Options
@@ -12,13 +12,14 @@ newtype BeamPostgresConnection
   = BeamPostgresConnection { beamPostgresConnection :: Connection }
 
 instance HasBeamPostgresOptions options => With options BeamPostgresConnection where
-  withResource = hoistWithResource $ \options cont -> do
+  withResource = hoistWithResource \options cont -> do
     let connectInfo
           = defaultConnectInfo
-            { connectHost = view (beamPostgresOptions._host) options
-            , connectPort = view (beamPostgresOptions._port) options
-            , connectUser = view (beamPostgresOptions._user) options
-            , connectPassword = view (beamPostgresOptions._password) options
-            , connectDatabase = view (beamPostgresOptions._database) options
+            { connectHost = view (beamPostgresOptionsL._host) options
+            , connectPort = view (beamPostgresOptionsL._port) options
+            , connectUser = view (beamPostgresOptionsL._user) options
+            , connectPassword = view (beamPostgresOptionsL._password) options
+            , connectDatabase = view (beamPostgresOptionsL._database) options
             }
-    liftIO (connect connectInfo) >>= (cont . BeamPostgresConnection)
+    bracket (liftIO $ connect connectInfo) (liftIO . close)
+      $ cont . BeamPostgresConnection

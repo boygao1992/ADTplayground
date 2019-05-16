@@ -5,7 +5,7 @@ import Options.Applicative (strOption, option, auto, long, metavar, value, help)
 import Tonatona.Options.Parser (HasParser, parser)
 
 class HasPersistMysqlOptions options where
-  persistMysqlOptions :: Lens' options PersistMysqlOptions
+  persistMysqlOptionsL :: Lens' options PersistMysqlOptions
 
 data PersistMysqlOptions = PersistMysqlOptions
   { host :: !Host
@@ -17,7 +17,7 @@ data PersistMysqlOptions = PersistMysqlOptions
 instance HasParser PersistMysqlOptions where
   parser = PersistMysqlOptions <$> parser <*> parser <*> parser <*> parser <*> parser
 instance HasPersistMysqlOptions PersistMysqlOptions where
-  persistMysqlOptions = id
+  persistMysqlOptionsL = id
 
 newtype Host = Host { unHost :: Text }
   deriving newtype (Eq, Ord, IsString, Read, Show)
