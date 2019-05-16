@@ -15,5 +15,15 @@ newtype WithResource options m resource
 hoistWithResource :: (options -> ((resource -> m ()) -> m ())) -> WithResource options m resource
 hoistWithResource action = WithResource $ ReaderT $ ContT <$> action
 
-runWithResource :: WithResource options m resource -> options -> (resource -> m ()) -> m ()
-runWithResource (WithResource w) opts action = runContT (runReaderT w opts) action
+runWithResource ::
+  ( With options resource
+  , MonadUnliftIO m
+  )
+  => options
+  -> (resource -> m ())
+  -> m ()
+runWithResource = _runWithResource withResource
+  where
+    _runWithResource :: WithResource options m resource -> options -> (resource -> m ()) -> m ()
+    _runWithResource (WithResource w) opts action = runContT (runReaderT w opts) action
+

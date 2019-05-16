@@ -4,7 +4,7 @@ import RIO
 import Database.Beam.Postgres (ConnectInfo(..), Connection, connect, close, defaultConnectInfo)
 
 import Tonatona.WithResource (With, withResource, hoistWithResource)
-import Tonatona.Beam.Postgres.Options
+import Tonatona.Beam.Postgres.Options (HasBeamPostgresOptions, beamPostgresOptionsL, _host, _port, _user, _password, _database)
 
 -- Resource Initialization
 

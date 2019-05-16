@@ -5,32 +5,33 @@ import RIO
 
 import Tonatona.Options.Parser
 import Tonatona.Logger.Options
-import Tonatona.Beam.Postgres.Options
+import Tonatona.Beam.MySQL.Options
 
 import Tonatona.WithResource
 import Tonatona.Logger.Resources
-import Tonatona.Beam.Postgres.Resources
+import Tonatona.Beam.MySQL.Resources
 
 data Options = Options
   { optionsLogger :: !LoggerOptions
-  , optionsBeamPostgresOptions :: !BeamPostgresOptions
+  , optionsBeamMySQL :: !BeamMySQLOptions
   }
 instance HasParser Options where
   parser = Options <$> parser <*> parser
 instance HasLoggerOptions Options where
   loggerOptionsL = lens optionsLogger (\x y -> x { optionsLogger = y })
-instance HasBeamPostgresOptions Options where
-  beamPostgresOptionsL = lens optionsBeamPostgresOptions (\x y -> x { optionsBeamPostgresOptions = y })
+instance HasBeamMySQLOptions Options where
+  beamMySQLOptionsL = lens optionsBeamMySQL (\x y -> x { optionsBeamMySQL = y })
 
 data Resources = Resources
   { resourceLogFunc :: !LoggerLogFunc
-  , resourceBeamPostgresConnection :: !BeamPostgresConnection
+  , resourceBeamMySQLConnection :: !BeamMySQLConnection
   }
 instance With Options Resources where
   withResource = Resources <$> withResource <*> withResource
 instance HasLogFunc Resources where
   logFuncL = lens resourceLogFunc (\x y -> x { resourceLogFunc = y }) . logFuncL
-
+instance HasBeamMySQLConnection Resources where
+  beamMySQLConnectionL = lens resourceBeamMySQLConnection (\x y -> x { resourceBeamMySQLConnection = y }) . beamMySQLConnectionL
 
 -- data AppOptions = AppOptions
 --   { appLoggerOptions :: LoggerOptions

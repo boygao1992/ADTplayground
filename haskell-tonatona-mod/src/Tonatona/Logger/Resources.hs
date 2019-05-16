@@ -9,7 +9,7 @@ import Tonatona.Logger.Options (HasLoggerOptions, defaultLogOptions)
 
 newtype LoggerLogFunc = LoggerLogFunc { loggerLogFunc :: LogFunc }
 instance HasLogFunc LoggerLogFunc where
-  logFuncL = lens loggerLogFunc (\x y -> x { loggerLogFunc = y })
+  logFuncL = lens loggerLogFunc (\_ y -> LoggerLogFunc y )
 
 instance HasLoggerOptions options => With options LoggerLogFunc where
   withResource = hoistWithResource $ \options cont -> do

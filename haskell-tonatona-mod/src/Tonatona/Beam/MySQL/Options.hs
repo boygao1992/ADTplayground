@@ -1,4 +1,4 @@
-module Tonatona.Beam.Mysql.Options where
+module Tonatona.Beam.MySQL.Options where
 
 import RIO
 import Options.Applicative (strOption, option, auto, long, metavar, value, help)
@@ -25,24 +25,24 @@ data SSLInfo = SSLInfo {
 } deriving (Eq, Read, Show, Typeable)
 -}
 
-class HasBeamMysqlOptions options where
-  beamMysqlOptionsL :: Lens' options BeamMysqlOptions
+class HasBeamMySQLOptions options where
+  beamMySQLOptionsL :: Lens' options BeamMySQLOptions
 
-data BeamMysqlOptions = BeamMysqlOptions
+data BeamMySQLOptions = BeamMySQLOptions
   { host :: !Host
   , port :: !Port
   , user :: !User
   , password :: !Password
   , database :: !Database
   } deriving (Eq, Read, Show)
-instance HasParser BeamMysqlOptions where
-  parser = BeamMysqlOptions <$> parser <*> parser <*> parser <*> parser <*> parser
-instance HasBeamMysqlOptions BeamMysqlOptions where
-  beamMysqlOptionsL = id
+instance HasParser BeamMySQLOptions where
+  parser = BeamMySQLOptions <$> parser <*> parser <*> parser <*> parser <*> parser
+instance HasBeamMySQLOptions BeamMySQLOptions where
+  beamMySQLOptionsL = id
 
 newtype Host = Host { unHost :: String }
   deriving newtype (Eq, IsString, Read, Show)
-_host :: Lens' BeamMysqlOptions String
+_host :: Lens' BeamMySQLOptions String
 _host = lens (unHost . host) (\x y -> x { host = Host y })
 instance HasParser Host where
   parser =
@@ -50,11 +50,11 @@ instance HasParser Host where
     $ long "bmh"
     <> metavar "HOST"
     <> value (Host "localhost")
-    <> help "Beam Mysql Host"
+    <> help "Beam MySQL Host"
 
 newtype Port = Port { unPort :: Word16 }
   deriving newtype (Eq, Read, Show)
-_port :: Lens' BeamMysqlOptions Word16
+_port :: Lens' BeamMySQLOptions Word16
 _port = lens (unPort . port) (\x y -> x { port = Port y })
 instance HasParser Port where
   parser =
@@ -62,11 +62,11 @@ instance HasParser Port where
     $ long "bmP"
     <> metavar "PORT"
     <> value (Port 3306)
-    <> help "Beam Mysql Port"
+    <> help "Beam MySQL Port"
 
 newtype User = User { unUser :: String }
   deriving newtype (Eq, IsString, Read, Show)
-_user :: Lens' BeamMysqlOptions String
+_user :: Lens' BeamMySQLOptions String
 _user = lens (unUser . user) (\x y -> x { user = User y })
 instance HasParser User where
   parser
@@ -74,27 +74,27 @@ instance HasParser User where
     $ long "bmu"
     <> metavar "USER"
     <> value (User "root")
-    <> help "Beam Mysql User"
+    <> help "Beam MySQL User"
 
 newtype Password = Password { unPassword :: String }
   deriving newtype (Eq, IsString, Read, Show)
-_password :: Lens' BeamMysqlOptions String
+_password :: Lens' BeamMySQLOptions String
 _password = lens (unPassword . password) (\x y -> x { password = Password y })
 instance HasParser Password where
   parser
     = strOption
     $ long "bmp"
     <> metavar "PASSWORD"
-    <> value (Password "root")
-    <> help "Beam Mysql Password"
+    <> value (Password "")
+    <> help "Beam MySQL Password"
 
 newtype Database = Database { unDatabase :: String }
   deriving newtype (Eq, IsString, Read, Show)
-_database :: Lens' BeamMysqlOptions String
+_database :: Lens' BeamMySQLOptions String
 _database = lens (unDatabase . database) (\x y -> x { database = Database y })
 instance HasParser Database where
   parser
     = strOption
     $ long "bmD"
     <> metavar "DATABASE"
-    <> help "Beam Mysql Test"
+    <> help "Beam MySQL Test"

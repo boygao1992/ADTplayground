@@ -12,7 +12,7 @@ import Tonatona.Options.Parser
 main :: IO ()
 main = do
   (options :: Options) <- parseOptions
-  runWithResource withResource options (\resource -> runRIO resource run)
+  runWithResource options (\resource -> runRIO resource run)
 
 -- main :: IO ()
 -- main = do

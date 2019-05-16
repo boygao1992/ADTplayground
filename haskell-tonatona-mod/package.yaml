@@ -32,6 +32,8 @@ dependencies:
 - transformers >= 0.5
 - beam-core >= 0.8
 - beam-postgres
+- beam-mysql
+- mysql >=0.1 && <0.2
 
 
 
