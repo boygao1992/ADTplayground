@@ -45,6 +45,7 @@ ghc-options:
 - -Wincomplete-uni-patterns
 - -Wpartial-fields
 - -Wredundant-constraints
+- -Wno-missing-signatures # NOTE for lenses
 
 default-extensions:
 - AutoDeriveTypeable

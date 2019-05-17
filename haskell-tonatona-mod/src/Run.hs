@@ -1,22 +1,45 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedStrings #-}
 module Run (run) where
 
 import Import
-
-import Tonatona.Beam.MySQL.Run (runBeamMySQLDebug)
 import DB
+
+import Tonatona.Beam.MySQL.Run (runBeamMySQLDebug, runBeamMySQLDebugSafe)
 import Database.Beam.Query
 
 run :: RIO Resources ()
 run = do
   logInfo "We're inside the application!"
 
-  let sam = Person 1 "Sam" 10 :: Person
+  runBeamMySQLDebugSafe do
+    runInsert
+      $ insert (persistentDb ^. persons)
+      $ insertValues
+        [ Person 1 "Sam" 10
+        ]
 
-  (runBeamMySQLDebug
-    . runInsert
-    . insert (persistentDb ^. _persons)
-    . insertValues
-    $ [ sam ]) `catchAny` \(e :: SomeException) -> do
-      logInfo $ displayShow e
+    runInsert
+      $ insert (persistentDb ^. persons)
+      $ insertExpressions
+        [ Person default_ (val_ "Melanie Hill") (val_ 29)
+        ]
+
+  runBeamMySQLDebugSafe
+    $ runInsert
+    $ insert (persistentDb ^. follows)
+    $ insertExpressions
+      [ Follow default_ (PersonId 23) (PersonId 1)
+      , Follow default_ (PersonId 24) (PersonId 1)
+      ]
+
+  followers <- runBeamMySQLDebug
+    $ runSelectReturningList
+    $ select do
+        user <- all_ (persistentDb ^. persons)
+        follow <- all_ (persistentDb ^. follows)
+        follower <- all_ (persistentDb ^. persons)
+        guard_ (_followFollowed follow `references_` user)
+        guard_ (_followFollower follow `references_` follower)
+        pure (user ^. personName, follower ^. personName)
+
+  logInfo $ displayShow followers
+
