@@ -11,30 +11,30 @@ import Database.Beam.Schema
 -- Database
 
 data PersistentDb f = PersistentDb
-  { persistentPersons :: f (TableEntity PersonT)
-  , persistentFollows :: f (TableEntity FollowT)
-  , persistentBlogPosts :: f (TableEntity BlogPostT)
+  { _persistentPersons :: f (TableEntity PersonT)
+  , _persistentFollows :: f (TableEntity FollowT)
+  , _persistentBlogPosts :: f (TableEntity BlogPostT)
   } deriving (Generic, Database be)
 
 persistentDb :: DatabaseSettings be PersistentDb
 persistentDb =
   defaultDbSettings `withDbModification`
     dbModification
-    { persistentPersons =
+    { _persistentPersons =
         setEntityName "person"
         <> modifyTableFields tableModification
             { _personId = "id"
             , _personName = "name"
             , _personAge = "age"
             }
-    , persistentFollows =
+    , _persistentFollows =
         setEntityName "follow"
         <> modifyTableFields tableModification
             { _followId = "id"
             , _followFollower = PersonId "follower"
             , _followFollowed = PersonId "followed"
             }
-    , persistentBlogPosts =
+    , _persistentBlogPosts =
         setEntityName "blog_post"
         <> modifyTableFields tableModification
             { _blogpostId = "id"
@@ -68,9 +68,6 @@ instance Table PersonT where
 type PersonId = PrimaryKey PersonT Identity
 deriving instance Eq PersonId
 deriving instance Show PersonId
-
--- _personName :: Functor f2 => (Columnar f1 Text -> f2 (Columnar f1 Text)) -> PersonT f1 -> f2 (PersonT f1)
--- _personAge :: Functor f2 => (Columnar f1 Int -> f2 (Columnar f1 Int)) -> PersonT f1 -> f2 (PersonT f1)
 
 Person
   (LensFor personId)

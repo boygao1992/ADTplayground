@@ -1,7 +1,8 @@
 module Tonatona.Servant.Options where
 
 import RIO
-import Options.Applicative (strOption, option, auto, long, metavar, value, help)
+import Network.Wai.Handler.Warp (HostPreference)
+import Options.Applicative (strOption, option, auto, long, metavar, value, help, switch, showDefault)
 
 import Tonatona.Options.Parser (HasParser, parser)
 
@@ -12,23 +13,25 @@ data ServantOptions = ServantOptions
   { host :: !Host
   , protocol :: !Protocol
   , port :: !Port
+  , logging :: !Logging
   } deriving (Eq, Show)
 instance HasParser ServantOptions where
-  parser = ServantOptions <$> parser <*> parser <*> parser
+  parser = ServantOptions <$> parser <*> parser <*> parser <*> parser
 instance HasServantOptions ServantOptions where
   servantOptionsL = id
 
-newtype Host = Host { unHost :: Text}
+newtype Host = Host { unHost :: HostPreference }
   deriving newtype (Eq, Ord, IsString, Read, Show)
-_host :: Lens' ServantOptions Text
+_host :: Lens' ServantOptions HostPreference
 _host = lens (unHost . host) (\x y -> x { host = Host y })
 instance HasParser Host where
   parser =
     strOption
-    $ long "host"
+    $ long "sh"
     <> metavar "HOST"
-    <> value (Host "localhost")
-    <> help "Servant Host"
+    <> value "127.0.0.1"
+    <> showDefault
+    <> help "set Servant Host"
 
 newtype Protocol = Protocol { unProtocol :: Text }
   deriving newtype (Eq, Ord, IsString, Read, Show)
@@ -37,10 +40,11 @@ _protocol = lens (unProtocol . protocol) (\x y -> x { protocol = Protocol y })
 instance HasParser Protocol where
   parser =
     strOption
-    $ long "protocol"
+    $ long "sp"
     <> metavar "PROTOCOL"
     <> value (Protocol "http")
-    <> help "Servant Protocol"
+    <> showDefault
+    <> help "set Servant Protocol"
 
 newtype Port = Port { unPort :: Int }
   deriving newtype (Eq, Ord, Read, Show)
@@ -49,7 +53,19 @@ _port = lens (unPort . port) (\x y -> x { port = Port y })
 instance HasParser Port where
   parser =
     option auto
-    $ long "port"
+    $ long "sP"
     <> metavar "PORT"
     <> value (Port 8000)
-    <> help "Servant Port"
+    <> showDefault
+    <> help "set Servant Port"
+
+newtype Logging = Logging { unLogging :: Bool }
+  deriving newtype (Eq, Ord, Read, Show)
+_logging :: Lens' ServantOptions Bool
+_logging = lens (unLogging . logging) (\x y -> x { logging = Logging y })
+instance HasParser Logging where
+  parser = Logging <$>
+    switch
+    ( long "sL"
+    <> help "disable Servant Request Logger Middleware"
+    )

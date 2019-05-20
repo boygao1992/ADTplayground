@@ -32,7 +32,7 @@ instance HasParser Host where
     $ long "bph"
     <> metavar "HOST"
     <> value (Host "localhost")
-    <> help "Beam Postgres Host"
+    <> help "set Beam Postgres Host"
 
 newtype User = User { unUser :: String }
   deriving newtype (Eq, Ord, IsString, Read, Show)
@@ -44,7 +44,7 @@ instance HasParser User where
     $ long "bpu"
     <> metavar "USER"
     <> value (User "root")
-    <> help "Beam Postgres Username"
+    <> help "set Beam Postgres Username"
 
 newtype Password = Password { unPassword :: String }
   deriving newtype (Eq, Ord, IsString, Read, Show)
@@ -56,7 +56,7 @@ instance HasParser Password where
     $ long "bpp"
     <> metavar "PASSWORD"
     <> value (Password "root")
-    <> help "Beam Postgres Password"
+    <> help "set Beam Postgres Password"
 
 newtype Database = Database { unDatabase :: String }
   deriving newtype (Eq, Ord, IsString, Read, Show)
@@ -67,7 +67,7 @@ instance HasParser Database where
     strOption
     $ long "bpD"
     <> metavar "DB"
-    <> help "Beam Postgres Database name"
+    <> help "set Beam Postgres Database name"
 
 newtype Port = Port { unPort :: Word16 }
   deriving newtype (Eq, Ord, Read, Show)
@@ -79,4 +79,4 @@ instance HasParser Port where
     $ long "bpP"
     <> metavar "PORT"
     <> value (Port 3306)
-    <> help "Beam Postgres Port"
+    <> help "set Beam Postgres Port"

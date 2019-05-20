@@ -29,7 +29,7 @@ instance HasParser Host where
     $ long "pmh"
     <> metavar "HOST"
     <> value (Host "localhost")
-    <> help "Persist Mysql Host"
+    <> help "set Persist Mysql Host"
 
 newtype User = User { unUser :: Text }
   deriving newtype (Eq, Ord, IsString, Read, Show)
@@ -41,7 +41,7 @@ instance HasParser User where
     $ long "pmu"
     <> metavar "USER"
     <> value (User "root")
-    <> help "Persist Mysql Username"
+    <> help "set Persist Mysql Username"
 
 newtype Password = Password { unPassword :: Text }
   deriving newtype (Eq, Ord, IsString, Read, Show)
@@ -53,7 +53,7 @@ instance HasParser Password where
     $ long "pmp"
     <> metavar "PASSWORD"
     <> value (Password "root")
-    <> help "Persist Mysql Password"
+    <> help "set Persist Mysql Password"
 
 newtype Database = Database { unDatabase :: Text }
   deriving newtype (Eq, Ord, IsString, Read, Show)
@@ -64,7 +64,7 @@ instance HasParser Database where
     strOption
     $ long "pmD"
     <> metavar "DB"
-    <> help "Persist Mysql Database name"
+    <> help "set Persist Mysql Database name"
 
 newtype Port = Port { unPort :: Int }
   deriving newtype (Eq, Ord, Read, Show)
@@ -76,4 +76,4 @@ instance HasParser Port where
     $ long "pmP"
     <> metavar "PORT"
     <> value (Port 3306)
-    <> help "Persist Mysql Port"
+    <> help "set Persist Mysql Port"

@@ -50,7 +50,7 @@ instance HasParser Host where
     $ long "bmh"
     <> metavar "HOST"
     <> value (Host "localhost")
-    <> help "Beam MySQL Host"
+    <> help "set Beam MySQL Host"
 
 newtype Port = Port { unPort :: Word16 }
   deriving newtype (Eq, Read, Show)
@@ -62,7 +62,7 @@ instance HasParser Port where
     $ long "bmP"
     <> metavar "PORT"
     <> value (Port 3306)
-    <> help "Beam MySQL Port"
+    <> help "set Beam MySQL Port"
 
 newtype User = User { unUser :: String }
   deriving newtype (Eq, IsString, Read, Show)
@@ -74,7 +74,7 @@ instance HasParser User where
     $ long "bmu"
     <> metavar "USER"
     <> value (User "root")
-    <> help "Beam MySQL User"
+    <> help "set Beam MySQL User"
 
 newtype Password = Password { unPassword :: String }
   deriving newtype (Eq, IsString, Read, Show)
@@ -86,7 +86,7 @@ instance HasParser Password where
     $ long "bmp"
     <> metavar "PASSWORD"
     <> value (Password "")
-    <> help "Beam MySQL Password"
+    <> help "set Beam MySQL Password"
 
 newtype Database = Database { unDatabase :: String }
   deriving newtype (Eq, IsString, Read, Show)
@@ -97,4 +97,4 @@ instance HasParser Database where
     = strOption
     $ long "bmD"
     <> metavar "DATABASE"
-    <> help "Beam MySQL Test"
+    <> help "set Beam MySQL Database name"

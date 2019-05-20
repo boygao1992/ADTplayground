@@ -9,6 +9,7 @@ class With options resource where
   withResource :: MonadUnliftIO m => WithResource options m resource
 
 newtype WithResource options m resource
+  -- NOTE options -> ( resource -> m () ) -> m ()
   = WithResource (ReaderT options (ContT () m) resource)
   deriving newtype (Functor, Applicative, Monad, MonadIO)
 

@@ -1,7 +1,7 @@
 module Tonatona.Logger.Options where
 
 import RIO
-import Options.Applicative (option, auto, long, metavar, value, help)
+import Options.Applicative (long, help, flag, switch)
 
 import Tonatona.Options.Parser (HasParser, parser)
 
@@ -54,20 +54,17 @@ _mode :: Lens' LoggerOptions DeployMode
 _mode = lens mode (\x y -> x { mode = y })
 instance HasParser DeployMode where
   parser =
-    option auto
-    $ long "env"
-    <> metavar "ENV"
-    <> value Development
-    <> help "Application deployment mode to run"
+    flag Development Production
+    $ long "prod"
+    <> help "run Application in Production mode"
 
 newtype Verbose = Verbose { unVerbose :: Bool }
   deriving newtype (Eq, Ord, Read, Show)
-_verbose :: Lens' LoggerOptions Bool
-_verbose = lens (unVerbose . verbose) (\x y -> x { verbose = Verbose y })
+_verbose :: Lens' LoggerOptions Verbose
+_verbose = lens verbose (\x y -> x { verbose = y })
 instance HasParser Verbose where
-  parser =
-    option auto
-    $ long "verbose"
-    <> metavar "VERBOSE"
-    <> value (Verbose False)
-    <> help "Make the operation more talkative"
+  parser = Verbose <$>
+    switch
+    ( long "verbose"
+    <> help "set Logger to Verbose mode"
+    )

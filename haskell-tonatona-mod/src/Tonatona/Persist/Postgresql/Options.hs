@@ -25,7 +25,7 @@ instance HasParser ConnectionString where
     = strOption
     $ long "ppcs"
     <> metavar "CONNECTION_STRING"
-    <> help "Persist Postgresql Connection String e.g. \"host=localhost port=5432 user=test dbname=test password=test\""
+    <> help "set Persist Postgresql Connection String e.g. \"host=localhost port=5432 user=test dbname=test password=test\""
 
 newtype PoolSize = PoolSize { unPoolSize :: Int }
   deriving newtype (Eq, Read, Show)
@@ -37,4 +37,4 @@ instance HasParser PoolSize where
     $ long "ppps"
     <> metavar "POOL_SIZE"
     <> value (PoolSize 10)
-    <> help "Persist Postgresql Pool Size"
+    <> help "set Persist Postgresql Pool Size"
