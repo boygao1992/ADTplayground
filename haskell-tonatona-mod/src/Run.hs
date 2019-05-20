@@ -3,22 +3,37 @@ module Run (run) where
 import Import
 -- import DB
 import Magento.Database
+import qualified Magento.Database.Eav.Attribute as EA
+import qualified Magento.Database.Eav.Attribute.Option as EAO
+import qualified Magento.Database.Eav.Attribute.Option.Value as EAOV
 
 import Tonatona.Beam.MySQL.Run (runBeamMySQLDebug -- , runBeamMySQLDebugSafe
                                )
 import Database.Beam.Query
 
+
 run :: RIO Resources ()
 run = do
   logInfo "We're inside the application!"
 
+  let my_attribute_code = "filterable_size"
+      -- my_attribute_option_value = "10\""
+
   result <- runBeamMySQLDebug
     $ runSelectReturningList
     $ select do
-        eav_attribute <- limit_ 10 $ all_ (magentoDb ^. catalogProductEntityInt)
-        pure eav_attribute
+        eav_attribute_option_value <-
+          filter_ (\table -> table ^. EAOV.value /=. nothing_)
+          $ all_ (magentoDb ^. eavAttributeOptionValue)
+        eav_attribute_option <- all_ (magentoDb ^. eavAttributeOption)
+        eav_attribute <- all_ (magentoDb ^. eavAttribute)
+        guard_ (EAOV._option_id eav_attribute_option_value `references_` eav_attribute_option)
+        guard_ (EAO._attribute_id eav_attribute_option `references_` eav_attribute)
+        guard_ (eav_attribute ^. EA.attribute_code ==. just_ my_attribute_code)
 
-  logInfo $ displayShow result
+        pure $ eav_attribute_option_value^.EAOV.value
+
+  logInfo $ displayShow $ catMaybes result
 
 
   -- runBeamMySQLDebugSafe do

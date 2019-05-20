@@ -52,6 +52,9 @@ magentoDb = defaultDbSettings `withDbModification`
   , _magentoEavAttributeGroup = modifyTableFields tableModification
       { EavAttributeGroup._attribute_set_id = EavAttributeSet.AttributeSetId "attribute_set_id"
       }
+  , _magentoEavAttributeOption = modifyTableFields tableModification
+      { EavAttributeOption._attribute_id = EavAttribute.AttributeId "attribute_id"
+      }
   , _magentoEavAttributeOptionValue = modifyTableFields tableModification
       { EavAttributeOptionValue._option_id = EavAttributeOption.OptionId "option_id"
       , EavAttributeOptionValue._store_id = Store.StoreId "store_id"
