@@ -6,14 +6,16 @@ import RIO
 
 import Database.Beam.Schema
 
+import Magento.Data.BackendType (BackendType)
+import Magento.Data.FrontendInput (FrontendInput)
 import qualified Magento.Database.Eav.Entity.Type as EavEntityType
 
 data EavAttributeT f = EavAttribute
   { _attribute_id :: C f Word16
   , _entity_type_id :: PrimaryKey EavEntityType.EavEntityTypeT f
   , _attribute_code :: C f (Maybe Text)
-  , _backend_type :: C f (Maybe Text)
-  , _frontend_input :: C f (Maybe Text)
+  , _backend_type :: C f BackendType
+  , _frontend_input :: C f (Maybe FrontendInput)
   } deriving (Generic, Beamable)
 type EavAttribute = EavAttributeT Identity
 deriving instance Eq EavAttribute

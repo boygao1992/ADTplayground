@@ -3,127 +3,119 @@
 
 module DB where
 
+import Types (Resources)
+
 import RIO
+import RIO.Partial (read)
+import RIO.Text (unpack)
+import RIO.List (nub, groupBy, headMaybe, lastMaybe, drop, length)
+import qualified Data.Set as Set
+import qualified Data.Map.Strict as Map
 
-import Database.Beam.Schema
+import Database.Beam.Query
+import Database.Beam.MySQL.Connection (MySQLM)
+import Tonatona.Beam.MySQL.Run (runBeamMySQLDebug)
 
------------
--- Database
+import Magento.Data.Categories (Category(..))
+import Magento.Data.CategoryPath (CategoryPath(..), unCategoryPath)
+import Magento.Database
+import qualified Magento.Database.Eav.Entity.Type as EET
+import qualified Magento.Database.Eav.Attribute as EA
+import qualified Magento.Database.Eav.Attribute.Option as EAO
+import qualified Magento.Database.Eav.Attribute.Option.Value as EAOV
+import qualified Magento.Database.Catalog.Category.Entity as CCE
+import qualified Magento.Database.Catalog.Category.Entity.Varchar as CCEV
 
-data PersistentDb f = PersistentDb
-  { _persistentPersons :: f (TableEntity PersonT)
-  , _persistentFollows :: f (TableEntity FollowT)
-  , _persistentBlogPosts :: f (TableEntity BlogPostT)
-  } deriving (Generic, Database be)
+_getAllAttributeOptionValuesByAttributeCode :: String -> MySQLM [Maybe Text]
+_getAllAttributeOptionValuesByAttributeCode my_attribute_code =
+  runSelectReturningList $ select do
+    eav_attribute_option_value <-
+      filter_ (\table -> table^.EAOV.value /=. nothing_)
+      $ all_ (magentoDb^.eavAttributeOptionValue)
+    eav_attribute_option <- all_ (magentoDb^.eavAttributeOption)
+    eav_attribute <- all_ (magentoDb^.eavAttribute)
+    guard_ $ EAOV._option_id eav_attribute_option_value `references_` eav_attribute_option
+    guard_ $ EAO._attribute_id eav_attribute_option `references_` eav_attribute
+    guard_ $ eav_attribute^.EA.attribute_code ==. just_ (fromString my_attribute_code)
+    pure $ eav_attribute_option_value^.EAOV.value
 
-persistentDb :: DatabaseSettings be PersistentDb
-persistentDb =
-  defaultDbSettings `withDbModification`
-    dbModification
-    { _persistentPersons =
-        setEntityName "person"
-        <> modifyTableFields tableModification
-            { _personId = "id"
-            , _personName = "name"
-            , _personAge = "age"
-            }
-    , _persistentFollows =
-        setEntityName "follow"
-        <> modifyTableFields tableModification
-            { _followId = "id"
-            , _followFollower = PersonId "follower"
-            , _followFollowed = PersonId "followed"
-            }
-    , _persistentBlogPosts =
-        setEntityName "blog_post"
-        <> modifyTableFields tableModification
-            { _blogpostId = "id"
-            , _blogpostTitle = "title"
-            , _blogpostAuthorId = PersonId "authorId"
-            }
-    }
+_getAttributeMetaData :: String -> String -> MySQLM (Maybe (EA.EavAttribute, EET.EavEntityType))
+_getAttributeMetaData my_attribute_code my_entity_type_code =
+  let
+    attribute_code = fromString my_attribute_code
+    entity_type_code = fromString my_entity_type_code
+  in
+    runSelectReturningOne
+    $ select
+    $ nub_ do
+        eav_attribute <- all_ (magentoDb^.eavAttribute)
+        eav_entity_type <- all_ (magentoDb^.eavEntityType)
+        guard_ $ EA._entity_type_id eav_attribute `references_` eav_entity_type
+        guard_ $ eav_attribute^.EA.attribute_code ==. just_ attribute_code
+        guard_ $ eav_entity_type^.EET.entity_type_code ==. entity_type_code
+        pure $
+          ( eav_attribute
+          , eav_entity_type
+          )
 
-PersistentDb
-  (TableLens persons)
-  (TableLens follows)
-  (TableLens blogposts)
-  = dbLenses
+getCategoryPath :: Category -> RIO Resources (Maybe (CategoryPath))
+getCategoryPath (Category category) = do
+  let
+    leaf :: Maybe Text
+    leaf = lastMaybe category
 
----------
--- Person
+  result <- runBeamMySQLDebug
+    $ runSelectReturningList
+    $ select do
+        catalog_category_entity_varchar <-
+          all_ (magentoDb^.catalogCategoryEntityVarchar)
+        catalog_category_entity <-
+          all_ (magentoDb^.catalogCategoryEntity)
+        guard_ $ catalog_category_entity_varchar^.CCEV.value ==. val_ leaf
+        guard_ $ CCEV._row_id catalog_category_entity_varchar `references_` catalog_category_entity
+        pure $ catalog_category_entity^.CCE.path
 
-data PersonT f = Person
-  { _personId :: Columnar f Word64
-  , _personName :: Columnar f Text
-  , _personAge :: Columnar f Int
-  } deriving (Generic, Beamable)
-type Person = PersonT Identity
-deriving instance Eq Person
-deriving instance Show Person
+  let
+    paths :: [[Word32]]
+    paths = fmap (drop 1 . unCategoryPath) $ read . unpack <$> result
+    nodeIds :: [Word32]
+    nodeIds = nub . join $ paths
 
-instance Table PersonT where
-   data PrimaryKey PersonT f = PersonId (Columnar f Word64)
-     deriving (Generic, Beamable)
-   primaryKey = PersonId . _personId
-type PersonId = PrimaryKey PersonT Identity
-deriving instance Eq PersonId
-deriving instance Show PersonId
+  nodes <- runBeamMySQLDebug
+    $ runSelectReturningList
+    $ select
+    $ nub_ do
+        catalog_category_entity_varchar <-
+          all_ (magentoDb^.catalogCategoryEntityVarchar)
+        guard_
+          $ catalog_category_entity_varchar^.CCEV.row_id
+            `in_` (val_ <$> nodeIds)
+        pure $
+          ( catalog_category_entity_varchar^.CCEV.row_id
+          , catalog_category_entity_varchar^.CCEV.value
+          )
 
-Person
-  (LensFor personId)
-  (LensFor personName)
-  (LensFor personAge)
-  = tableLenses
+  let
+    nodeDict :: Map.Map Word32 (Set.Set Text)
+    nodeDict
+      = Map.fromList
+      . mapMaybe (\(x,y) -> (,y) <$> x)
+      . fmap ( (fmap fst . headMaybe) &&& (Set.fromList . fmap snd) )
+      . groupBy (\x y -> fst x == fst y)
+      . mapMaybe (\(x,y) -> (x,) <$> y)
+      $ nodes
 
----------
--- Follow
+  let
+    validPaths
+      = (\path ->
+          for (path `zip` category) \(key, label) ->
+            Map.lookup key nodeDict
+            >>= \s -> if Set.member label s
+                        then Just key
+                        else Nothing
+        ) `mapMaybe` paths
 
-data FollowT f = Follow
-  { _followId :: Columnar f Word64
-  , _followFollower :: PrimaryKey PersonT f
-  , _followFollowed :: PrimaryKey PersonT f
-  } deriving (Generic, Beamable)
-type Follow = FollowT Identity
-deriving instance Eq Follow
-deriving instance Show Follow
-
-instance Table FollowT where
-  data PrimaryKey FollowT f = FollowId (Columnar f Word64)
-    deriving (Generic, Beamable)
-  primaryKey = FollowId . _followId
-type FollowId = PrimaryKey FollowT Identity
-deriving instance Eq FollowId
-deriving instance Show FollowId
-
-Follow
-  (LensFor followId)
-  (PersonId (LensFor followFollower))
-  (PersonId (LensFor followFollowed))
-  = tableLenses
-
------------
--- BlogPost
-
-data BlogPostT f = BlogPost
-  { _blogpostId :: Columnar f Word64
-  , _blogpostTitle :: Columnar f Text
-  , _blogpostAuthorId :: PrimaryKey PersonT f
-  } deriving (Generic, Beamable)
-type BlogPost = BlogPostT Identity
-deriving instance Eq BlogPost
-deriving instance Show BlogPost
-
-instance Table BlogPostT where
-  data PrimaryKey BlogPostT f = BlogPostId (Columnar f Word64)
-    deriving (Generic, Beamable)
-  primaryKey = BlogPostId . _blogpostId
-
-type BlogPostId = PrimaryKey BlogPostT Identity
-deriving instance Eq BlogPostId
-deriving instance Show BlogPostId
-
-BlogPost
-  (LensFor blogpostId)
-  (LensFor blogpostTitle)
-  (PersonId (LensFor blogpostAuthorId))
-  = tableLenses
+  pure $ CategoryPath <$>
+    if length validPaths /= 1
+      then Nothing
+      else headMaybe validPaths
