@@ -7,13 +7,14 @@ import RIO
 import Database.Beam.Schema
 
 import qualified Magento.Database.Eav.Attribute.Set as EavAttributeSet
+import Magento.Data.CategoryPath (CategoryPath)
 
 data CatalogCategoryEntityT f = CatalogCategoryEntity
   { _row_id :: C f Word32
   , _entity_id :: C f Word32
   , _attribute_set_id :: PrimaryKey EavAttributeSet.EavAttributeSetT f
   , _parent_id :: PrimaryKey CatalogCategoryEntityT (Nullable f) -- NOTE Recursive reference without Nullable constraint forms an infinite loop
-  , _path :: C f Text
+  , _path :: C f CategoryPath
   } deriving (Generic, Beamable)
 type CatalogCategoryEntity = CatalogCategoryEntityT Identity
 deriving instance Eq CatalogCategoryEntity

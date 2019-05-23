@@ -2,7 +2,7 @@ module Tonatona.Servant.Options where
 
 import RIO
 import Network.Wai.Handler.Warp (HostPreference)
-import Options.Applicative (strOption, option, auto, long, metavar, value, help, switch, showDefault)
+import Options.Applicative (strOption, option, auto, long, metavar, value, help, flag, showDefault)
 
 import Tonatona.Options.Parser (HasParser, parser)
 
@@ -65,7 +65,7 @@ _logging :: Lens' ServantOptions Bool
 _logging = lens (unLogging . logging) (\x y -> x { logging = Logging y })
 instance HasParser Logging where
   parser = Logging <$>
-    switch
+    flag True False
     ( long "sL"
     <> help "disable Servant Request Logger Middleware"
     )

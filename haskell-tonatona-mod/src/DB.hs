@@ -6,15 +6,13 @@ module DB where
 import Types (Resources)
 
 import RIO
-import RIO.Partial (read)
-import RIO.Text (unpack)
 import RIO.List (nub, groupBy, headMaybe, lastMaybe, drop, length)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 
 import Database.Beam.Query
 import Database.Beam.MySQL.Connection (MySQLM)
-import Tonatona.Beam.MySQL.Run (runBeamMySQLDebug)
+import Tonatona.Beam.MySQL.Run (runBeamMySQL)
 
 import Magento.Data.Categories (Category(..))
 import Magento.Data.CategoryPath (CategoryPath(..), unCategoryPath)
@@ -58,31 +56,22 @@ _getAttributeMetaData my_attribute_code my_entity_type_code =
           , eav_entity_type
           )
 
-getCategoryPath :: Category -> RIO Resources (Maybe (CategoryPath))
-getCategoryPath (Category category) = do
-  let
-    leaf :: Maybe Text
-    leaf = lastMaybe category
-
-  result <- runBeamMySQLDebug
-    $ runSelectReturningList
-    $ select do
+_getCandidateCategoryPathsByLeafNodeLabel :: Text -> MySQLM [CategoryPath]
+_getCandidateCategoryPathsByLeafNodeLabel leaf =
+    runSelectReturningList
+    $ select
+    $ nub_ do
         catalog_category_entity_varchar <-
           all_ (magentoDb^.catalogCategoryEntityVarchar)
         catalog_category_entity <-
           all_ (magentoDb^.catalogCategoryEntity)
-        guard_ $ catalog_category_entity_varchar^.CCEV.value ==. val_ leaf
+        guard_ $ catalog_category_entity_varchar^.CCEV.value ==. just_ (val_ leaf)
         guard_ $ CCEV._row_id catalog_category_entity_varchar `references_` catalog_category_entity
         pure $ catalog_category_entity^.CCE.path
 
-  let
-    paths :: [[Word32]]
-    paths = fmap (drop 1 . unCategoryPath) $ read . unpack <$> result
-    nodeIds :: [Word32]
-    nodeIds = nub . join $ paths
-
-  nodes <- runBeamMySQLDebug
-    $ runSelectReturningList
+_getCandidateLabelsByNodeIds :: [Word32] -> MySQLM [(Word32, Maybe Text)]
+_getCandidateLabelsByNodeIds nodeIds =
+    runSelectReturningList
     $ select
     $ nub_ do
         catalog_category_entity_varchar <-
@@ -95,6 +84,53 @@ getCategoryPath (Category category) = do
           , catalog_category_entity_varchar^.CCEV.value
           )
 
+nodeDictFromList :: [(Word32, Maybe Text)] -> Map.Map Word32 (Set.Set Text)
+nodeDictFromList
+  = Map.fromList
+  . mapMaybe (\(x,y) -> (,y) <$> x)
+  . fmap ( (fmap fst . headMaybe) &&& (Set.fromList . fmap snd) )
+  . groupBy (\x y -> fst x == fst y)
+  . mapMaybe (\(x,y) -> (x,) <$> y)
+
+filterValidPaths :: Map.Map Word32 (Set.Set Text) -> [Text] -> [[Word32]] -> [[Word32]]
+filterValidPaths nodeDict category =
+  mapMaybe
+  (\path ->
+      for (path `zip` category) \(key, label) ->
+        Map.lookup key nodeDict
+        >>= \s -> if Set.member label s
+                    then Just key
+                    else Nothing
+  )
+
+getCategoryPath :: Category -> RIO Resources (Maybe (CategoryPath))
+getCategoryPath (Category category) = do
+  let
+    leaf :: Maybe Text
+    leaf = lastMaybe category
+
+  result :: [CategoryPath] <- runBeamMySQL
+    $ runSelectReturningList
+    $ select
+    $ nub_ do
+        catalog_category_entity_varchar <-
+          all_ (magentoDb^.catalogCategoryEntityVarchar)
+        catalog_category_entity <-
+          all_ (magentoDb^.catalogCategoryEntity)
+        guard_ $ catalog_category_entity_varchar^.CCEV.value ==. val_ leaf
+        guard_ $ CCEV._row_id catalog_category_entity_varchar `references_` catalog_category_entity
+        pure $ catalog_category_entity^.CCE.path
+
+  let
+    paths :: [[Word32]]
+    paths = drop 1 . unCategoryPath <$> result
+
+    nodeIds :: [Word32]
+    nodeIds = nub . join $ paths
+
+  nodes :: [(Word32, Maybe Text)] <-
+    runBeamMySQL $ _getCandidateLabelsByNodeIds nodeIds
+
   let
     nodeDict :: Map.Map Word32 (Set.Set Text)
     nodeDict
@@ -106,14 +142,8 @@ getCategoryPath (Category category) = do
       $ nodes
 
   let
-    validPaths
-      = (\path ->
-          for (path `zip` category) \(key, label) ->
-            Map.lookup key nodeDict
-            >>= \s -> if Set.member label s
-                        then Just key
-                        else Nothing
-        ) `mapMaybe` paths
+    validPaths :: [[Word32]]
+    validPaths = filterValidPaths nodeDict category paths
 
   pure $ CategoryPath <$>
     if length validPaths /= 1
