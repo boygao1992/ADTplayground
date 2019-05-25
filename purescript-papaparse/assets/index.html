@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en-US">
+
+<head>
+  <meta charset="UTF-8" >
+  <title>XLSX</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="./xlsx.full.min.js"></script>
+  <script src="./papaparse.js"></script>
+</head>
+
+<body>
+
+  <input type="file" id="file-picker" />
+
+  <script>
+    var filespec;
+    var button = document.getElementById("file-picker")
+    var reader = new FileReader();
+    reader.onload = function ( event ) {
+      var contents = event.target.result;
+
+      var base64Anchor = "base64,";
+      var contentIdx = contents.indexOf( base64Anchor );
+      if ( contentIdx !== -1 ) {
+        contents = contents.substring( contentIdx + base64Anchor.length );
+      }
+      var sourceXLSX = XLSX.read(contents, {type: "base64"})
+      var sourceCSV = Papa.parse(XLSX.utils.sheet_to_csv(sourceXLSX["Sheets"][sourceXLSX["SheetNames"][0]]))
+
+      var file = button["files"][0];
+      filespec = { contents: sourceCSV, name: file.name };
+      console.log("reader.onload: " + filespec);
+    };
+
+    button.oninput = function ( event ) {
+      var file = button["files"][0];
+      reader.readAsDataURL(file);
+    };
+  </script>
+</body>
+
+</html>
