@@ -5,6 +5,8 @@ import RIO
 import Tonatona.WithResource (With, withResource, hoistWithResource)
 import Tonatona.Logger.Options (HasLoggerOptions, defaultLogOptions)
 
+-- TODO auto disable all `logDebug` when LogOptions.mode == Production
+
 -- Resource Initialization
 
 newtype LoggerLogFunc = LoggerLogFunc { loggerLogFunc :: LogFunc }

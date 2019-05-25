@@ -19,8 +19,8 @@ class HasServantResources resources where
 
 -- Resource Initialization
 data ServantResources = ServantResources
-  { loggerMiddleware :: ServantRequestLoggerMiddleware
-  , runApplication :: ServantRunApplication
+  { servantLoggerMiddleware :: ServantRequestLoggerMiddleware
+  , servantRunApplication :: ServantRunApplication
   }
 instance ( HasLoggerOptions options
          , HasServantOptions options
@@ -32,7 +32,7 @@ instance HasServantResources ServantResources where
 newtype ServantRequestLoggerMiddleware
   = ServantRequestLoggerMiddleware { unLoggerMiddleware :: Middleware }
 _loggerMiddleware :: Lens' ServantResources Middleware
-_loggerMiddleware = lens (unLoggerMiddleware . loggerMiddleware) \x y -> x { loggerMiddleware = ServantRequestLoggerMiddleware y }
+_loggerMiddleware = lens (unLoggerMiddleware . servantLoggerMiddleware) \x y -> x { servantLoggerMiddleware = ServantRequestLoggerMiddleware y }
 instance ( HasLoggerOptions options
          , HasServantOptions options
          ) => With options ServantRequestLoggerMiddleware where
@@ -50,7 +50,7 @@ instance ( HasLoggerOptions options
 newtype ServantRunApplication = ServantRunApplication
   { unRunApplication :: Application -> IO () }
 _runApplication :: Lens' ServantResources (Application -> IO ())
-_runApplication = lens (unRunApplication . runApplication) \x y -> x { runApplication = ServantRunApplication y }
+_runApplication = lens (unRunApplication . servantRunApplication) \x y -> x { servantRunApplication = ServantRunApplication y }
 instance (HasServantOptions options
          ) => With options (ServantRunApplication) where
   withResource = hoistWithResource \options cont -> do

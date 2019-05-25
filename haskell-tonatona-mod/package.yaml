@@ -36,6 +36,8 @@ dependencies:
 - mysql >=0.1 && <0.2
 - bytestring >= 0.10
 - containers >= 0.6
+- newtype-generics >= 0.5
+- aeson >= 1.4
 
 
 

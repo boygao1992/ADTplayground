@@ -5,17 +5,16 @@ import RIO
 import Servant
 
 import Types
-import Server.Categories
-
+import qualified Server.CategoryValidation as CategoryValidation
 
 -- | Validation Endpoints
 
 type RestApi
-  = CategoriesValidationApi
+  = CategoryValidation.Api
 
 restApiServer :: ServerT RestApi (RIO Resources)
 restApiServer
-  = categoriesValidationApiServer
+  = CategoryValidation.server
 
 -- | Serve Directories
 
@@ -23,6 +22,6 @@ type Api =
   RestApi
   :<|> Raw
 
-apiServer :: ServerT Api (RIO Resources)
-apiServer = restApiServer
+server :: ServerT Api (RIO Resources)
+server = restApiServer
   :<|> serveDirectoryFileServer "public"

@@ -29,14 +29,14 @@ instance HasServantOptions Options where
 
 data Resources = Resources
   { resourceLogFunc :: !LoggerLogFunc
-  , resourceBeamMySQLConnection :: !BeamMySQLConnection
+  , resourceBeamMySQLConnection :: !BeamMySQLResources
   , resourceServant :: !ServantResources
   }
 instance With Options Resources where
   withResource = Resources <$> withResource <*> withResource <*> withResource
 instance HasLogFunc Resources where
   logFuncL = lens resourceLogFunc (\x y -> x { resourceLogFunc = y }) . logFuncL
-instance HasBeamMySQLConnection Resources where
-  beamMySQLConnectionL = lens resourceBeamMySQLConnection (\x y -> x { resourceBeamMySQLConnection = y }) . beamMySQLConnectionL
+instance HasBeamMySQLResources Resources where
+  beamMySQLResourcesL = lens resourceBeamMySQLConnection (\x y -> x { resourceBeamMySQLConnection = y }) . beamMySQLResourcesL
 instance HasServantResources Resources where
   servantResourcesL = lens resourceServant (\x y -> x { resourceServant = y })

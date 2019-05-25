@@ -1,6 +1,7 @@
 module Tonatona.Beam.MySQL.Run where
 
 import RIO
+import Database.Beam.MySQL (connect, close)
 import Database.Beam.MySQL.Connection (MySQLM(..))
 import qualified Database.Beam.MySQL.Connection as Beam (runBeamMySQL, runBeamMySQLDebug)
 import Database.MySQL.Base (MySQLError)
@@ -8,15 +9,16 @@ import Database.MySQL.Base (MySQLError)
 import Tonatona.Beam.MySQL.Resources
 
 runBeamMySQL
-  :: HasBeamMySQLConnection resources
+  :: HasBeamMySQLResources resources
   => MySQLM a
   -> RIO resources a
 runBeamMySQL query = do
-  connection <- view beamMySQLConnectionL
-  liftIO $ Beam.runBeamMySQL connection query
+  connectInfo <- view (beamMySQLResourcesL._connectInfo)
+  bracket (liftIO $ connect connectInfo) (liftIO . close) \connection ->
+    liftIO $ Beam.runBeamMySQL connection query
 
 runBeamMySQLSafe ::
-  ( HasBeamMySQLConnection resources
+  ( HasBeamMySQLResources resources
   , HasLogFunc resources
   )
   => MySQLM ()
@@ -25,18 +27,19 @@ runBeamMySQLSafe query = runBeamMySQL query `catch` \(e :: MySQLError) -> do
   logError $ displayShow e
 
 runBeamMySQLDebug ::
-  ( HasBeamMySQLConnection resources
+  ( HasBeamMySQLResources resources
   , HasLogFunc resources
   )
   => MySQLM a
   -> RIO resources a
 runBeamMySQLDebug query = do
-  connection <- view beamMySQLConnectionL
-  withRunInIO \unlift ->
-    Beam.runBeamMySQLDebug (unlift . logDebug . fromString) connection query
+  connectInfo <- view (beamMySQLResourcesL._connectInfo)
+  bracket (liftIO $ connect connectInfo) (liftIO . close) \connection ->
+    withRunInIO \unlift ->
+      Beam.runBeamMySQLDebug (unlift . logDebug . fromString) connection query
 
 runBeamMySQLDebugSafe ::
-  ( HasBeamMySQLConnection resources
+  ( HasBeamMySQLResources resources
   , HasLogFunc resources
   )
   => MySQLM ()
