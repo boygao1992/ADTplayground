@@ -7,7 +7,4 @@
 /.psc*
 /.purs*
 /.psa*
-/.cache*
-/dist/
-/compiled/
 /source/

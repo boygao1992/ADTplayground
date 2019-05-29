@@ -18,15 +18,18 @@
     var button = document.getElementById("file-picker")
     var reader = new FileReader();
     reader.onload = function ( event ) {
+      console.log(event)
       var contents = event.target.result;
 
-      var base64Anchor = "base64,";
-      var contentIdx = contents.indexOf( base64Anchor );
-      if ( contentIdx !== -1 ) {
-        contents = contents.substring( contentIdx + base64Anchor.length );
-      }
-      var sourceXLSX = XLSX.read(contents, {type: "base64"})
-      var sourceCSV = Papa.parse(XLSX.utils.sheet_to_csv(sourceXLSX["Sheets"][sourceXLSX["SheetNames"][0]]))
+      /* var base64Anchor = "base64,"; */
+      /* var contentIdx = contents.indexOf( base64Anchor ); */
+      /* if ( contentIdx !== -1 ) { */
+      /* contents = contents.substring( contentIdx + base64Anchor.length ); */
+      /* } */
+      /* var sourceXLSX = XLSX.read(contents, {type: "base64"}) */
+      /* var sourceCSV = Papa.parse(XLSX.utils.sheet_to_csv(sourceXLSX["Sheets"][sourceXLSX["SheetNames"][0]])) */
+
+      var sourceCSV = Papa.parse(contents)
 
       var file = button["files"][0];
       filespec = { contents: sourceCSV, name: file.name };
@@ -34,8 +37,10 @@
     };
 
     button.oninput = function ( event ) {
+      console.log(event)
       var file = button["files"][0];
-      reader.readAsDataURL(file);
+      /* reader.readAsDataURL(file); */
+      reader.readAsText(file);
     };
   </script>
 </body>
