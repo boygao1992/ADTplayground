@@ -56,19 +56,19 @@ render :: forall m. MonadAff m => State -> ComponentHTML m
 render _ =
   HH.div_
   [ HH.slot _categories unit Categories.component
-      [ Tuple (Sku "FSWT400")
-        [ { category: fromMaybe mempty $ read "Finestra Wood Category/Traverse/Components/Cord Draw"
+      [ Tuple (Sku "A")
+        [ { category: fromMaybe mempty $ read "A/B/C"
           , validity: false
           }
-          , { category: fromMaybe mempty $ read "Finestra Wood Category/Traverse/Components/Baton Draw"
+          , { category: fromMaybe mempty $ read "A/E/F"
           , validity: true
           }
         ]
-        , Tuple (Sku "CP500")
-        [ { category: fromMaybe mempty $ read "Rowley Category/Drapery Hardware/Tracks & Components/Cord Draw Track"
+        , Tuple (Sku "M")
+        [ { category: fromMaybe mempty $ read "D"
           , validity: true
           }
-        , { category: fromMaybe mempty $ read "A/B/C"
+        , { category: fromMaybe mempty $ read "EF"
           , validity: false
           }
         ]
