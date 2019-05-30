@@ -14,9 +14,10 @@ data ServantOptions = ServantOptions
   , protocol :: !Protocol
   , port :: !Port
   , logging :: !Logging
+  , gzip :: !Gzip
   } deriving (Eq, Show)
 instance HasParser ServantOptions where
-  parser = ServantOptions <$> parser <*> parser <*> parser <*> parser
+  parser = ServantOptions <$> parser <*> parser <*> parser <*> parser <*> parser
 instance HasServantOptions ServantOptions where
   servantOptionsL = id
 
@@ -68,4 +69,15 @@ instance HasParser Logging where
     flag True False
     ( long "sL"
     <> help "disable Servant Request Logger Middleware"
+    )
+
+newtype Gzip = Gzip { unGzip :: Bool }
+  deriving newtype (Eq, Ord, Read, Show)
+_gzip :: Lens' ServantOptions Bool
+_gzip = lens (unGzip . gzip) (\x y -> x { gzip = Gzip y })
+instance HasParser Gzip where
+  parser = Gzip <$>
+    flag True False
+    ( long "sG"
+    <> help "disable Servant Gzip Middleware"
     )

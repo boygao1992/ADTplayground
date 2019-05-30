@@ -5,10 +5,11 @@ import RIO
 import Network.Wai (Middleware)
 import qualified Network.Wai.Handler.Warp as Warp
 import Network.Wai.Middleware.RequestLogger (logStdout, logStdoutDev)
+import Network.Wai.Middleware.Gzip (gzip, def, gzipFiles, GzipFiles(..))
 import Servant (Application)
 
 import Tonatona.Logger.Options (HasLoggerOptions, loggerOptionsL, _mode, _verbose, defaultVerbosity)
-import Tonatona.Servant.Options (HasServantOptions, servantOptionsL, _host, _port, _logging)
+import Tonatona.Servant.Options (HasServantOptions, servantOptionsL, _host, _port, _logging, _gzip)
 import Tonatona.WithResource (With, withResource, hoistWithResource)
 
 emptyMiddleware :: Middleware -- NOTE = Wai.Application -> Wai.Application
@@ -21,11 +22,12 @@ class HasServantResources resources where
 data ServantResources = ServantResources
   { servantLoggerMiddleware :: ServantRequestLoggerMiddleware
   , servantRunApplication :: ServantRunApplication
+  , servantGzipMiddleware :: ServantGzipMiddleware
   }
 instance ( HasLoggerOptions options
          , HasServantOptions options
          ) => With options ServantResources where
-  withResource = ServantResources <$> withResource <*> withResource
+  withResource = ServantResources <$> withResource <*> withResource <*> withResource
 instance HasServantResources ServantResources where
   servantResourcesL = id
 
@@ -45,6 +47,18 @@ instance ( HasLoggerOptions options
         | logging -> if
           | defaultVerbosity mode verbose -> logStdoutDev
           | otherwise -> logStdout
+        | otherwise -> emptyMiddleware
+
+newtype ServantGzipMiddleware
+  = ServantGzipMiddleware { unGzipMiddleware :: Middleware }
+_gzipMiddleware :: Lens' ServantResources Middleware
+_gzipMiddleware = lens (unGzipMiddleware . servantGzipMiddleware) \x y -> x { servantGzipMiddleware = ServantGzipMiddleware y }
+instance HasServantOptions options => With options ServantGzipMiddleware where
+  withResource = hoistWithResource \option cont -> do
+    let compressing = option^.servantOptionsL._gzip
+    cont . ServantGzipMiddleware
+      $ if
+        | compressing -> gzip (def { gzipFiles = GzipCompress })
         | otherwise -> emptyMiddleware
 
 newtype ServantRunApplication = ServantRunApplication

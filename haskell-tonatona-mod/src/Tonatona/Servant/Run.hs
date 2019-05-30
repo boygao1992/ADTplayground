@@ -8,7 +8,7 @@ import RIO
 import Network.HTTP.Types.Header (hLocation)
 import Servant (Application, Handler, HasServer, ServantErr, ServerT, errHeaders, err302, hoistServer, serve, throwError)
 
-import Tonatona.Servant.Resources (HasServantResources, servantResourcesL, _loggerMiddleware, _runApplication)
+import Tonatona.Servant.Resources (HasServantResources, servantResourcesL, _loggerMiddleware, _runApplication, _gzipMiddleware)
 
 runServantServer
   :: forall (api :: *) env.
@@ -19,9 +19,14 @@ runServantServer
   -> RIO env ()
 runServantServer servantServer = do
   loggerMiddleware <- view (servantResourcesL._loggerMiddleware)
+  gzipMiddleware <- view (servantResourcesL._gzipMiddleware)
   runApplication <- view (servantResourcesL._runApplication)
   initApp <- runServant servantServer
-  let app = loggerMiddleware initApp
+  let
+    app
+      = gzipMiddleware
+      $ loggerMiddleware
+      $ initApp
   liftIO $ runApplication app
 
   where

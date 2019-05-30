@@ -14,7 +14,7 @@ leafNode :: Category -> Maybe Text
 leafNode (Category c) = lastMaybe c
 
 newtype Category = Category { unCategory :: [Text] }
-  deriving newtype (Eq)
+  deriving newtype (Eq, Semigroup, Monoid)
   deriving (Generic)
 instance Newtype Category
 instance Read Category where
@@ -28,8 +28,10 @@ instance Show Category where
   show = intercalate "/" . fmap Text.unpack . unCategory
 
 newtype Categories = Categories { unCategories :: [Category] }
-  deriving newtype (Eq, Show, Semigroup, Monoid)
+  deriving newtype (Eq, Semigroup, Monoid)
   deriving (Generic)
 instance Newtype Categories
 instance Read Categories where
   readsPrec _ input = [ (Categories . mapMaybe (readMaybe . unpack) . split ',' . fromString $ input, "")]
+instance Show Categories where
+  show = intercalate "," . fmap show . unCategories

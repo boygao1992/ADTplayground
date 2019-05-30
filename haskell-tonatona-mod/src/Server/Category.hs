@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeOperators #-}
-module Server.CategoryValidation where
+module Server.Category where
 
 import RIO
 import RIO.Partial (read)
@@ -7,19 +7,19 @@ import Servant
 import Data.Bifunctor (bimap)
 
 import Types (Resources)
-import Server.CategoryValidation.GetCategoryPaths (getCategoryPaths)
+import Server.Category.GetCategoryPaths (getCategoryPaths)
 
 type Api
-  = "categories"
+  = "batchValidate"
        :> ReqBody '[JSON] [(Text, String)]
        :> Post '[JSON] [(Text, [String])]
 
 server :: ServerT Api (RIO Resources)
 server
-  = categories
+  = batchValidate
 
-categories :: [(Text, String)] -> RIO Resources [(Text, [String])]
-categories
+batchValidate :: [(Text, String)] -> RIO Resources [(Text, [String])]
+batchValidate
   = fmap
     ( filter (not . null . snd)
     . fmap

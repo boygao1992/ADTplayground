@@ -5,16 +5,19 @@ import RIO
 import Servant
 
 import Types
-import qualified Server.CategoryValidation as CategoryValidation
+import qualified Server.Category as Category
+import qualified Server.Sku as Sku
 
 -- | Validation Endpoints
 
 type RestApi
-  = CategoryValidation.Api
+  = "category" :> Category.Api
+  :<|> "sku" :> Sku.Api
 
 restApiServer :: ServerT RestApi (RIO Resources)
 restApiServer
-  = CategoryValidation.server
+  = Category.server
+  :<|> Sku.server
 
 -- | Serve Directories
 

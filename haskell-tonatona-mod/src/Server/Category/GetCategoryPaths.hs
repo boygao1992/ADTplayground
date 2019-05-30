@@ -1,4 +1,4 @@
-module Server.CategoryValidation.GetCategoryPaths where
+module Server.Category.GetCategoryPaths where
 
 import Types (Resources)
 
