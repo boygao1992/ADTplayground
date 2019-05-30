@@ -3,6 +3,7 @@ module Magento.Import.UI.Container.Categories.Category where
 import Prelude
 
 import Data.Array as Array
+import Data.Foldable (foldMap)
 import Data.Maybe (Maybe(..))
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
@@ -11,16 +12,13 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Util (debug)
 import Magento.Import.Data.Categories (Categories(..), Category)
+import Magento.Import.Data.Skus (Sku)
 import Magento.Import.UI.Container.Categories.Item as Item
+import Magento.Import.UI.Data.Validity as Validity
 import Ocelot.Block.Button (button) as Ocelot
+import Ocelot.Block.Card as Card
 import Ocelot.Block.Expandable as Expandable
 import Type.Data.Symbol (SProxy(..))
-import Magento.Import.Data.Skus (Sku)
-import Ocelot.Block.Card as Card
-import Magento.Import.UI.Data.Validity as Validity
-import Data.Newtype (ala)
-import Data.Monoid.Conj (Conj(..))
-import Data.Foldable (foldMap)
 
 type State =
   { categories :: Array { category :: Category, validity :: Validity.Validity, selected :: Boolean }

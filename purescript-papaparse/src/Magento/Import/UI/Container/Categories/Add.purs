@@ -52,11 +52,11 @@ render _ =
   Input.inputGroup_
   [ Input.addonLeft_
     [ HH.slot Button._button unit Button.component
-      { render: Button.render } (Just <<< HandleButton)
+      { render: Button.simpleRender } (Just <<< HandleButton)
     ]
   -- TODO add validation logic and share the augmented component with Categories.Item
   , HH.slot TextField._textField unit TextField.component
-      { render: TextField.render
+      { render: TextField.simpleRender
       , initialState: TextField.defaultInitialState
       }
       (const Nothing)

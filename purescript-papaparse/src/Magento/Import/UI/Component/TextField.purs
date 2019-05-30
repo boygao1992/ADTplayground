@@ -1,17 +1,7 @@
 module Magento.Import.UI.Component.TextField
-( module TextField
-, _textField
-, render
+( module Export
 ) where
 
-import Effect.Aff.Class (class MonadAff)
-import Magento.Import.UI.Component.Renderless.TextField (Action(..), ChildSlots, Component, ComponentHTML, ComponentM, ComponentRender, Input, Output(..), Query(..), Slot, State, StateStore, component, defaultInitialState, handleAction, handleQuery) as TextField
-import Magento.Import.UI.Component.Renderless.TextField.Setters (Props, setProps) as TextField
-import Ocelot.Block.Input (input)
-import Type.Data.Symbol (SProxy(..))
-
-_textField = SProxy :: SProxy "textField"
-
-render :: forall m. MonadAff m => TextField.ComponentRender m
-render st =
-  input (TextField.setProps st [])
+import Magento.Import.UI.Component.TextField.Renderless (Action(..), ChildSlots, Component, ComponentHTML, ComponentM, ComponentRender, Input, Output(..), Query(..), Slot, State, StateStore, component, defaultInitialState, handleAction, handleQuery) as Export
+import Magento.Import.UI.Component.TextField.Setters (Props, setProps) as Export
+import Magento.Import.UI.Component.TextField.Render (_textField, simpleRender) as Export

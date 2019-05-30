@@ -6,7 +6,6 @@ import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
 
-
 data Validity
   = Invalid
   | Validating

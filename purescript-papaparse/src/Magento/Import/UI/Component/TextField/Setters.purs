@@ -1,11 +1,11 @@
-module Magento.Import.UI.Component.Renderless.TextField.Setters where
+module Magento.Import.UI.Component.TextField.Setters where
 
 import Prelude
 
 import Data.Maybe (Maybe(..))
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Magento.Import.UI.Component.Renderless.TextField as TextField
+import Magento.Import.UI.Component.TextField.Renderless as TextField
 import Web.Event.Event as WE
 
 type Props r =

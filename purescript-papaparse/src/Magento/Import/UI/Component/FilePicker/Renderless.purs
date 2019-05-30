@@ -1,4 +1,4 @@
-module Magento.Import.UI.Component.Renderless.FilePicker where
+module Magento.Import.UI.Component.FilePicker.Renderless where
 
 import Prelude
 

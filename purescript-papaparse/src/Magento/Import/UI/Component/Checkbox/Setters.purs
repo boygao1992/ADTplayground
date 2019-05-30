@@ -1,11 +1,11 @@
-module Magento.Import.UI.Component.Renderless.Checkbox.Setters where
+module Magento.Import.UI.Component.Checkbox.Setters where
 
 import Prelude
 
 import Data.Maybe (Maybe(..))
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Magento.Import.UI.Component.Renderless.Checkbox as Checkbox
+import Magento.Import.UI.Component.Checkbox.Renderless as Checkbox
 import Web.Event.Event as WE
 
 type Props r =

@@ -1,4 +1,4 @@
-module Magento.Import.UI.Component.Renderless.TextField where
+module Magento.Import.UI.Component.TextField.Renderless where
 
 import Prelude
 

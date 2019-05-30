@@ -1,4 +1,4 @@
-module Magento.Import.UI.Component.Renderless.Button where
+module Magento.Import.UI.Component.Button.Renderless where
 
 import Prelude
 

@@ -1,4 +1,4 @@
-module Magento.Import.UI.Component.Renderless.Checkbox where
+module Magento.Import.UI.Component.Checkbox.Renderless where
 
 import Prelude
 
