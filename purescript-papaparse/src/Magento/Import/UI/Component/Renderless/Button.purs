@@ -2,7 +2,7 @@ module Magento.Import.UI.Component.Renderless.Button where
 
 import Prelude
 
-import Renderless.State (Store, extract, store)
+import Renderless.State (Store, extract, modifyStore_, store)
 import Data.Const (Const)
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
@@ -16,8 +16,9 @@ initialState = unit
 type StateStore m
   = Store State (ComponentHTML m)
 
-data Action
+data Action m
   = OnClick
+  | Receive (Input m)
 
 type Query = Const Void
 
@@ -28,9 +29,9 @@ data Output
 
 type ChildSlots = ()
 
-type ComponentM m a = H.HalogenM (StateStore m) Action ChildSlots Output m a
+type ComponentM m a = H.HalogenM (StateStore m) (Action m) ChildSlots Output m a
 type Component m = H.Component HH.HTML Query (Input m) Output m
-type ComponentHTML m = H.ComponentHTML Action ChildSlots m
+type ComponentHTML m = H.ComponentHTML (Action m) ChildSlots m
 type ComponentRender m = State -> ComponentHTML m
 
 type Slot = H.Slot Query Output
@@ -44,8 +45,11 @@ component = H.mkComponent
       }
   }
 
-handleAction :: forall m. MonadAff m => Action -> ComponentM m Unit
+handleAction :: forall m. MonadAff m => Action m -> ComponentM m Unit
 handleAction = case _ of
   OnClick -> do
     H.raise Pressed
+
+  Receive { render } -> do
+    modifyStore_ render identity
 

@@ -28,8 +28,7 @@ type Input m =
   }
 
 data Output
-  = Checked
-  | Unchecked
+  = Checked Boolean
 
 type ChildSlots = ()
 
@@ -56,9 +55,7 @@ handleAction = case _ of
     st <- getState
     let checked = not st
     putState checked
-    if checked
-      then H.raise Checked
-      else H.raise Unchecked
+    H.raise $ Checked checked
 
   Receive { render } -> do
     modifyStore_ render identity

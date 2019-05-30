@@ -2,7 +2,7 @@ module Magento.Import.UI.Component.Renderless.FilePicker where
 
 import Prelude
 
-import Renderless.State (Store, extract, getsState, modifyState_, store)
+import Renderless.State (Store, extract, getsState, modifyState_, modifyStore_, store)
 import Data.Maybe (Maybe(..))
 import Data.MediaType (MediaType)
 import Data.Traversable (for_)
@@ -35,10 +35,11 @@ initialState =
   , mediaType: Nothing
   }
 
-data Action
+data Action m
   = Initialize
   | SetFile HIE.HTMLInputElement
   | LoadFile FR.FileReader
+  | Receive (Input m)
 
 data Query a
   = Reset a
@@ -51,9 +52,9 @@ data Output
 
 type ChildSlots = ()
 
-type ComponentM m a = H.HalogenM (StateStore m) Action ChildSlots Output m a
+type ComponentM m a = H.HalogenM (StateStore m) (Action m) ChildSlots Output m a
 type Component m = H.Component HH.HTML Query (Input m) Output m
-type ComponentHTML m = H.ComponentHTML Action ChildSlots m
+type ComponentHTML m = H.ComponentHTML (Action m) ChildSlots m
 type ComponentRender m = State -> ComponentHTML m
 
 type Slot = H.Slot Query Output
@@ -77,7 +78,7 @@ handleQuery = case _ of
       H.liftEffect $ HIE.setValue "" ie
     modifyState_ _ { mediaType = Nothing }
 
-handleAction :: forall m. MonadAff m => Action -> ComponentM m Unit
+handleAction :: forall m. MonadAff m => Action m -> ComponentM m Unit
 handleAction = case _ of
   Initialize -> do
     fr <- H.liftEffect FR.fileReader
@@ -108,3 +109,6 @@ handleAction = case _ of
     mmt <- getsState _.mediaType
     for_ ({data: _, mediaType: _} <$> ms <*> mmt) \result ->
       H.raise $ FileLoaded result
+
+  Receive { render } -> do
+    modifyStore_ render identity

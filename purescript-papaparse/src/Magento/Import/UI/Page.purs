@@ -2,6 +2,7 @@ module Magento.Import.UI.Page where
 
 import Prelude
 
+import Data.Tuple (Tuple(..))
 import Data.String.Read (read)
 import Data.Const (Const)
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -11,9 +12,11 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 -- import Halogen.HTML.Properties as HP
 -- import Halogen.Query.EventSource as HES
-import Halogen.Util (debug, debugShow)
+import Halogen.Util (debugShow)
 import Type.Data.Symbol (SProxy(..))
-import Magento.Import.UI.Container.Category as Category
+import Magento.Import.UI.Container.Categories as Categories
+import Magento.Import.Data.Skus (Sku(..))
+import Ocelot.Block.Button (button) as Button
 
 type State = Unit
 
@@ -30,10 +33,10 @@ type Input = Unit
 type Output = Void
 
 type ChildSlots =
-  ( category :: Category.Slot Unit
+  ( categories :: Categories.Slot Unit
   )
 
-_category = SProxy :: SProxy "category"
+_categories = SProxy :: SProxy "categories"
 
 type ComponentM m a = H.HalogenM State Action ChildSlots Output m a
 type Component m = H.Component HH.HTML Query Input Output m
@@ -52,29 +55,34 @@ component = H.mkComponent
 render :: forall m. MonadAff m => State -> ComponentHTML m
 render _ =
   HH.div_
-  [ HH.slot _category unit Category.component
-      { categories:
-        [ { category: fromMaybe mempty (read "A/B")
+  [ HH.slot _categories unit Categories.component
+      [ Tuple (Sku "FSWT400")
+        [ { category: fromMaybe mempty $ read "Finestra Wood Category/Traverse/Components/Cord Draw"
           , validity: false
           }
-        , { category: fromMaybe mempty (read "A/C/D/E")
+          , { category: fromMaybe mempty $ read "Finestra Wood Category/Traverse/Components/Baton Draw"
           , validity: true
           }
-        , { category: fromMaybe mempty (read "A/F/G")
+        ]
+        , Tuple (Sku "CP500")
+        [ { category: fromMaybe mempty $ read "Rowley Category/Drapery Hardware/Tracks & Components/Cord Draw Track"
+          , validity: true
+          }
+        , { category: fromMaybe mempty $ read "A/B/C"
           , validity: false
           }
         ]
-      }
+      ]
       (const Nothing)
-  , HH.button
+  , Button.button
     [ HE.onClick $ Just <<< const GetAllValidCategories ]
-    [ HH.text "getAllCategories" ]
+    [ HH.text "getAllValidCategories" ]
   ]
 
 handleAction :: forall m. MonadAff m => Action -> ComponentM m Unit
 handleAction = case _ of
   GetAllValidCategories -> do
-    result <- H.query _category unit (H.request Category.GetCategories)
+    result <- H.query _categories unit (H.request Categories.GetAllCategories)
     debugShow result
 
 

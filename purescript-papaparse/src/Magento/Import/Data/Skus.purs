@@ -11,6 +11,9 @@ import Data.String.Read (class Read)
 newtype Sku = Sku String
 derive newtype instance eqSku :: Eq Sku
 derive newtype instance ordSku :: Ord Sku
+derive newtype instance readSku :: Read Sku
+derive newtype instance semigroupSku :: Semigroup Sku
+derive newtype instance monoidSku :: Monoid Sku
 derive instance newtypeSku :: Newtype Sku _
 instance showSku :: Show Sku where
   show = unwrap

@@ -1,4 +1,7 @@
 {
+  "scripts":{
+    "start": "parcel assets/index.html"
+  },
   "name": "purescript-papaparse",
   "version": "1.0.0",
   "main": "index.js",

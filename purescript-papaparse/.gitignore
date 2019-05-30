@@ -8,3 +8,5 @@
 /.purs*
 /.psa*
 /source/
+/.cache/
+/dist/

@@ -15,9 +15,9 @@ type Props r =
   )
 
 setProps
-  :: forall r
-  . Array (HP.IProp (Props r) Action)
-  -> Array (HP.IProp (Props r) Action)
+  :: forall m r
+  . Array (HP.IProp (Props r) (Action m))
+  -> Array (HP.IProp (Props r) (Action m))
 setProps = append
   [ HP.type_ HP.InputFile
   , HE.onChange $ map SetFile <<< HIE.fromEventTarget <=< WE.target

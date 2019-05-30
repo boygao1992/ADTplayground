@@ -16,10 +16,10 @@ type Props r =
   )
 
 setProps
-  :: forall r
+  :: forall m r
   . String
-  -> Array (HP.IProp (Props r) TextField.Action)
-  -> Array (HP.IProp (Props r) TextField.Action)
+  -> Array (HP.IProp (Props r) (TextField.Action m))
+  -> Array (HP.IProp (Props r) (TextField.Action m))
 setProps str = append
   [ HP.type_ HP.InputText
   , HE.onValueInput $ Just <<< TextField.KeyboardInput

@@ -2,11 +2,11 @@ module Magento.Import.UI.Component.Renderless.TextField where
 
 import Prelude
 
-import Renderless.State (Store, extract, putState, store)
-import Data.Const (Const)
+import Data.Maybe (Maybe(..))
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
+import Renderless.State (Store, extract, getState, modifyStore_, putState, store)
 
 type State = String
 
@@ -15,10 +15,12 @@ defaultInitialState = ""
 
 type StateStore m = Store State (ComponentHTML m)
 
-data Action
+data Action m
   = KeyboardInput String
+  | Receive (Input m)
 
-type Query = Const Void
+data Query a
+  = Get (String -> a)
 
 type Input m =
   { render :: ComponentRender m
@@ -30,9 +32,9 @@ data Output
 
 type ChildSlots = ()
 
-type ComponentM m a = H.HalogenM (StateStore m) Action ChildSlots Output m a
+type ComponentM m a = H.HalogenM (StateStore m) (Action m) ChildSlots Output m a
 type Component m = H.Component HH.HTML Query (Input m) Output m
-type ComponentHTML m = H.ComponentHTML Action ChildSlots m
+type ComponentHTML m = H.ComponentHTML (Action m) ChildSlots m
 type ComponentRender m = State -> ComponentHTML m
 
 type Slot = H.Slot Query Output
@@ -43,12 +45,22 @@ component = H.mkComponent
   , render: extract
   , eval: H.mkEval $ H.defaultEval
       { handleAction = handleAction
+      , handleQuery = handleQuery
       }
   }
 
-handleAction :: forall m. MonadAff m => Action -> ComponentM m Unit
+handleAction :: forall m. MonadAff m => Action m -> ComponentM m Unit
 handleAction = case _ of
   KeyboardInput str -> do
     putState str
     H.raise $ Updated str
+
+  Receive { render } -> do
+    modifyStore_ render identity
+
+handleQuery :: forall m a. MonadAff m => Query a -> ComponentM m (Maybe a)
+handleQuery = case _ of
+  Get reply -> do
+    str <- getState
+    pure $ Just $ reply str
 

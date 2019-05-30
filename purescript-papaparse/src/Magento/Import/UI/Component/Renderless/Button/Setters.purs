@@ -14,8 +14,8 @@ type Props r =
   )
 
 setProps
-  :: forall r
-  . Array (HP.IProp (Props r) Button.Action)
-  -> Array (HP.IProp (Props r) Button.Action)
+  :: forall m r
+  . Array (HP.IProp (Props r) (Button.Action m))
+  -> Array (HP.IProp (Props r) (Button.Action m))
 setProps = append
   [ HE.onClick $ Just <<< const Button.OnClick ]
