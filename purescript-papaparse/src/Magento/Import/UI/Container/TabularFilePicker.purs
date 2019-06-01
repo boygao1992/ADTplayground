@@ -10,7 +10,6 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.MediaType.Extra as MediaType
 import Data.Tuple (Tuple)
-import Effect.Aff as Aff
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
