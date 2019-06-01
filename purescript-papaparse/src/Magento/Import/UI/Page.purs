@@ -91,6 +91,9 @@ render _ =
     [ HE.onClick $ Just <<< const (PopupTest { status: Popup.Success, message: "success"}) ]
     [ HH.text "Success" ]
   , Button.button
+    [ HE.onClick $ Just <<< const (PopupTest { status: Popup.Warning, message: "warning"}) ]
+    [ HH.text "Warning" ]
+  , Button.button
     [ HE.onClick $ Just <<< const (PopupTest { status: Popup.Error, message: "errorrrrrrrrrrrrrrrrrrrrr"}) ]
     [ HH.text "Error" ]
   ]

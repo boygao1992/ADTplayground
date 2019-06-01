@@ -21,6 +21,7 @@ import Ocelot.Block.Toast as Toast
 
 data PopupStatus
   = Success
+  | Warning
   | Error
 derive instance genericPopupStatus :: Generic PopupStatus _
 derive instance eqPopupStatus :: Eq PopupStatus
@@ -36,7 +37,6 @@ type PopupPayload =
 type State =
   { messageQueue :: Maybe (Queue PopupPayload)
   , popQueue :: Maybe (BoundedQueue PopupPayload)
-  , displayQueue :: Maybe (BoundedQueue PopupPayload)
   , inDisplay :: Maybe PopupPayload
   }
 
@@ -44,7 +44,6 @@ defaultInitialState :: State
 defaultInitialState =
   { messageQueue: Nothing
   , popQueue: Nothing
-  , displayQueue: Nothing
   , inDisplay: Nothing
   }
 
@@ -88,12 +87,15 @@ render { inDisplay } =
       []
     Just { status, message } ->
       [ case status of
-           Success ->
-             Icon.success
-             [ HP.classes $ HH.ClassName <$> ["text-green", "text-2xl", "mr-2"] ]
-           Error ->
-             Icon.error
-             [ HP.classes $ HH.ClassName <$> ["text-red", "text-2xl", "mr-2"] ]
+          Success ->
+            Icon.success
+            [ HP.classes $ HH.ClassName <$> ["text-green", "text-2xl", "mr-2"] ]
+          Warning ->
+            Icon.error
+            [ HP.classes $ HH.ClassName <$> ["text-yellow", "text-2xl", "mr-2"] ]
+          Error ->
+            Icon.error
+            [ HP.classes $ HH.ClassName <$> ["text-red", "text-2xl", "mr-2"] ]
       , HH.p_
         [ HH.text message ]
       ]
@@ -104,24 +106,17 @@ handleAction = case _ of
   Initialize -> do
     messageQueue <- H.liftAff $ Queue.new
     popQueue <- H.liftAff $ BoundedQueue.new 1
-    displayQueue <- H.liftAff $ BoundedQueue.new 1
     H.modify_
       _ { messageQueue = Just messageQueue
         , popQueue = Just popQueue
-        , displayQueue = Just displayQueue
         }
 
     void $ H.fork $ forever $ H.liftAff do
       item <- Queue.read messageQueue
       BoundedQueue.write popQueue item
 
-    void $ H.fork $ forever $ H.liftAff do
-      item <- BoundedQueue.read popQueue
-      Aff.delay $ Aff.Milliseconds 300.0
-      BoundedQueue.write displayQueue item
-
     void $ H.fork $ forever do
-      item <- H.liftAff $ BoundedQueue.read displayQueue
+      item <- H.liftAff $ BoundedQueue.read popQueue
       H.modify_ _ { inDisplay = Just item }
       H.liftAff $ Aff.delay $ Aff.Milliseconds 2000.0
       H.modify_ _ { inDisplay = Nothing }
