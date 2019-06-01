@@ -3,7 +3,8 @@ module Magento.Import.UI.Component.FilePicker.Renderless where
 import Prelude
 
 import Renderless.State (Store, extract, getsState, modifyState_, modifyStore_, store)
-import Data.Maybe (Maybe(..))
+import Data.String as String
+import Data.Maybe (Maybe(..), maybe)
 import Data.MediaType (MediaType)
 import Data.Traversable (for_)
 import Effect.Aff.Class (class MonadAff)
@@ -18,6 +19,7 @@ import Web.File.FileList (item) as File
 import Web.File.FileReader as FR
 import Web.HTML.Event.EventTypes as ET
 import Web.HTML.HTMLInputElement as HIE
+import Data.MediaType.Extra as MediaType
 
 type State =
   { fileReader :: Maybe FR.FileReader
@@ -59,6 +61,11 @@ type ComponentRender m = State -> ComponentHTML m
 
 type Slot = H.Slot Query Output
 
+normalizeBase64 :: String -> String
+normalizeBase64 str =
+  maybe str (\idx -> String.drop idx str)
+  $ (_ + 7) <$> String.indexOf (String.Pattern "base64,") str
+
 component :: forall m. MonadAff m => Component m
 component = H.mkComponent
   { initialState: \({ render }) -> store render initialState
@@ -98,14 +105,17 @@ handleAction = case _ of
           f <- File.item 0 fs
           pure $ File.toBlob f
     for_ mb \(b :: File.Blob) -> do
-      modifyState_ _ { mediaType = File.type_ b }
-      mfr <- getsState _.fileReader
-      for_ mfr \(fr :: FR.FileReader) -> do
-        H.liftEffect $ FR.readAsText b fr
+      for_ (File.type_ b) \mediaType -> do
+        modifyState_ _ { mediaType = Just mediaType }
+        mfr <- getsState _.fileReader
+        for_ mfr \(fr :: FR.FileReader) -> do
+          if mediaType == MediaType.applicationXLSX
+            then H.liftEffect $ FR.readAsDataURL b fr
+            else H.liftEffect $ FR.readAsText b fr
 
   LoadFile fr -> do
     fd <- H.liftEffect $ FR.result fr
-    let (ms :: Maybe String) = JSON.read_ fd
+    let (ms :: Maybe String) = normalizeBase64 <$> JSON.read_ fd
     mmt <- getsState _.mediaType
     for_ ({data: _, mediaType: _} <$> ms <*> mmt) \result ->
       H.raise $ FileLoaded result

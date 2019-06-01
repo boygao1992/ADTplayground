@@ -1,0 +1,91 @@
+module Magento.Import.UI.Container.TabularFilePicker where
+
+import Prelude
+
+import Control.Monad.Maybe.Trans (runMaybeT)
+import Control.MonadZero (empty)
+import Data.Const (Const)
+import Data.Either (Either(..))
+import Data.Maybe (Maybe(..))
+import Data.MediaType.Extra as MediaType
+import Data.Tuple (Tuple)
+import Effect.Aff.Class (class MonadAff)
+import Halogen as H
+import Halogen.HTML as HH
+-- import Halogen.HTML.Events as HE
+-- import Halogen.HTML.Properties as HP
+-- import Halogen.Util (debug)
+import Magento.Import.UI.Component.FilePicker as FilePicker
+import PapaParse as CSV
+import XLSX as XLSX
+
+type State = Unit
+
+defaultInitialState :: State
+defaultInitialState = unit
+
+data Action
+  = HandleFilePicker FilePicker.Output
+
+type Query = Const Void
+
+type Input = Unit
+
+data Output
+  = FileLoaded (Array (Array (Tuple String String)))
+  | UnsupportedFileType
+  | XLSXParsingError String
+  | CSVParsingError (Array CSV.ParseError)
+
+type ChildSlots =
+  ( filePicker :: FilePicker.Slot Unit
+  )
+
+type ComponentM m a = H.HalogenM State Action ChildSlots Output m a
+type Component m = H.Component HH.HTML Query Input Output m
+type ComponentHTML m = H.ComponentHTML Action ChildSlots m
+type ComponentRender m = State -> ComponentHTML m
+
+type Slot = H.Slot Query Output
+
+component :: forall m. MonadAff m => Component m
+component = H.mkComponent
+  { initialState: const defaultInitialState
+  , render
+  , eval: H.mkEval $ H.defaultEval
+      { handleAction = handleAction
+      }
+  }
+
+
+render :: forall m. MonadAff m => ComponentRender m
+render _ =
+  HH.div_
+  [ HH.slot FilePicker._filePicker unit FilePicker.component
+      { render: FilePicker.simpleRender} (Just <<< HandleFilePicker)
+  ]
+
+handleAction :: forall m. MonadAff m => Action -> ComponentM m Unit
+handleAction = case _ of
+  HandleFilePicker (FilePicker.FileLoaded f) -> void $ runMaybeT do
+    when (f.mediaType /= MediaType.applicationXLSX
+          && f.mediaType /= MediaType.textCSV) do
+      H.lift $ H.raise UnsupportedFileType
+      empty
+
+    csv <- if (f.mediaType == MediaType.applicationXLSX)
+      then do
+        eCSV <- H.lift $ H.liftEffect $ XLSX.toCSV f.data
+        case eCSV of
+          Left err -> do
+            H.lift $ H.raise $ XLSXParsingError err
+            empty
+          Right csv -> pure csv
+      else
+        pure f.data
+
+    eTable <- H.lift $ H.liftEffect $ CSV.parseFileHeadedList csv
+    H.lift $ H.raise $ case eTable of
+      Left err -> CSVParsingError err
+      Right table -> FileLoaded table
+

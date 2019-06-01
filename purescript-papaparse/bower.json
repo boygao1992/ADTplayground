@@ -15,7 +15,8 @@
     "purescript-simple-json": "^5.1.0",
     "purescript-read": "^1.0.1",
     "purescript-fuzzy": "^0.2.1",
-    "purescript-remotedata": "^4.2.0"
+    "purescript-remotedata": "^4.2.0",
+    "purescript-concurrent-queues": "^1.1.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"

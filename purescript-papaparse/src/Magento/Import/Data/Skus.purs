@@ -21,6 +21,8 @@ instance showSku :: Show Sku where
 newtype Skus = Skus (Array Sku)
 
 derive newtype instance eqSkus :: Eq Skus
+derive newtype instance semigroupSkus :: Semigroup Skus
+derive newtype instance monoidSkus :: Monoid Skus
 derive instance newtypeSkus :: Newtype Skus _
 
 instance readSkus :: Read Skus where
