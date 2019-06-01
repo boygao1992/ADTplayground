@@ -1,14 +1,14 @@
 "use strict";
 
-var Papa;
+var papa;
 if ( typeof process !== 'undefined' &&
   process.versions != null &&
   process.versions.node != null ) {
-  Papa = require( "papaparse" )
+  papa = require( "papaparse" )
 } else {
-  Papa = window.Papa
+  papa = window.Papa
 }
 
 exports[ "_parse" ] = function ( str ) {
-  return Papa.parse( str )
+  return papa.parse( str )
 }

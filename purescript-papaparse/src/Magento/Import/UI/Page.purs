@@ -26,8 +26,9 @@ initialState :: State
 initialState = unit
 
 data Action
-  = GetAllValidCategories
-  | PopupTest Popup.PopupPayload
+  = GetAllValidCategories -- NOTE test
+  | PopupTest Popup.PopupPayload -- NOTE test
+  | HandleFilePicker FilePicker.Output
 
 type Query = Const Void
 
@@ -63,7 +64,7 @@ render :: forall m. MonadAff m => State -> ComponentHTML m
 render _ =
   HH.div_
   [ HH.slot _popup unit Popup.component unit (const Nothing)
-  , HH.slot _filePicker unit FilePicker.component unit (const Nothing)
+  , HH.slot _filePicker unit FilePicker.component unit (Just <<< HandleFilePicker)
   , HH.slot _categories unit Categories.component
       [ Tuple (Sku "A")
         [ { category: fromMaybe mempty $ read "A/B/C"
@@ -96,6 +97,13 @@ render _ =
 
 handleAction :: forall m. MonadAff m => Action -> ComponentM m Unit
 handleAction = case _ of
+  HandleFilePicker f -> case f of
+    FilePicker.FileLoaded table -> do
+      debugShow table
+    FilePicker.Error err -> do
+      void $ H.query _popup unit
+        $ H.tell $ Popup.PushNew { status: Popup.Error , message: show err }
+
   GetAllValidCategories -> do
     result <- H.query _categories unit (H.request Categories.GetAllCategories)
     debugShow result
