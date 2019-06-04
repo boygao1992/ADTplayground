@@ -3,7 +3,6 @@ module Magento.Import.UI.Component.Checkbox.Renderless where
 import Prelude
 
 import Data.Maybe (Maybe(..))
-import Data.Const (Const)
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
@@ -20,7 +19,8 @@ data Action m
   = Toggle
   | Receive (Input m)
 
-type Query = Const Void
+data Query a
+  = Get (Boolean -> a)
 
 type Input m =
   { render :: ComponentRender m
@@ -45,6 +45,7 @@ component = H.mkComponent
   , render: extract
   , eval: H.mkEval $ H.defaultEval
       { handleAction = handleAction
+      , handleQuery = handleQuery
       , receive = Just <<< Receive
       }
   }
@@ -60,3 +61,8 @@ handleAction = case _ of
   Receive { render } -> do
     modifyStore_ render identity
 
+handleQuery :: forall m a. MonadAff m => Query a -> ComponentM m (Maybe a)
+handleQuery = case _ of
+  Get reply -> do
+    b <- getState
+    pure $ Just $ reply b

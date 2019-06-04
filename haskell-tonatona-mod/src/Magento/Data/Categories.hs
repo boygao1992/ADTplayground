@@ -1,7 +1,7 @@
 module Magento.Data.Categories where
 
 import RIO
-import RIO.List (intercalate, lastMaybe)
+import qualified RIO.List as List (intercalate, lastMaybe, length)
 import qualified RIO.Text as Text
 import Data.ByteString.Char8 (split, unpack)
 import Text.Read (readsPrec)
@@ -11,7 +11,10 @@ allLeafNodes :: Categories -> [Text]
 allLeafNodes (Categories cs) = mapMaybe leafNode cs
 
 leafNode :: Category -> Maybe Text
-leafNode (Category c) = lastMaybe c
+leafNode (Category c) = List.lastMaybe c
+
+length :: Category -> Int
+length = List.length . unCategory
 
 newtype Category = Category { unCategory :: [Text] }
   deriving newtype (Eq, Semigroup, Monoid)
@@ -25,7 +28,7 @@ instance Read Category where
     . split '/'
     . fromString
 instance Show Category where
-  show = intercalate "/" . fmap Text.unpack . unCategory
+  show = List.intercalate "/" . fmap Text.unpack . unCategory
 
 newtype Categories = Categories { unCategories :: [Category] }
   deriving newtype (Eq, Semigroup, Monoid)
@@ -34,4 +37,4 @@ instance Newtype Categories
 instance Read Categories where
   readsPrec _ input = [ (Categories . mapMaybe (readMaybe . unpack) . split ',' . fromString $ input, "")]
 instance Show Categories where
-  show = intercalate "," . fmap show . unCategories
+  show = List.intercalate "," . fmap show . unCategories

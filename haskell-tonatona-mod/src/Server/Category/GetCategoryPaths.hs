@@ -3,6 +3,7 @@ module Server.Category.GetCategoryPaths where
 import Types (Resources)
 
 import RIO
+import qualified Data.List.Util as List
 import qualified Data.List.Util as List (returningOne)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
@@ -10,10 +11,12 @@ import qualified Data.Map.Strict.Util as Map
 
 import Database.Beam.Query
 import Database.Beam.MySQL.Connection (MySQLM)
-import Tonatona.Beam.MySQL.Run (runBeamMySQL)
+import Tonatona.Beam.MySQL.Run (runBeamMySQLDebug)
 
 import Magento.Data.Categories (Category(..), Categories(..), leafNode, allLeafNodes)
+import qualified Magento.Data.Categories as Categories (length)
 import Magento.Data.CategoryPath (CategoryPath(..), unCategoryPath)
+import qualified Magento.Data.CategoryPath as CategoryPath(length)
 import Magento.Database
 import qualified Magento.Database.Catalog.Category.Entity as CCE
 import qualified Magento.Database.Catalog.Category.Entity.Varchar as CCEV
@@ -40,6 +43,7 @@ _getCandidateLabelsByNodeIds nodeIds =
     fmap (mapMaybe \(x,y) -> (x,) <$> y)
     . runSelectReturningList
     $ select
+    $ orderBy_ (asc_ . fst)
     $ nub_ do
         catalog_category_entity_varchar <-
           all_ (magentoDb^.catalogCategoryEntityVarchar)
@@ -50,6 +54,18 @@ _getCandidateLabelsByNodeIds nodeIds =
           ( catalog_category_entity_varchar^.CCEV.row_id
           , catalog_category_entity_varchar^.CCEV.value
           )
+
+_getCategoryEntityIdRowIdPairs :: MySQLM [(Word32, Word32)]
+_getCategoryEntityIdRowIdPairs = do
+  runSelectReturningList
+  $ select
+  $ orderBy_ (asc_ . fst)
+  $ nub_ do
+    catalog_category_entity <-
+      all_ (magentoDb^.catalogCategoryEntity)
+    pure $ ( catalog_category_entity^.CCE.entity_id
+           , catalog_category_entity^.CCE.row_id
+           )
 
 filterValidPaths :: Map.Map Word32 (Set.Set Text) -> Category -> [CategoryPath] -> [CategoryPath]
 filterValidPaths nodeDict (Category category) =
@@ -66,23 +82,38 @@ filterValidPaths nodeDict (Category category) =
 categoryPathFromCategory :: Map.Map Text [CategoryPath] -> Category -> [CategoryPath]
 categoryPathFromCategory nodeLabelToCategoryPaths category =
   fromMaybe [] do
+    let categoryLength = Categories.length category
     l <- leafNode category
-    Map.lookup l nodeLabelToCategoryPaths
+    ps <- Map.lookup l nodeLabelToCategoryPaths
+    pure $ filter ((== categoryLength) . CategoryPath.length) ps
 
 getCategoryPaths
   :: [(Text, Categories)]
   -> RIO Resources [(Text, [(Category, Maybe CategoryPath)])]
 getCategoryPaths request = do
+
+  entityIdRowIdPairs :: [(Word32, Word32)]
+    <- runBeamMySQLDebug
+      _getCategoryEntityIdRowIdPairs
+
   let
+    entityIdToRowId :: Word32 -> Maybe Word32
+                                      -- TODO Map.fromAscList
+    entityIdToRowId = flip Map.lookup $ Map.fromList entityIdRowIdPairs
+
     allLeafNodeLabels :: [Text]
-      = allLeafNodes
+      = List.nub
+      . allLeafNodes
       . fold
       . fmap snd
       $ request
 
   nodeLabelAndCategoryPathPairs :: [(Text, CategoryPath)]
-    <- runBeamMySQL
+    <- fmap (mapMaybe \(sku, CategoryPath cp) -> (sku, ) . CategoryPath <$> traverse entityIdToRowId cp )
+    . runBeamMySQLDebug
     $ _getAllCandidateCategoryPathsByLeafNodeLabels allLeafNodeLabels
+
+  logDebug $ displayShow $ nodeLabelAndCategoryPathPairs
 
   let
     nodeLabelToCategoryPaths :: Map.Map Text [CategoryPath]
@@ -98,22 +129,27 @@ getCategoryPaths request = do
       $ request
 
     allNodeIds :: [Word32]
-      = Set.toList
-      . Set.fromList
+      = List.nub
       . join
       . fmap unCategoryPath
       . fmap snd
       $ nodeLabelAndCategoryPathPairs
 
+  logDebug $ displayShow $ nodeLabelToCategoryPaths
+  logDebug $ displayShow $ skuAndCategoryPathsPairs
+
   allCandidateNodeLabels :: [(Word32, Text)]
-    <- runBeamMySQL
+    <- runBeamMySQLDebug
     $ _getCandidateLabelsByNodeIds allNodeIds
+
+  logDebug $ displayShow $ allCandidateNodeLabels
 
   let
     nodeIdToCandidateNodeLabels :: Map.Map Word32 (Set Text)
       = fmap Set.fromList
       . Map.fromListGroupBy
       $ allCandidateNodeLabels
+
 
   -- TODO memorization to save computation for repeated categories
     result :: [(Text, [(Category, Maybe CategoryPath)])]
@@ -128,5 +164,19 @@ getCategoryPaths request = do
           )
         )
       $ skuAndCategoryPathsPairs
+
+  logDebug $ displayShow $ nodeIdToCandidateNodeLabels
+  logDebug $ displayShow
+    $ fmap
+      ( fmap
+        ( fmap
+          (\pair ->
+            ( filterValidPaths nodeIdToCandidateNodeLabels (fst pair)
+            ) <$> pair
+          )
+        )
+      )
+    $ skuAndCategoryPathsPairs
+
 
   pure result

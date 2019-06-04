@@ -6,7 +6,7 @@ module Tonatona.Servant.Run where
 import RIO
 
 import Network.HTTP.Types.Header (hLocation)
-import Servant (Application, Handler, HasServer, ServantErr, ServerT, errHeaders, err302, hoistServer, serve, throwError)
+import Servant (Application, Handler, HasServer, Header, Headers, JSON, PostCreated, NoContent(..), ServantErr, ServerT, ToHttpApiData, Verb, addHeader, errHeaders, err302, hoistServer, serve, throwError)
 
 import Tonatona.Servant.Resources (HasServantResources, servantResourcesL, _loggerMiddleware, _runApplication, _gzipMiddleware)
 
@@ -49,9 +49,21 @@ runServantServer servantServer = do
         Right res -> pure res
         Left servantErr -> throwError servantErr
 
-redirect :: ByteString -> RIO env a
-redirect redirectLocation =
+-- NOTE not recommended
+redirect' :: ByteString -> RIO env a
+redirect' redirectLocation =
   throwM $
     err302
       { errHeaders = [(hLocation, redirectLocation)]
       }
+
+type PostCreatedRedirect url
+  = PostCreated '[JSON] (Headers '[Header "Location" url] NoContent)
+type PermanentRedirect verb url
+  = Verb verb 301 '[JSON] (Headers '[Header "Location" url] NoContent)
+redirect
+  :: ToHttpApiData url
+  => url -- ^ what to put in the 'Location' header
+  -> RIO env (Headers '[Header "Location" url] NoContent)
+redirect url = return (addHeader url NoContent)
+

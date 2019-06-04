@@ -20,35 +20,41 @@ import Ocelot.Block.Expandable as Expandable
 import Type.Data.Symbol (SProxy(..))
 
 type State =
-  { allCategories ::
+  { initCategories ::
       Array
       ( Tuple Sku
           (Array { category :: Category, validity :: Boolean })
       )
   , expand :: Expandable.Status
   , validity :: Maybe Validity.Validity
+  , visibility :: Boolean
   }
 
 defaultInitialState :: State
 defaultInitialState =
-  { allCategories: mempty
+  { initCategories: mempty
   , expand: Expandable.Expanded -- TODO for styling
   , validity: Nothing
+  , visibility: false
   }
 
 data Action
   = ToggleExpand
   | HandleCategory Sku Category.Output
   | Initialize
+  | Receive Input
 
 data Query a
   = GetAllCategories (Map Sku Categories -> a)
 
 type Input =
-  Array
-  ( Tuple Sku
-    (Array { category :: Category, validity :: Boolean })
-  )
+  { initCategories ::
+    Array
+    ( Tuple Sku
+      (Array { category :: Category, validity :: Boolean })
+    )
+  , visibility :: Boolean
+  }
 
 
 type Output = Void
@@ -69,22 +75,26 @@ type Slot = H.Slot Query Output
 
 component :: forall m. MonadAff m => Component m
 component = H.mkComponent
-  { initialState: \allCategories ->
+  { initialState: \({initCategories, visibility}) ->
       defaultInitialState
-      { allCategories = allCategories}
+      { initCategories = initCategories
+      , visibility = visibility
+      }
   , render
   , eval: H.mkEval $ H.defaultEval
       { handleAction = handleAction
       , handleQuery = handleQuery
       , initialize = Just Initialize
+      , receive = Just <<< Receive
       }
   }
 
 render :: forall m. MonadAff m => ComponentRender m
-render { allCategories, expand, validity } =
+render { initCategories, expand, validity, visibility } =
   Card.card
   [ HP.classes $ HH.ClassName <$>
     [ Validity.backgroundColorLightest validity
+    , if visibility then "" else "hidden"
     ]
   ]
   [ Expandable.heading
@@ -92,7 +102,7 @@ render { allCategories, expand, validity } =
     [ HH.text "Categories"]
   , Expandable.content_
     expand
-    (map renderCategory allCategories)
+    (map renderCategory initCategories)
   ]
   where
     renderCategory :: (Tuple Sku (Array { category :: Category, validity :: Boolean })) -> ComponentHTML m
@@ -113,9 +123,13 @@ handleAction = case _ of
     vs <- H.queryAll _category (H.request Category.GetValidity)
     H.modify_ _ { validity = foldMap identity vs }
 
+  Receive { visibility } -> do
+    H.modify_ _ { visibility = visibility }
+
 
 handleQuery :: forall m a. MonadAff m => Query a -> ComponentM m (Maybe a)
 handleQuery = case _ of
   GetAllCategories reply -> do
     result <- H.queryAll _category (H.request Category.GetCategories)
     pure $ Just $ reply result
+

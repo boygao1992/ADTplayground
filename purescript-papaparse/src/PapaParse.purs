@@ -3,7 +3,7 @@ module PapaParse where
 import Prelude
 
 import Data.Array as Array
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Data.Either (Either(..))
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1, runEffectFn1)
@@ -46,7 +46,10 @@ parseFile
   = parseRaw
   >>> map \result ->
       if Array.null result.errors
-      then Right result.data
+      then maybe (Left result.errors) Right $ do
+        header <- Array.head result.data
+        let size = Array.length header
+        pure $ Array.filter (\row -> Array.length row == size) result.data
       else Left result.errors
 
 parseFileHeadedList

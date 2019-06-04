@@ -9,7 +9,6 @@ import Data.Const (Const)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.MediaType.Extra as MediaType
-import Data.Tuple (Tuple)
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
@@ -17,6 +16,7 @@ import Halogen.HTML as HH
 -- import Halogen.HTML.Properties as HP
 import Halogen.Util (debugShow)
 import Magento.Import.UI.Component.FilePicker as FilePicker
+import Magento.Import.UI.Data.File (File(..))
 import PapaParse as CSV
 import XLSX as XLSX
 
@@ -33,7 +33,7 @@ type Query = Const Void
 type Input = Unit
 
 data Output
-  = FileLoaded (Array (Array (Tuple String String)))
+  = FileLoaded File
   | Error ErrorType
 
 data ErrorType
@@ -95,8 +95,8 @@ handleAction = case _ of
         else
           pure f.data
 
-      eTable <- H.lift $ H.liftEffect $ CSV.parseFileHeadedList csv
-      H.lift $ H.raise $ case eTable of
+      eFile <- H.lift $ H.liftEffect $ CSV.parseFile csv
+      H.lift $ H.raise $ case eFile of
         Left err -> Error $ CSVParsingError err
-        Right table -> FileLoaded table
+        Right file -> FileLoaded $ File file
 
