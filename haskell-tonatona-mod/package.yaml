@@ -39,7 +39,9 @@ dependencies:
 - newtype-generics >= 0.5
 - aeson >= 1.4
 - http-types >= 0.12
-- http-client >= 0.6
+- http-client >= 0.5
+- cryptonite >= 0.25
+- memory >= 0.14
 
 
 
@@ -52,7 +54,6 @@ ghc-options:
 - -Wincomplete-uni-patterns
 - -Wpartial-fields
 - -Wredundant-constraints
-- -Wno-missing-signatures # NOTE for lenses
 
 default-extensions:
 - AutoDeriveTypeable

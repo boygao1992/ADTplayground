@@ -58,21 +58,28 @@ validity :: Bool
 example: Product Reviews
 1. Add App
 `https://productreviews.shopifyapps.com/login?shop=wynntest.myshopify.com`
-Shopify Post `our-server/request_auth`
-to Our server
-2.
-Our Server generate unique identifier `nonce`
-Prepare redirect url and respond with Header including `Location` (code `201`)
+Shopify redirects User to `app-server/add-app` previously whitelisted endpoint
 
+2. App Server generate unique identifier `{nonce}`
+Prepare redirect url with required query parameters filled in
 `https://wynntest.myshopify.com/admin/oauth/request_grant?client_id=60fca9c7f3400ddd43004e94b1355691&redirect_uri=https%3A%2F%2Fproductreviews.shopifyapps.com%2Fauth%2Fshopify%2Fcallback&scope=read_orders%2Cwrite_products%2Cwrite_script_tags%2Cwrite_themes&state=c3dc925c23b77c6999541222135a5c12407eedb625aef614`
+respond with Header
+  - status code `201`
+  - `Location` = url
 
-
+3. Install
 `https://productreviews.shopifyapps.com/?hmac=afe96b14ccfbaab2ffe27a4fd5c6c17f11ee6d371311b251976c1a61faf362d1&shop=wynntest.myshopify.com&timestamp=1559669232`
+Shopify redirects User to `app-server/install-app` previously whitelisted endpoint
+
+4. App Server fetch OAuth `{access_token}`
+rediret User to home page of embeded app
+
 `https://wynntest.myshopify.com/admin/apps/product-reviews/?hmac=53733f438def68727ad4faf4432d35fee50e7fb1a12421f2e9ddd5124449c17b&locale=en-US&protocol=https%3A%2F%2F&shop=wynntest.myshopify.com&timestamp=1559669294`
 
 # Step 2: Ask for permission
 
 `https://{shop}.myshopify.com/admin/oauth/authorize?client_id={api_key}&scope={scopes}&redirect_uri={redirect_uri}&state={nonce}&grant_options[]={access_mode}`
+
 - `{shop} :: String`
   - The name of the user's shop.
 - `{api_key} :: String`
@@ -128,8 +135,8 @@ example: Shopify Flow
   - The `hostname` parameter is a valid hostname
     - NOTE ends with `myshopify.com`
     - does not contain characters other than 
-      - letters (a-z)
-      - numbers (0-9)
+      - letters (`a`-`z`)
+      - numbers (`0`-`9`)
       - dots 
       - hyphens
     
@@ -137,6 +144,7 @@ example: Shopify Flow
 
 `POST https://{shop}.myshopify.com/admin/oauth/access_token`
 - `{shop}`
+  
   - The name of the user's shop.
 - query body :: JSON
   - `client_id` = `{api_key}`
@@ -155,15 +163,36 @@ example: Shopify Flow
       - The list of access scopes that were granted to the application and are associated with the access token. Due to the nature of OAuth, it's always possible for a merchant to change the requested scope in the URL during the authorize phase, so the application should ensure that all required scopes are granted before using the access token. If you requested both the read and write access scopes for a resource, then check only for the write access scope. The read access scope is omitted because it's implied by the write access scope. For example, if your request included `scope=read_orders,write_orders`, then check only for the `write_orders` scope.
   - online mode
     - `access_token` = `{access_token}`
+    
     - `scope` = `{scopes}`
+    
     - `expires_in`
       - e.g. `86399`
       - The number of seconds until the access token expires.
+      
     - `associated_user_scope`
       - e.g. `write_orders`
       - The list of access scopes that were granted to the app and are available for this access token, given the user's permissions.
+      
     - `associated_user`
+      
+      - type
+        
+        ```haskell
+        data AssociatedUser = AssociatedUser
+          { id :: Word32
+          , first_name :: ByteString
+          , last_name :: ByteString
+          , email :: ByteString
+          , email_verified :: Boolean
+          , account_owner :: Boolean
+          , locale :: ByteString
+          , collaborator :: Boolean
+          }
+        ```
+        
       - Information about the user who completed the OAuth authorization flow.
+      
       - e.g. 
         ```JSON
         {

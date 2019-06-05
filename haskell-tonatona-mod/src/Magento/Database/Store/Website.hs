@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE ImpredicativeTypes #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 module Magento.Database.Store.Website where
 
 import RIO

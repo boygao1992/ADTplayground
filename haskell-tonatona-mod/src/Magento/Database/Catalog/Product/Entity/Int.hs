@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE ImpredicativeTypes #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 module Magento.Database.Catalog.Product.Entity.Int where
 
 import RIO

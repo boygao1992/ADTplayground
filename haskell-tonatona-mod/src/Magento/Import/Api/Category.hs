@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeOperators #-}
-module Server.Category where
+module Magento.Import.Api.Category where
 
 import RIO
 import RIO.Partial (read)
@@ -7,7 +7,7 @@ import Servant
 import Data.Bifunctor (bimap)
 
 import Types (Resources)
-import Server.Category.GetCategoryPaths (getCategoryPaths)
+import Magento.Import.Api.Category.GetCategoryPaths (getCategoryPaths)
 
 type Api
   = "batchValidate"

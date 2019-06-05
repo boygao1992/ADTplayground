@@ -57,10 +57,12 @@ redirect' redirectLocation =
       { errHeaders = [(hLocation, redirectLocation)]
       }
 
-type PostCreatedRedirect url
+type PostCreatedRedirect url -- 201
   = PostCreated '[JSON] (Headers '[Header "Location" url] NoContent)
 type PermanentRedirect verb url
   = Verb verb 301 '[JSON] (Headers '[Header "Location" url] NoContent)
+type TemporaryRedirect verb url
+  = Verb verb 302 '[JSON] (Headers '[Header "Location" url] NoContent)
 redirect
   :: ToHttpApiData url
   => url -- ^ what to put in the 'Location' header

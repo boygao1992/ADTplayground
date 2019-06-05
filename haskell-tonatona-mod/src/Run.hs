@@ -3,7 +3,7 @@ module Run (run) where
 
 import RIO
 import Types
-import Server (Api, server)
+import Magento.Import.Api (Api, server)
 
 import Tonatona.Servant.Run (runServantServer)
 

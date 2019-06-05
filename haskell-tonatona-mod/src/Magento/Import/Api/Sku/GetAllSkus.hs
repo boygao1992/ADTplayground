@@ -1,4 +1,4 @@
-module Server.Sku.GetAllSkus where
+module Magento.Import.Api.Sku.GetAllSkus where
 
 import Types (Resources)
 

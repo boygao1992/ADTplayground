@@ -1,4 +1,4 @@
-module Server.Category.GetCategoryPaths where
+module Magento.Import.Api.Category.GetCategoryPaths where
 
 import Types (Resources)
 

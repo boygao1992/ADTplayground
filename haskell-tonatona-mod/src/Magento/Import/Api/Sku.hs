@@ -1,11 +1,11 @@
 {-# LANGUAGE TypeOperators #-}
-module Server.Sku where
+module Magento.Import.Api.Sku where
 
 import RIO
 import Servant
 
 import Types (Resources)
-import Server.Sku.GetAllSkus (getAllSkus)
+import Magento.Import.Api.Sku.GetAllSkus (getAllSkus)
 
 import Magento.Data.Skus (unSku, unSkus)
 

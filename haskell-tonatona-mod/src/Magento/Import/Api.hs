@@ -1,12 +1,12 @@
 {-# LANGUAGE TypeOperators #-}
-module Server where
+module Magento.Import.Api where
 
 import RIO
 import Servant
 
 import Types
-import qualified Server.Category as Category
-import qualified Server.Sku as Sku
+import qualified Magento.Import.Api.Category as Category
+import qualified Magento.Import.Api.Sku as Sku
 
 -- | Validation Endpoints
 
