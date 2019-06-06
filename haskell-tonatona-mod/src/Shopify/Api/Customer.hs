@@ -6,12 +6,20 @@ module Shopify.Api.Customer where
 
 import RIO
 import Servant
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.TH
 
-import Shopify.Api.CustomerAddress
+import Shopify.Api.CustomerAddress as CustomerAddress
+
+newtype CustomerId = CustomerId { unCustomerId :: Word32 }
+  deriving newtype
+    ( Eq, Ord, Show
+    , ToHttpApiData, FromHttpApiData
+    , FromJSON, ToJSON
+    )
 
 data Customer = Customer
-  { _id :: !(Maybe Word32)
+  { _id :: !(Maybe CustomerId)
     -- "id": 207119551,
   , _email :: !(Maybe Text)
     -- "email": "bob.norman@hostmail.com",
@@ -60,27 +68,91 @@ data Customer = Customer
   , _default_address :: !(Maybe Address)
     -- "default_address": {}
   } deriving (Eq, Show)
+$(deriveJSON
+    defaultOptions
+      { fieldLabelModifier = drop 1
+      , omitNothingFields = True
+      }
+    ''Customer)
 
+data SingleCustomer = SingleCustomer
+  { _customer :: !Customer
+  } deriving (Eq, Show)
 $(deriveJSON
     defaultOptions
       { fieldLabelModifier = drop 1
       }
-    ''Customer)
+    ''SingleCustomer)
 
 data Customers = Customers
   { _customers :: ![Customer]
   } deriving (Eq, Show)
-
 $(deriveJSON
     defaultOptions
       { fieldLabelModifier = drop 1
       }
     ''Customers)
 
+data AccountActivationUrl = AccountActivationUrl
+  { _account_activation_url :: !(Maybe Text)
+  , _errors :: !(Maybe [Text])
+  } deriving (Eq, Show)
+$(deriveJSON
+    defaultOptions
+      { fieldLabelModifier = drop 1
+      , omitNothingFields = True
+      }
+    ''AccountActivationUrl)
 
-type Api
-  = "customers.json"
-    :> QueryParam "ids"
+data CustomerInvite = CustomerInvite
+  { _to :: !(Maybe Text)
+  , _from :: !(Maybe Text)
+  , _subject :: !(Maybe Text)
+  , _custom_message :: !(Maybe Text)
+  , _bcc :: !(Maybe [Text])
+  } deriving (Eq, Show)
+$(deriveJSON
+    defaultOptions
+      { fieldLabelModifier = drop 1
+      , omitNothingFields = True
+      }
+    ''CustomerInvite)
+
+data SingleCustomerInvite = SingleCustomerInvite
+  { _customer_invite :: !CustomerInvite
+  } deriving (Eq, Show)
+$(deriveJSON
+    defaultOptions
+      { fieldLabelModifier = drop 1
+      , omitNothingFields = True
+      }
+    ''SingleCustomerInvite)
+
+data DeleteCustomerResponse = DeleteCustomerResponse
+  { __errors :: !(Maybe Text)
+  } deriving (Eq, Show)
+$(deriveJSON
+    defaultOptions
+      { fieldLabelModifier = drop 2
+      , omitNothingFields = True
+      }
+    ''DeleteCustomerResponse)
+
+data GetCustomerCountResponse = GetCustomerCountResponse
+  { _count :: !(Maybe Word32)
+  } deriving (Eq, Show)
+$(deriveJSON
+    defaultOptions
+      { fieldLabelModifier = drop 1
+      , omitNothingFields = True
+      }
+    ''GetCustomerCountResponse)
+
+
+
+type Api = "customers" :> CustomersApi
+type CustomersApi
+  = QueryParam "ids"
     -- Restrict results to customers specified by a comma-separated list of IDs.
     :> QueryParam "since_id"
     -- Restrict results to those after the specified ID.
@@ -102,8 +174,9 @@ type Api
     :> QueryParam "fields"
     -- Show only certain fields, specified by a comma-separated list of field names.
     :> Get '[JSON] Customers
-  :<|> "search.json"
-    :> QueryParam "order"
+    -- GET /admin/api/2019-04/customers.json
+    -- Retrieves a list of customers
+  :<|> QueryParam "order"
     -- Set the field and direction by which to order results.
     -- (default: last_order_date DESC)
     :> QueryParam "query"
@@ -114,16 +187,55 @@ type Api
     :> QueryParam "fields"
     -- Show only certain fields, specified by a comma-separated list of field names.
     :> Get '[JSON] Customers
-  :<|> "customers"
-    :> Capture "customer_id" Text -- NOTE manually strip ".json" -> Word32
-    :> Get '[JSON] Customer
-  :<|> "customers"
-    :> ReqBody '[JSON] Customer
-    :> Post '[JSON] Customer
-  :<|> "customers"
-    :> Capture "customer_id" Text -- NOTE manually strip ".json" -> Word32
-    :> ReqBody '[JSON] Customer
-    :> Put '[JSON] Customer
+    -- GET /admin/api/2019-04/customers/search.json?query=Bob country:United States
+    -- Searches for customers that match a supplied query
+
+  :<|> Capture "customer_id" CustomerId
+    :> Get '[JSON] SingleCustomer
+    -- GET /admin/api/2019-04/customers/#{customer_id}.json
+    -- Retrieves a single customer
+
+  :<|> ReqBody '[JSON] SingleCustomer
+    :> Post '[JSON] SingleCustomer
+    -- POST /admin/api/2019-04/customers.json
+    -- Creates a customer
+
+  :<|> Capture "customer_id" CustomerId
+    :> ReqBody '[JSON] SingleCustomer
+    :> Put '[JSON] SingleCustomer
+    -- PUT /admin/api/2019-04/customers/#{customer_id}.json
+    -- Updates a customer
+
+  :<|> Capture "customer_id" CustomerId
+    :> "account_activation_url"
+    :> Post '[JSON] AccountActivationUrl
+    -- POST /admin/api/2019-04/customers/#{customer_id}/account_activation_url.json
+    -- Creates an account activation URL for a customer
+
+  :<|> Capture "customer_id" CustomerId
+    :> "send_invite"
+    :> ReqBody '[JSON] SingleCustomerInvite
+    :> Post '[JSON] SingleCustomerInvite
+    -- POST /admin/api/2019-04/customers/#{customer_id}/send_invite.json
+    -- Sends an account invite to a customer
+
+  :<|> Capture "customer_id" CustomerId
+    :> Delete '[JSON] DeleteCustomerResponse
+    -- DELETE /admin/api/2019-04/customers/#{customer_id}.json
+    -- Deletes a customer.
+
+  :<|> Capture "customer_id" CustomerId
+    :> "count"
+    :> Get '[JSON] GetCustomerCountResponse
+    -- GET /admin/api/2019-04/customers/count.json
+    -- Retrieves a count of customers
+
+    -- TODO
+    -- GET /admin/api/2019-04/customers/#{customer_id}/orders.json
+    -- Retrieves all orders belonging to a customer
+
+  :<|> Capture "customer_id" CustomerId
+    :> CustomerAddress.Api
 
 -- Creating a customer without an email or name fails and returns an error
 

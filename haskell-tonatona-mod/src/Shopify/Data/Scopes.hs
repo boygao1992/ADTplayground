@@ -1,6 +1,7 @@
 module Shopify.Data.Scopes where
 
 import RIO
+import Servant
 import qualified RIO.List as List (intercalate)
 import Data.ByteString.Char8 (split, unpack)
 import Text.Read (readsPrec)
@@ -8,10 +9,10 @@ import Text.Read (readsPrec)
 newtype Scopes = Scopes { unScopes :: [Scope] }
   deriving newtype (Eq, Ord)
 
+-- instance Show Scopes where
+--   show = List.intercalate "," . fmap show . unScopes
 instance Read Scopes where
   readsPrec _ input = [ (Scopes . mapMaybe (readMaybe . unpack) . split ',' . fromString $ input, "")]
-instance Show Scopes where
-  show = List.intercalate "," . fmap show . unScopes
 
 data Scope
   = ReadContent
@@ -62,53 +63,53 @@ data Scope
   | UnauthenticatedReadContent
   deriving (Eq, Ord, Enum)
 
-instance Show Scope where
-  show ReadContent                         = "read_content"
-  show WriteContent                        = "write_content"
-  show ReadThemes                          = "read_themes"
-  show WriteThemes                         = "write_themes"
-  show ReadProducts                        = "read_products"
-  show WriteProducts                       = "write_products"
-  show ReadProductListings                 = "read_product_listings"
-  show ReadCustomers                       = "read_customers"
-  show WriteCustomers                      = "write_customers"
-  show ReadOrders                          = "read_orders"
-  show WriteOrders                         = "write_orders"
-  show ReadAllOrders                       = "read_all_orders"
-  show ReadDraftOrders                     = "read_draft_orders"
-  show WriteDraftOrders                    = "write_draft_orders"
-  show ReadInventory                       = "read_inventory"
-  show WriteInventory                      = "write_inventory"
-  show ReadLocations                       = "read_locations"
-  show ReadScriptTags                      = "read_script_tags"
-  show WriteScriptTags                     = "write_script_tags"
-  show ReadFulfillments                    = "read_fulfillments"
-  show WriteFulfillments                   = "write_fulfillments"
-  show ReadShipping                        = "read_shipping"
-  show WriteShipping                       = "write_shipping"
-  show ReadAnalytics                       = "read_analytics"
-  show ReadUsers                           = "read_users"
-  show WriteUsers                          = "write_users"
-  show ReadCheckouts                       = "read_checkouts"
-  show WriteCheckouts                      = "write_checkouts"
-  show ReadReports                         = "read_reports"
-  show WriteReports                        = "write_reports"
-  show ReadPriceRules                      = "read_price_rules"
-  show WritePriceRules                     = "write_price_rules"
-  show ReadMarketingEvents                 = "read_marketing_events"
-  show WriteMarketingEvents                = "write_marketing_events"
-  show ReadResourceFeedbacks               = "read_resource_feedbacks"
-  show WriteResourceFeedbacks              = "write_resource_feedbacks"
-  show ReadShopifyPaymentsPayouts          = "read_shopify_payments_payouts"
-  show ReadShopifyPaymentsDisputes         = "read_shopify_payments_disputes"
-  show UnauthenticatedReadProductListings  = "unauthenticated_read_product_listings"
-  show UnauthenticatedReadProductTags      = "unauthenticated_read_product_tags"
-  show UnauthenticatedWriteCheckouts       = "unauthenticated_write_checkouts"
-  show UnauthenticatedReadCheckouts        = "unauthenticated_read_checkouts"
-  show UnauthenticatedWriteCustomers       = "unauthenticated_write_customers"
-  show UnauthenticatedReadCustomers        = "unauthenticated_read_customers"
-  show UnauthenticatedReadCustomerTags     = "unauthenticated_read_customer_tags"
-  show UnauthenticatedReadContent          = "unauthenticated_read_content"
+instance ToHttpApiData Scope where
+  toQueryParam ReadContent                         = "read_content"
+  toQueryParam WriteContent                        = "write_content"
+  toQueryParam ReadThemes                          = "read_themes"
+  toQueryParam WriteThemes                         = "write_themes"
+  toQueryParam ReadProducts                        = "read_products"
+  toQueryParam WriteProducts                       = "write_products"
+  toQueryParam ReadProductListings                 = "read_product_listings"
+  toQueryParam ReadCustomers                       = "read_customers"
+  toQueryParam WriteCustomers                      = "write_customers"
+  toQueryParam ReadOrders                          = "read_orders"
+  toQueryParam WriteOrders                         = "write_orders"
+  toQueryParam ReadAllOrders                       = "read_all_orders"
+  toQueryParam ReadDraftOrders                     = "read_draft_orders"
+  toQueryParam WriteDraftOrders                    = "write_draft_orders"
+  toQueryParam ReadInventory                       = "read_inventory"
+  toQueryParam WriteInventory                      = "write_inventory"
+  toQueryParam ReadLocations                       = "read_locations"
+  toQueryParam ReadScriptTags                      = "read_script_tags"
+  toQueryParam WriteScriptTags                     = "write_script_tags"
+  toQueryParam ReadFulfillments                    = "read_fulfillments"
+  toQueryParam WriteFulfillments                   = "write_fulfillments"
+  toQueryParam ReadShipping                        = "read_shipping"
+  toQueryParam WriteShipping                       = "write_shipping"
+  toQueryParam ReadAnalytics                       = "read_analytics"
+  toQueryParam ReadUsers                           = "read_users"
+  toQueryParam WriteUsers                          = "write_users"
+  toQueryParam ReadCheckouts                       = "read_checkouts"
+  toQueryParam WriteCheckouts                      = "write_checkouts"
+  toQueryParam ReadReports                         = "read_reports"
+  toQueryParam WriteReports                        = "write_reports"
+  toQueryParam ReadPriceRules                      = "read_price_rules"
+  toQueryParam WritePriceRules                     = "write_price_rules"
+  toQueryParam ReadMarketingEvents                 = "read_marketing_events"
+  toQueryParam WriteMarketingEvents                = "write_marketing_events"
+  toQueryParam ReadResourceFeedbacks               = "read_resource_feedbacks"
+  toQueryParam WriteResourceFeedbacks              = "write_resource_feedbacks"
+  toQueryParam ReadShopifyPaymentsPayouts          = "read_shopify_payments_payouts"
+  toQueryParam ReadShopifyPaymentsDisputes         = "read_shopify_payments_disputes"
+  toQueryParam UnauthenticatedReadProductListings  = "unauthenticated_read_product_listings"
+  toQueryParam UnauthenticatedReadProductTags      = "unauthenticated_read_product_tags"
+  toQueryParam UnauthenticatedWriteCheckouts       = "unauthenticated_write_checkouts"
+  toQueryParam UnauthenticatedReadCheckouts        = "unauthenticated_read_checkouts"
+  toQueryParam UnauthenticatedWriteCustomers       = "unauthenticated_write_customers"
+  toQueryParam UnauthenticatedReadCustomers        = "unauthenticated_read_customers"
+  toQueryParam UnauthenticatedReadCustomerTags     = "unauthenticated_read_customer_tags"
+  toQueryParam UnauthenticatedReadContent          = "unauthenticated_read_content"
 
 instance Read Scope where
    readsPrec _ "read_content"                          = [(ReadContent, "")]
