@@ -2,7 +2,6 @@ module Shopify.Data.Scopes where
 
 import RIO
 import Servant
-import qualified RIO.List as List (intercalate)
 import Data.ByteString.Char8 (split, unpack)
 import Text.Read (readsPrec)
 

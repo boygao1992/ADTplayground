@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators #-}
-module Shopify.Api.CustomerAddress where
+module Shopify.Api.Customer.Address where
 
 import RIO
 import Servant
@@ -50,6 +50,10 @@ data Address = Address
     -- "country_name": "United States",
   , _default :: !(Maybe Bool)
     -- "default": true
+  , _latitude :: !(Maybe Text)
+    -- "latitude": "45.41634", -- NOTE business/shipping address only
+  , _longitude :: !(Maybe Text)
+    -- "longitude": "-75.6868", -- NOTE business/shipping address only
   } deriving (Eq, Show)
 $(deriveJSON
     defaultOptions

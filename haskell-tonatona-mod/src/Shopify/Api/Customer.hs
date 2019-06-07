@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 module Shopify.Api.Customer where
 
@@ -6,185 +7,48 @@ module Shopify.Api.Customer where
 
 import RIO
 import Servant
-import Data.Aeson (FromJSON, ToJSON)
-import Data.Aeson.TH
+import Servant.Client (client)
 
-import Shopify.Api.CustomerAddress as CustomerAddress
-
-newtype CustomerId = CustomerId { unCustomerId :: Word32 }
-  deriving newtype
-    ( Eq, Ord, Show
-    , ToHttpApiData, FromHttpApiData
-    , FromJSON, ToJSON
-    )
-
-data Customer = Customer
-  { _id :: !(Maybe CustomerId)
-    -- "id": 207119551,
-  , _email :: !(Maybe Text)
-    -- "email": "bob.norman@hostmail.com",
-  , _accepts_marketing :: !(Maybe Bool)
-    -- "accepts_marketing": false,
-  , _created_at :: !(Maybe Text)
-    -- "created_at": "2019-04-18T15:41:45-04:00",
-  , _updated_at :: !(Maybe Text)
-    -- "updated_at": "2019-04-18T15:41:45-04:00",
-  , _first_name :: !(Maybe Text)
-    -- "first_name": "Bob",
-  , _last_name :: !(Maybe Text)
-    -- "last_name": "Norman",
-  , _orders_count :: !(Maybe Word32)
-    -- "orders_count": 1,
-  , _state :: !(Maybe Text)
-    -- "state": "disabled",
-  , _total_spent :: !(Maybe Text)
-    -- "total_spent": "199.65",
-  , _last_order_id :: !(Maybe Word32)
-    -- "last_order_id": 450789469,
-  , _note :: !(Maybe Text)
-    -- "note": null,
-  , _verified_email :: !(Maybe Bool)
-    -- "verified_email": true,
-  , _multipass_identifier :: !(Maybe Text)
-    -- "multipass_identifier": null,
-  , _tax_exempt :: !(Maybe Bool)
-    -- "tax_exempt": false,
-  , _phone :: !(Maybe Text)
-    -- "phone": null,
-  , _tags :: !(Maybe Text) -- NOTE a string of comma-separated values
-    -- "tags": "",
-  , _last_order_name :: !(Maybe Text)
-    -- "last_order_name": "#1001",
-  , _currency :: !(Maybe Text)
-    -- "currency": "USD",
-  , _accepts_marketing_updated_at :: !(Maybe Text)
-    -- "accepts_marketing_updated_at": "2005-06-12T11:57:11-04:00",
-  , _marketing_opt_in_level :: !(Maybe Text)
-    -- "marketing_opt_in_level": null,
-  , _admin_graphql_api_id :: !(Maybe Text)
-    -- "admin_graphql_api_id": "gid://shopify/Customer/207119551",
-  , _addresses :: !(Maybe [Address])
-    -- "addresses": [{}]
-  , _default_address :: !(Maybe Address)
-    -- "default_address": {}
-  } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''Customer)
-
-data SingleCustomer = SingleCustomer
-  { _customer :: !Customer
-  } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      }
-    ''SingleCustomer)
-
-data Customers = Customers
-  { _customers :: ![Customer]
-  } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      }
-    ''Customers)
-
-data AccountActivationUrl = AccountActivationUrl
-  { _account_activation_url :: !(Maybe Text)
-  , _errors :: !(Maybe [Text])
-  } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''AccountActivationUrl)
-
-data CustomerInvite = CustomerInvite
-  { _to :: !(Maybe Text)
-  , _from :: !(Maybe Text)
-  , _subject :: !(Maybe Text)
-  , _custom_message :: !(Maybe Text)
-  , _bcc :: !(Maybe [Text])
-  } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''CustomerInvite)
-
-data SingleCustomerInvite = SingleCustomerInvite
-  { _customer_invite :: !CustomerInvite
-  } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''SingleCustomerInvite)
-
-data DeleteCustomerResponse = DeleteCustomerResponse
-  { __errors :: !(Maybe Text)
-  } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 2
-      , omitNothingFields = True
-      }
-    ''DeleteCustomerResponse)
-
-data GetCustomerCountResponse = GetCustomerCountResponse
-  { _count :: !(Maybe Word32)
-  } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''GetCustomerCountResponse)
-
-
+import qualified Shopify.Api.Customer.Address as CustomerAddress
+import Shopify.Api.Order (Orders)
+import Shopify.Api.Customer.Data.Customer
+import Shopify.Api.Customer.Data.CustomerId (CustomerId)
 
 type Api = "customers" :> CustomersApi
 type CustomersApi
-  = QueryParam "ids"
+  = QueryParam "ids" Text -- TODO implement ToHTTPApiData for CustomerIds
     -- Restrict results to customers specified by a comma-separated list of IDs.
-    :> QueryParam "since_id"
+    :> QueryParam "since_id" CustomerId
     -- Restrict results to those after the specified ID.
-    :> QueryParam "created_at_min"
+    :> QueryParam "created_at_min" Text -- TODO UTC
     -- Show customers created after a specified date.
     -- (format: 2014-04-25T16:15:47-04:00)
-    :> QueryParam "created_at_max"
+    :> QueryParam "created_at_max" Text -- TODO UTC
     -- Show customers created before a specified date.
     -- (format: 2014-04-25T16:15:47-04:00)
-    :> QueryParam "updated_at_min"
+    :> QueryParam "updated_at_min" Text -- TODO UTC
     -- Show customers last updated after a specified date.
     -- (format: 2014-04-25T16:15:47-04:00)
-    :> QueryParam "updated_at_max"
+    :> QueryParam "updated_at_max" Text -- TODO UTC
     -- Show customers last updated before a specified date.
     -- (format: 2014-04-25T16:15:47-04:00)
-    :> QueryParam "limit"
+    :> QueryParam "limit" Word8
     -- The maximum number of results to show.
     -- (default: 50, maximum: 250)
-    :> QueryParam "fields"
+    :> QueryParam "fields" Text -- TODO Newtype FieldNames [FieldName]
     -- Show only certain fields, specified by a comma-separated list of field names.
     :> Get '[JSON] Customers
     -- GET /admin/api/2019-04/customers.json
     -- Retrieves a list of customers
-  :<|> QueryParam "order"
+  :<|> QueryParam "order" Text
     -- Set the field and direction by which to order results.
     -- (default: last_order_date DESC)
-    :> QueryParam "query"
+    :> QueryParam "query" Text
     -- Text to search for in the shop's customer data.
-    :> QueryParam "limit"
+    :> QueryParam "limit" Word8
     -- The maximum number of results to show.
     -- (default: 50, maximum: 250)
-    :> QueryParam "fields"
+    :> QueryParam "fields" Text
     -- Show only certain fields, specified by a comma-separated list of field names.
     :> Get '[JSON] Customers
     -- GET /admin/api/2019-04/customers/search.json?query=Bob country:United States
@@ -230,7 +94,9 @@ type CustomersApi
     -- GET /admin/api/2019-04/customers/count.json
     -- Retrieves a count of customers
 
-    -- TODO
+  :<|> Capture "customer_id" CustomerId
+    :> "orders"
+    :> Get '[JSON] Orders
     -- GET /admin/api/2019-04/customers/#{customer_id}/orders.json
     -- Retrieves all orders belonging to a customer
 
@@ -259,3 +125,15 @@ type CustomersApi
 
 -- Update a customer's marketing opt-in state
 -- "marketing_opt_in_level": "confirmed_opt_in"
+
+( getCustomers
+ :<|> searchCustomers
+ :<|> getCustomerById
+ :<|> createCustomer
+ :<|> updateCustomer
+ :<|> createAccountActivationUrl
+ :<|> sendAccountInvite
+ :<|> deleteCustomer
+ :<|> countCustomers
+ :<|> getOrdersByCustomerId
+ :<|> addressApi) = client (Proxy @Api)
