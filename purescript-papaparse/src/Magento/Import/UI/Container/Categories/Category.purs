@@ -30,7 +30,7 @@ type State =
 defaultInitialState :: State
 defaultInitialState =
   { categories: mempty
-  , expand: Expandable.Expanded -- TODO for styling
+  , expand: Expandable.Collapsed
   , sku: mempty
   , validity: Nothing
   }

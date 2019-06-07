@@ -3,12 +3,23 @@ module Magento.Import.Data.Categories where
 import Prelude
 
 import Data.Argonaut.Encode (class EncodeJson, encodeJson)
+import Data.Argonaut.Decode (class DecodeJson, decodeJson)
 import Data.Array as Array
 import Data.Maybe (Maybe(..))
+import Data.Either (note)
 import Data.Newtype (class Newtype, unwrap)
 import Data.String as String
 import Data.String.Read (class Read, read)
 import Data.Traversable (traverse)
+
+type VerifiedCategory
+  = { category :: Category
+    , validity :: Boolean
+    }
+
+stampValidity :: Categories -> Categories -> Array VerifiedCategory
+stampValidity (Categories invalid) (Categories raw)
+  = (\c -> { category: c, validity: Array.notElem c invalid }) <$> raw
 
 columnName = "categories" :: String
 
@@ -23,6 +34,8 @@ instance showCategory :: Show Category where
   show = Array.intercalate "/" <<< unwrap
 instance encodeJsonCategory :: EncodeJson Category where
   encodeJson = encodeJson <<< show
+instance decodeJsonCategory :: DecodeJson Category where
+  decodeJson = note "" <<< read <=< decodeJson
 
 newtype Categories = Categories (Array Category)
 derive newtype instance eqCategories :: Eq Categories
@@ -35,3 +48,5 @@ instance showCategoreis :: Show Categories where
   show = Array.intercalate "," <<< map show <<< unwrap
 instance encodeJsonCategories :: EncodeJson Categories where
   encodeJson = encodeJson <<< show
+instance decodeJsonCategories :: DecodeJson Categories where
+  decodeJson = note "" <<< read <=< decodeJson

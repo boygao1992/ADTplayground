@@ -7,11 +7,12 @@ import Data.Array as Array
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
-import Data.Newtype (class Newtype)
-import Data.Traversable (for)
+import Data.Traversable (traverse, for)
+import Data.Newtype (class Newtype, unwrap)
 import Data.Tuple (Tuple(..))
 import Magento.Import.Data.Skus (Sku(..))
 import Magento.Import.Data.Skus (columnName) as Skus
+import Data.Profunctor.Strong ((&&&))
 
 newtype File = File (Array (Array String))
 derive instance newtypeFile :: Newtype File _
@@ -22,6 +23,12 @@ derive instance newtypeRowTable :: Newtype RowTable _
 derive newtype instance showRowTable :: Show RowTable
 derive newtype instance semigroupRowTable :: Semigroup RowTable
 derive newtype instance monoidRowTable :: Monoid RowTable
+
+newtype RowTableHeaded = RowTableHeaded (Map String (Map String String))
+derive instance newtypeRowTableHeaded :: Newtype RowTableHeaded _
+derive newtype instance showRowTableHeaded :: Show RowTableHeaded
+derive newtype instance semigroupRowTableHeaded :: Semigroup RowTableHeaded
+derive newtype instance monoidRowTableHeaded :: Monoid RowTableHeaded
 
 newtype Column = Column (Array (Tuple Sku String))
 derive newtype instance encodeJsonColumn :: EncodeJson Column
@@ -43,10 +50,16 @@ parseRowTable (File file) = case Array.uncons file of
   Just { head: header, tail: rows } ->
     Just $ RowTable $ (Map.fromFoldable <<< Array.zip header) <$> rows
 
-parseSingleColumn :: String -> RowTable -> Maybe Column
-parseSingleColumn columnName (RowTable rows) =
+_parseRowTableHeaded :: RowTable -> Maybe RowTableHeaded
+_parseRowTableHeaded
+  = map (RowTableHeaded <<< Map.fromFoldable)
+    <<< traverse ((\(Tuple a b) -> Tuple <$> a <*> b) <<< (Map.lookup Skus.columnName &&& Just))
+    <<< unwrap
+
+parseSingleColumn :: String -> RowTableHeaded -> Maybe Column
+parseSingleColumn columnName (RowTableHeaded rows) =
   Column
-  <$> for rows \row ->
+  <$> for (Array.fromFoldable $ Map.values rows) \row ->
     Tuple
     <$> (Sku <$> Map.lookup Skus.columnName row)
     <*> Map.lookup columnName row

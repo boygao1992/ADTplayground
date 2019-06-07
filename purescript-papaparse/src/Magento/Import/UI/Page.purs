@@ -4,33 +4,34 @@ import Prelude
 
 import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 import Data.Const (Const)
+import Data.Either (hush) as Either
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String.Read (read)
-import Data.Either (hush) as Either
-import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple)
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.Util (debug, debugShow)
+import Magento.Import.Data.Categories (VerifiedCategory, columnName) as Categories
 import Magento.Import.Data.Options (Options, defaultOptions)
-import Magento.Import.Data.Skus (Sku(..))
+import Magento.Import.Data.Skus (Sku)
 import Magento.Import.UI.Api.Category as CategoryApi
 import Magento.Import.UI.Container.Categories (Query(..), Slot, component) as Categories
 import Magento.Import.UI.Container.OptionPanel as OptionPanel
 import Magento.Import.UI.Container.Popup as Popup
 import Magento.Import.UI.Container.TabularFilePicker as FilePicker
-import Magento.Import.UI.Data.File (File, RowTable)
+import Magento.Import.UI.Data.File (File, RowTableHeaded, _parseRowTableHeaded)
 import Magento.Import.UI.Data.File as File
-import Magento.Import.Data.Categories (columnName) as Categories
 import Ocelot.Block.Button (button) as Button
 import Type.Data.Symbol (SProxy(..))
 
 type State =
   { options :: Options
   , file :: Maybe File
-  , rowTable :: Maybe RowTable
+  , rowTable :: Maybe RowTableHeaded
+  , categoryValidationResult
+    :: Maybe (Array (Tuple Sku (Array Categories.VerifiedCategory)))
   }
 
 initialState :: State
@@ -38,6 +39,7 @@ initialState =
   { options: defaultOptions
   , file: Nothing
   , rowTable: Nothing
+  , categoryValidationResult: Nothing
   }
 
 data Action
@@ -88,28 +90,14 @@ render st =
     [ HE.onClick $ Just <<< const OpenOptionPanel ]
     [ HH.text "Open Option Panel" ]
   , HH.slot _filePicker unit FilePicker.component unit (Just <<< HandleFilePicker)
-  , HH.slot _categories unit Categories.component
-      { initCategories:
-          [ Tuple (Sku "A")
-            [ { category: fromMaybe mempty $ read "A/B/C"
-              , validity: false
-              }
-            , { category: fromMaybe mempty $ read "A/E/F"
-              , validity: true
-              }
-            ]
-          , Tuple (Sku "M")
-            [ { category: fromMaybe mempty $ read "D"
-              , validity: true
-              }
-            , { category: fromMaybe mempty $ read "EF"
-              , validity: false
-              }
-            ]
-          ]
-      , visibility: fromMaybe true $ Map.lookup "category" st.options
-      }
-      (const Nothing)
+  , case st.categoryValidationResult of
+      Nothing -> HH.text ""
+      Just categoryValidationResult ->
+        HH.slot _categories unit Categories.component
+          { initCategories: categoryValidationResult
+          , visibility: fromMaybe true $ Map.lookup "category" st.options
+          }
+          (const Nothing)
   , Button.button
     [ HE.onClick $ Just <<< const GetAllValidCategories ]
     [ HH.text "getAllValidCategories" ]
@@ -135,14 +123,15 @@ handleAction = case _ of
             $ Popup.PushNew { status: Popup.Error , message: show "Failure when parsing File" }
         Just rowTable -> do
           debug "HandleFilePicker > FileLoaded > parseRowTable"
-          H.modify_ _ { rowTable = Just rowTable }
           -- NOTE debug
-          void $ runMaybeT $ do
-            categoryColumn <- MaybeT $ pure $ File.parseSingleColumn Categories.columnName rowTable
+          mCategoryValidationResult <- runMaybeT $ do
+            rowTableHeaded <- MaybeT $ pure $ _parseRowTableHeaded rowTable
+            categoryColumn <- MaybeT $ pure $ File.parseSingleColumn Categories.columnName rowTableHeaded
             result <- MaybeT $ H.liftAff
               $ map (Either.hush <<< _.body) <<< CategoryApi.batchValidate
               $ categoryColumn
-            H.lift $ debugShow result
+            pure $ CategoryApi.parseBatchValidationResult result rowTableHeaded
+          H.modify_ _ { categoryValidationResult = mCategoryValidationResult }
 
     FilePicker.Error err -> do
       void $ H.query _popup unit
@@ -160,3 +149,4 @@ handleAction = case _ of
 
   HandleOptionPanel (OptionPanel.OptionChanged opts) -> do
     H.modify_ _ { options = opts }
+

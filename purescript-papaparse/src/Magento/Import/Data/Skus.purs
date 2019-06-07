@@ -3,6 +3,7 @@ module Magento.Import.Data.Skus where
 import Prelude
 
 import Data.Argonaut.Encode (class EncodeJson)
+import Data.Argonaut.Decode (class DecodeJson)
 import Data.Array as Array
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
@@ -18,6 +19,7 @@ derive newtype instance readSku :: Read Sku
 derive newtype instance semigroupSku :: Semigroup Sku
 derive newtype instance monoidSku :: Monoid Sku
 derive newtype instance encodeJsonSku :: EncodeJson Sku
+derive newtype instance decodeJsonKus :: DecodeJson Sku
 derive instance newtypeSku :: Newtype Sku _
 instance showSku :: Show Sku where
   show = unwrap
@@ -27,7 +29,6 @@ newtype Skus = Skus (Array Sku)
 derive newtype instance eqSkus :: Eq Skus
 derive newtype instance semigroupSkus :: Semigroup Skus
 derive newtype instance monoidSkus :: Monoid Skus
-derive newtype instance encodeJsonSkus :: EncodeJson Skus
 derive instance newtypeSkus :: Newtype Skus _
 
 instance readSkus :: Read Skus where
@@ -42,7 +43,6 @@ instance newtypeRelatedSkus :: Newtype RelatedSkus (Array Sku) where
   wrap skus = RelatedSkus $ Skus skus
 derive newtype instance readRelatedSkus :: Read RelatedSkus
 derive newtype instance showRelatedSkus :: Show RelatedSkus
-derive newtype instance encodeJsonRelatedSkus :: EncodeJson RelatedSkus
 
 newtype CrossSellSkus = CrossSellSkus (Skus)
 derive newtype instance eqCrossSellSkus :: Eq CrossSellSkus
@@ -51,7 +51,6 @@ instance newtypeCrossSellSkus :: Newtype CrossSellSkus (Array Sku) where
   wrap skus = CrossSellSkus $ Skus skus
 derive newtype instance readCrossSellSkus :: Read CrossSellSkus
 derive newtype instance showCrossSellSkus :: Show CrossSellSkus
-derive newtype instance encodeJsonCrossSellSkus :: EncodeJson CrossSellSkus
 
 newtype UpSellSkus = UpSellSkus (Skus)
 derive newtype instance eqUpSellSkus :: Eq UpSellSkus
@@ -60,4 +59,3 @@ instance newtypeUpSellSkus :: Newtype UpSellSkus (Array Sku) where
   wrap skus = UpSellSkus $ Skus skus
 derive newtype instance readUpSellSkus :: Read UpSellSkus
 derive newtype instance showUpSellSkus :: Show UpSellSkus
-derive newtype instance encodeJsonUpSellSkus :: EncodeJson UpSellSkus

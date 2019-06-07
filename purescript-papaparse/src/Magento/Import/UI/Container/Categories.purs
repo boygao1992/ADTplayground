@@ -11,7 +11,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Magento.Import.Data.Categories (Categories, Category)
+import Magento.Import.Data.Categories (Categories, Category, VerifiedCategory)
 import Magento.Import.Data.Skus (Sku)
 import Magento.Import.UI.Container.Categories.Category as Category
 import Magento.Import.UI.Data.Validity as Validity
@@ -23,7 +23,7 @@ type State =
   { initCategories ::
       Array
       ( Tuple Sku
-          (Array { category :: Category, validity :: Boolean })
+          (Array VerifiedCategory)
       )
   , expand :: Expandable.Status
   , validity :: Maybe Validity.Validity
@@ -33,7 +33,7 @@ type State =
 defaultInitialState :: State
 defaultInitialState =
   { initCategories: mempty
-  , expand: Expandable.Expanded -- TODO for styling
+  , expand: Expandable.Collapsed
   , validity: Nothing
   , visibility: false
   }
@@ -51,7 +51,7 @@ type Input =
   { initCategories ::
     Array
     ( Tuple Sku
-      (Array { category :: Category, validity :: Boolean })
+        (Array VerifiedCategory)
     )
   , visibility :: Boolean
   }
