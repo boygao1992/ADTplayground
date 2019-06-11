@@ -1,0 +1,47 @@
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
+module Shopify.Api.Admin.OAuth where
+
+import RIO
+import Servant
+import Servant.Client (ClientM, client)
+
+import Shopify.Api.Admin.Data.Scopes (Scopes)
+import Shopify.Api.Admin.OAuth.Data.AccessMode (AccessMode)
+import Shopify.Api.Admin.OAuth.Data.Req.OAuthAuthorize as OAuthAuthorize (Req(..))
+import Shopify.Api.Admin.OAuth.Data.Req.OAuthAccessToken as OAuthAccessToken (Req(..), Res(..))
+
+-- | Redirect Url
+-- https://{shop}.myshopify.com/admin/oauth/authorize?client_id={api_key}&scope={scopes}&redirect_uri={redirect_uri}&state={nonce}&grant_options[]={access_mode}
+type OAuthAuthorize
+  = "admin"
+  :> "oauth"
+  :> "authorize"
+  :> QueryParam "client_id" Text
+  :> QueryParam "scope" Scopes
+  :> QueryParam "redirect_url" Text -- TODO redirect_url = base_url + install_url
+  :> QueryParam "state" Text
+  :> QueryParams "grant_options" AccessMode
+  :> Post '[JSON] NoContent
+
+oAuthAuthorizeUrl :: Text -> OAuthAuthorize.Req -> Text
+oAuthAuthorizeUrl
+  baseUrl
+  (OAuthAuthorize.Req api_key scopes redirect_url nonce access_modes)
+  = baseUrl <> _oAuthAuthorizeUrl api_key scopes redirect_url nonce access_modes
+  where
+    _oAuthAuthorizeUrl
+      :: Maybe Text -> Maybe Scopes -> Maybe Text -> Maybe Text -> [AccessMode] -> Text
+    _oAuthAuthorizeUrl = allLinks' toUrlPiece (Proxy @OAuthAuthorize)
+
+-- | Get Access Token Request
+
+type OAuthAccessToken
+  = "admin"
+  :> "oauth"
+  :> "accessToken"
+  :> ReqBody '[JSON] OAuthAccessToken.Req
+  :> Post '[JSON] OAuthAccessToken.Res
+
+_getAccessToken :: OAuthAccessToken.Req -> ClientM Res
+_getAccessToken = client (Proxy @OAuthAccessToken)

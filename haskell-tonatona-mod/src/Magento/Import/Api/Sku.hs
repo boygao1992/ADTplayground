@@ -4,7 +4,7 @@ module Magento.Import.Api.Sku where
 import RIO
 import Servant
 
-import Types (Resources)
+import Magento.Types (Resources)
 import Magento.Import.Api.Sku.GetAllSkus (getAllSkus)
 
 import Magento.Data.Skus (unSku, unSkus)

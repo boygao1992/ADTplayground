@@ -2,34 +2,35 @@
 module Magento.Import.Api.Category where
 
 import RIO
-import RIO.Partial (read)
 import Servant
-import Data.Bifunctor (bimap)
+import Data.Bifunctor as Bifunctor (second)
 
-import Types (Resources)
+import Magento.Types (Resources)
+import Magento.Data.Skus (Sku)
+import Magento.Data.Categories (Categories(..))
 import Magento.Import.Api.Category.GetCategoryPaths (getCategoryPaths)
 
 type Api
   = "batchValidate"
-       :> ReqBody '[JSON] [(Text, String)]
-       :> Post '[JSON] [(Text, [String])]
+       :> ReqBody '[JSON] [(Sku, Categories)]
+       :> Post '[JSON] [(Sku, Categories)]
 
 server :: ServerT Api (RIO Resources)
 server
   = batchValidate
 
-batchValidate :: [(Text, String)] -> RIO Resources [(Text, [String])]
+batchValidate :: [(Sku, Categories)] -> RIO Resources [(Sku, Categories)]
 batchValidate
   = fmap
-    ( filter (not . null . snd)
+    ( fmap (fmap Categories)
+    . filter (not . null . snd)
     . fmap
-      ( fmap
+      (fmap
         ( fmap fst
         . filter snd
-        . fmap (bimap show isNothing)
+        . fmap (Bifunctor.second isNothing)
         )
       )
     )
   . getCategoryPaths
-  . fmap (fmap read)
 

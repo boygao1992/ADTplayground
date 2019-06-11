@@ -4,7 +4,7 @@ module Magento.Import.Api where
 import RIO
 import Servant
 
-import Types
+import Magento.Types (Resources)
 import qualified Magento.Import.Api.Category as Category
 import qualified Magento.Import.Api.Sku as Sku
 

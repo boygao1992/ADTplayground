@@ -3,19 +3,12 @@
 module Shopify.Api.Order.Transaction where
 
 import RIO
-import Servant (FromHttpApiData, ToHttpApiData)
-import Data.Aeson (FromJSON, ToJSON, Value)
+import Data.Aeson (Value)
 import Data.Aeson.TH
 import Shopify.Api.Order.Transaction.Data.ErrorCode (ErrorCode)
 import Shopify.Api.Order.Transaction.Data.CurrencyExchangeAdjustment (CurrencyExchangeAdjustment)
 import Shopify.Api.Order.Transaction.Data.PaymentDetail (PaymentDetail)
-
-newtype TransactionId = TransactionId { unTransactionId :: Word32 }
-  deriving newtype
-    ( Eq, Ord, Show
-    , FromHttpApiData, ToHttpApiData
-    , FromJSON, ToJSON
-    )
+import Shopify.Api.Order.Transaction.Data.TransactionId (TransactionId)
 
 data Transaction = Transaction
   { _id :: !(Maybe TransactionId)

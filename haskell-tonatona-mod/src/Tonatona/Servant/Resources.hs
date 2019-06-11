@@ -20,9 +20,9 @@ class HasServantResources resources where
 
 -- Resource Initialization
 data ServantResources = ServantResources
-  { servantLoggerMiddleware :: ServantRequestLoggerMiddleware
-  , servantRunApplication :: ServantRunApplication
-  , servantGzipMiddleware :: ServantGzipMiddleware
+  { servantLoggerMiddleware :: !ServantRequestLoggerMiddleware
+  , servantRunApplication :: !ServantRunApplication
+  , servantGzipMiddleware :: !ServantGzipMiddleware
   }
 instance ( HasLoggerOptions options
          , HasServantOptions options

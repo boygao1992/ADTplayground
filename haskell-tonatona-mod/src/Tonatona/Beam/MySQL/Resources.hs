@@ -14,7 +14,7 @@ class HasBeamMySQLResources resources where
 
 -- Resource Initialization
 data BeamMySQLResources = BeamMySQLResources
-  { beamMySQLConnectInfo :: BeamMySQLConnectInfo
+  { beamMySQLConnectInfo :: !BeamMySQLConnectInfo
   }
 instance HasBeamMySQLResources BeamMySQLResources where
   beamMySQLResourcesL = id

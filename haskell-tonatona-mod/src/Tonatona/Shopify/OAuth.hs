@@ -2,17 +2,19 @@ module Tonatona.Shopify.OAuth where
 
 import RIO
 
-import Network.HTTP.Client
+import Network.HTTP.Client as Http (queryString, Request)
 import Servant
 import qualified Tonatona.Shopify.OAuth.Verification as Shopify
 import Tonatona.Servant.Auth.OAuth
 import Tonatona.Shopify.Options
 
+-- | Inbound Request
+
 oauthHandler
   :: ( HasShopifyOptions env
     , HasLogFunc env
     )
-  => RIOAuthHandler env Request NoContent
+  => RIOAuthHandler env Http.Request NoContent
 oauthHandler = mkRIOAuthHandler handler
   where
     handler req = do
@@ -22,7 +24,7 @@ oauthHandler = mkRIOAuthHandler handler
           logError $ displayBytesUtf8 $ "raw: " <> queryString req
           throwM $ err400
         Just (hmacReceived, message) -> do
-          secret <- view (shopifyOptionsL._apiSecret)
+          secret <- encodeUtf8 <$> view (shopifyOptionsL._apiSecret)
           let hmacExpected = Shopify.digestHmac secret message
           if hmacReceived /= hmacExpected
             then do

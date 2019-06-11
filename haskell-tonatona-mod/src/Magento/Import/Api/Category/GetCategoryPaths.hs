@@ -1,7 +1,5 @@
 module Magento.Import.Api.Category.GetCategoryPaths where
 
-import Types (Resources)
-
 import RIO
 import qualified Data.List.Util as List
 import qualified Data.List.Util as List (returningOne)
@@ -11,12 +9,14 @@ import qualified Data.Map.Strict.Util as Map
 
 import Database.Beam.Query
 import Database.Beam.MySQL.Connection (MySQLM)
+import Tonatona.Beam.MySQL.Resources (HasBeamMySQLResources)
 import Tonatona.Beam.MySQL.Run (runBeamMySQLDebug)
 
+import Magento.Data.Skus (Sku)
 import Magento.Data.Categories (Category(..), Categories(..), leafNode, allLeafNodes)
 import qualified Magento.Data.Categories as Categories (length)
 import Magento.Data.CategoryPath (CategoryPath(..), unCategoryPath)
-import qualified Magento.Data.CategoryPath as CategoryPath(length)
+import qualified Magento.Data.CategoryPath as CategoryPath (length)
 import Magento.Database
 import qualified Magento.Database.Catalog.Category.Entity as CCE
 import qualified Magento.Database.Catalog.Category.Entity.Varchar as CCEV
@@ -88,18 +88,20 @@ categoryPathFromCategory nodeLabelToCategoryPaths category =
     pure $ filter ((== categoryLength) . CategoryPath.length) ps
 
 getCategoryPaths
-  :: [(Text, Categories)]
-  -> RIO Resources [(Text, [(Category, Maybe CategoryPath)])]
+  :: ( HasBeamMySQLResources env
+    , HasLogFunc env
+    )
+  => [(Sku, Categories)]
+  -> RIO env [(Sku, [(Category, Maybe CategoryPath)])]
 getCategoryPaths request = do
-
   entityIdRowIdPairs :: [(Word32, Word32)]
     <- runBeamMySQLDebug
       _getCategoryEntityIdRowIdPairs
 
   let
+    -- TODO Map.fromAscList
     entityIdToRowId :: Word32 -> Maybe Word32
-                                      -- TODO Map.fromAscList
-    entityIdToRowId = flip Map.lookup $ Map.fromList entityIdRowIdPairs
+      = flip Map.lookup $ Map.fromList entityIdRowIdPairs
 
     allLeafNodeLabels :: [Text]
       = List.nub
@@ -119,7 +121,7 @@ getCategoryPaths request = do
     nodeLabelToCategoryPaths :: Map.Map Text [CategoryPath]
       = Map.fromListGroupBy nodeLabelAndCategoryPathPairs
 
-    skuAndCategoryPathsPairs :: [(Text, [(Category, [CategoryPath])])]
+    skuAndCategoryPathsPairs :: [(Sku, [(Category, [CategoryPath])])]
       = fmap
         ( fmap
           ( fmap ( id &&& categoryPathFromCategory nodeLabelToCategoryPaths )
@@ -152,7 +154,7 @@ getCategoryPaths request = do
 
 
   -- TODO memorization to save computation for repeated categories
-    result :: [(Text, [(Category, Maybe CategoryPath)])]
+    result :: [(Sku, [(Category, Maybe CategoryPath)])]
       = fmap
         ( fmap
           ( fmap

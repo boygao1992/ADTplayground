@@ -1,8 +1,8 @@
 module Main (main) where
 
 import RIO
-import Types
-import Run
+import Magento.Types
+import Magento.Run
 -- import RIO.Process
 -- import Options.Applicative.Simple
 -- import qualified Paths_haskell_tonatona_mod

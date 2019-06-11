@@ -27,6 +27,7 @@ dependencies:
 - servant >= 0.15
 - servant-server >= 0.15
 - servant-client >= 0.15
+- servant-client-core >= 0.15
 - wai >= 3.2
 - wai-extra >= 3.0
 - warp >= 3.2
@@ -43,6 +44,7 @@ dependencies:
 - http-client >= 0.5
 - cryptonite >= 0.25
 - memory >= 0.14
+- uuid >= 1.3
 
 
 

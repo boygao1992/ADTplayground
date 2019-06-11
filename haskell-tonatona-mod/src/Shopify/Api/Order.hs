@@ -6,7 +6,8 @@ import RIO
 import Data.Aeson.TH
 import Shopify.Api.Customer.Data.Customer (Customer)
 import Shopify.Api.Customer.Data.CustomerId (CustomerId)
-import Shopify.Api.Customer.Address (AddressId, Address)
+import Shopify.Api.Customer.Address (Address)
+import Shopify.Api.Customer.Address.Data.AddressId (AddressId)
 import Shopify.Api.Order.Data.DiscountApplication (DiscountApplication)
 import Shopify.Api.Order.Data.DiscountCode (DiscountCode)
 import Shopify.Api.Order.Data.NoteAttribute (NoteAttribute)

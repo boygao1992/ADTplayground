@@ -6,7 +6,8 @@ import Data.Aeson (FromJSON, ToJSON)
 
 newtype CustomerId = CustomerId { unCustomerId :: Word32 }
   deriving newtype
-    ( Eq, Show, Ord
+    ( Eq, Ord
     , FromHttpApiData, ToHttpApiData
     , FromJSON, ToJSON
     )
+  deriving (Show)

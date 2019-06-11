@@ -1,11 +1,10 @@
 module Magento.Import.Api.Sku.GetAllSkus where
 
-import Types (Resources)
-
 import RIO
 
 import Database.Beam.Query
 import Database.Beam.MySQL.Connection (MySQLM)
+import Tonatona.Beam.MySQL.Resources (HasBeamMySQLResources)
 import Tonatona.Beam.MySQL.Run (runBeamMySQL)
 
 import Magento.Data.Skus (Skus(..), Sku(..))
@@ -21,7 +20,9 @@ _getAllSkus =
       <- all_ (magentoDb^.catalogProductEntity)
     pure $ catalog_product_entity^.CPE.sku
 
-getAllSkus :: RIO Resources Skus
+getAllSkus
+  :: HasBeamMySQLResources env
+  => RIO env Skus
 getAllSkus = do
   allSkus <- runBeamMySQL _getAllSkus
   pure $ Skus . fmap Sku $ allSkus

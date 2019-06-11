@@ -6,9 +6,13 @@ module Tonatona.Servant.Run where
 import RIO
 
 import Network.HTTP.Types.Header (hLocation)
-import Servant (Application, Handler, HasServer, Header, Headers, JSON, PostCreated, NoContent(..), ServantErr, ServerT, ToHttpApiData, Verb, addHeader, errHeaders, err302, hoistServer, serve, throwError)
+import Servant (Application, Handler, HasServer, Header, Headers, JSON, PostCreated, NoContent(..), ServantErr, ServerT, ToHttpApiData, Verb, addHeader, errHeaders, err302, err500, hoistServer, serve, throwError)
+import Servant.Client (ClientEnv, HasClient, ClientM, Client, hoistClient, client, runClientM)
 
 import Tonatona.Servant.Resources (HasServantResources, servantResourcesL, _loggerMiddleware, _runApplication, _gzipMiddleware)
+
+---------
+-- Server
 
 runServantServer
   :: forall (api :: *) env.
@@ -49,6 +53,9 @@ runServantServer servantServer = do
         Right res -> pure res
         Left servantErr -> throwError servantErr
 
+------------------
+-- Server Redirect
+
 -- NOTE not recommended
 redirect' :: ByteString -> RIO env a
 redirect' redirectLocation =
@@ -69,3 +76,33 @@ redirect
   -> RIO env (Headers '[Header "Location" url] NoContent)
 redirect url = return (addHeader url NoContent)
 
+-----------------------------------
+-- Server-side Client (ServerError)
+
+class HasServantClientEnv env where
+  servantClientEnvL :: Lens' env ClientEnv
+instance HasServantClientEnv ClientEnv where
+  servantClientEnvL = id
+
+getClients
+  :: forall api env
+  . ( HasClient ClientM api
+    , HasServantClientEnv env
+    , HasLogFunc env
+    )
+  => Proxy api
+  -> Client (RIO env) api
+getClients hoistClientApi
+  = hoistClient hoistClientApi
+      transformation
+      (client hoistClientApi)
+  where
+    transformation :: ClientM a -> RIO env a
+    transformation cm = do
+      clientEnv <- view servantClientEnvL
+      e <- liftIO $ runClientM cm clientEnv
+      case e of
+        Left servantErr -> do
+          logError $ displayShow servantErr
+          throwM err500
+        Right a -> pure a
