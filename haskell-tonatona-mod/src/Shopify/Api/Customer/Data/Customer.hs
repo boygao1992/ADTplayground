@@ -25,13 +25,13 @@ data Customer = Customer
     -- "first_name": "Bob",
   , _last_name :: !(Maybe Text)
     -- "last_name": "Norman",
-  , _orders_count :: !(Maybe Word32)
+  , _orders_count :: !(Maybe Word64)
     -- "orders_count": 1,
   , _state :: !(Maybe Text)
     -- "state": "disabled",
   , _total_spent :: !(Maybe Text)
     -- "total_spent": "199.65",
-  , _last_order_id :: !(Maybe Word32)
+  , _last_order_id :: !(Maybe Word64)
     -- "last_order_id": 450789469,
   , _note :: !(Maybe Text)
     -- "note": null,
@@ -131,7 +131,7 @@ $(deriveJSON
     ''DeleteCustomerResponse)
 
 data GetCustomerCountResponse = GetCustomerCountResponse
-  { _count :: !(Maybe Word32)
+  { _count :: !(Maybe Word64)
   } deriving (Eq, Show)
 $(deriveJSON
     defaultOptions

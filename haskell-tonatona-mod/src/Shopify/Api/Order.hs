@@ -31,7 +31,7 @@ data Order = Order
     -- "created_at": "2008-01-10T11:00:00-05:00",
   , _updated_at :: !(Maybe Text)
     -- "updated_at": "2008-01-10T11:00:00-05:00",
-  , _number :: !(Maybe Word32)
+  , _number :: !(Maybe Word64)
     -- "number": 1,
   , _note :: !(Maybe Text)
     -- "note": null,
@@ -89,19 +89,19 @@ data Order = Order
     -- "source_url": null,
   , _processed_at :: !(Maybe Text)
     -- "processed_at": "2008-01-10T11:00:00-05:00",
-  , _device_id :: !(Maybe Word32)
+  , _device_id :: !(Maybe Word64)
     -- "device_id": null,
   , _phone :: !(Maybe Text)
     -- "phone": "+557734881234",
   , _customer_locale :: !(Maybe Text)
     -- "customer_locale": null,
-  , _app_id :: !(Maybe Word32)
+  , _app_id :: !(Maybe Word64)
     -- "app_id": null,
   , _browser_ip :: !(Maybe Text)
     -- "browser_ip": "0.0.0.0",
   , _landing_site_ref :: !(Maybe Text)
     -- "landing_site_ref": "abc",
-  , _order_number :: !(Maybe Word32)
+  , _order_number :: !(Maybe Word64)
     -- "order_number": 1001,
     -- NOTE The ID of the order used by the shop owner and customer.
     -- This is different from the id property, which is the ID of the order used by the API.
@@ -115,7 +115,7 @@ data Order = Order
 
   , _processing_method :: !(Maybe Text)
     -- "processing_method": "direct",
-  , _checkout_id :: !(Maybe Word32)
+  , _checkout_id :: !(Maybe Word64)
     -- "checkout_id": 901414060,
   , _source_name :: !(Maybe Text)
     -- "source_name": "web",

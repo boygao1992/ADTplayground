@@ -1,7 +1,7 @@
 module Tonatona.Beam.MySQL.Options where
 
 import RIO
-import Options.Applicative (strOption, option, auto, long, metavar, value, help)
+import Options.Applicative (strOption, option, auto, long, metavar, value, help, showDefault)
 import Tonatona.Options.Parser (HasParser, parser)
 
 {-
@@ -50,6 +50,7 @@ instance HasParser Host where
     $ long "bmh"
     <> metavar "HOST"
     <> value (Host "localhost")
+    <> showDefault
     <> help "set Beam MySQL Host"
 
 newtype Port = Port { unPort :: Word16 }
@@ -62,6 +63,7 @@ instance HasParser Port where
     $ long "bmP"
     <> metavar "PORT"
     <> value (Port 3306)
+    <> showDefault
     <> help "set Beam MySQL Port"
 
 newtype User = User { unUser :: String }
@@ -74,6 +76,7 @@ instance HasParser User where
     $ long "bmu"
     <> metavar "USER"
     <> value (User "root")
+    <> showDefault
     <> help "set Beam MySQL User"
 
 newtype Password = Password { unPassword :: String }
@@ -86,6 +89,7 @@ instance HasParser Password where
     $ long "bmp"
     <> metavar "PASSWORD"
     <> value (Password "")
+    <> showDefault
     <> help "set Beam MySQL Password"
 
 newtype Database = Database { unDatabase :: String }

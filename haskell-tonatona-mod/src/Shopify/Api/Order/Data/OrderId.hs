@@ -4,7 +4,7 @@ import RIO
 import Servant (FromHttpApiData, ToHttpApiData)
 import Data.Aeson (FromJSON, ToJSON)
 
-newtype OrderId = OrderId { unOrderId :: Word32}
+newtype OrderId = OrderId { unOrderId :: Word64 }
   deriving newtype
     ( Eq, Ord
     , FromHttpApiData, ToHttpApiData

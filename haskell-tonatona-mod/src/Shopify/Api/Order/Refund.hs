@@ -19,7 +19,7 @@ data Refund = Refund
     -- "created_at": "2019-04-09T10:02:43-04:00",
   , _note :: !(Maybe Text)
     -- "note": "it broke during shipping",
-  , _user_id :: !(Maybe Word32)
+  , _user_id :: !(Maybe Word64)
     -- "user_id": 799407056,
   , _processed_at :: !(Maybe Text)
     -- "processed_at": "2019-04-09T10:02:43-04:00",

@@ -20,9 +20,9 @@ data Image = Image
     -- "updated_at": "2019-05-01T15:21:27-04:00",
   , _alt :: !(Maybe Text)
     -- "alt": null,
-  , _width :: !(Maybe Word8)
+  , _width :: !(Maybe Word32)
     -- "width": 123,
-  , _height :: !(Maybe Word8)
+  , _height :: !(Maybe Word32)
     -- "height": 456,
   , _src :: !(Maybe Text)
     -- "src": "https://cdn.shopify.com/s/files/1/0006/9093/3842/products/ipod-nano.png?v=1556738487",

@@ -6,10 +6,11 @@ module Shopify.TestApp.Database.Oauth where
 import RIO
 
 import Database.Beam.Schema
+import Shopify.Api.Admin.OAuth.Data.AccessToken (AccessToken)
 
 data OauthT f = Oauth
   { _shopname :: C f Text
-  , _access_token :: C f (Maybe Text)
+  , _access_token :: C f (Maybe AccessToken)
   , _nonce :: C f (Maybe Text)
   } deriving (Generic, Beamable)
 type Oauth = OauthT Identity

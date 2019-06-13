@@ -4,7 +4,7 @@ import RIO
 import Servant (FromHttpApiData, ToHttpApiData)
 import Data.Aeson (FromJSON, ToJSON)
 
-newtype ImageId = ImageId { unImageId :: Word32 }
+newtype ImageId = ImageId { unImageId :: Word64 }
   deriving newtype
     ( Eq, Ord
     , FromHttpApiData, ToHttpApiData

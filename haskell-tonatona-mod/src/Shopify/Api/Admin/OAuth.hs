@@ -1,25 +1,27 @@
+{-# OPTIONS_GHC -fno-warn-type-defaults #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 module Shopify.Api.Admin.OAuth where
 
 import RIO
 import Servant
-import Servant.Client (ClientM, client)
+import Shopify.Servant.Client.Util (getBaseClients)
 
 import Shopify.Api.Admin.Data.Scopes (Scopes)
 import Shopify.Api.Admin.OAuth.Data.AccessMode (AccessMode)
 import Shopify.Api.Admin.OAuth.Data.Req.OAuthAuthorize as OAuthAuthorize (Req(..))
 import Shopify.Api.Admin.OAuth.Data.Req.OAuthAccessToken as OAuthAccessToken (Req(..), Res(..))
 
+import Shopify.TestApp.Types (BaseHttpClientResources)
+
 -- | Redirect Url
+
 -- https://{shop}.myshopify.com/admin/oauth/authorize?client_id={api_key}&scope={scopes}&redirect_uri={redirect_uri}&state={nonce}&grant_options[]={access_mode}
 type OAuthAuthorize
-  = "admin"
-  :> "oauth"
-  :> "authorize"
+  = "admin" :> "oauth" :> "authorize"
   :> QueryParam "client_id" Text
   :> QueryParam "scope" Scopes
-  :> QueryParam "redirect_url" Text -- TODO redirect_url = base_url + install_url
+  :> QueryParam "redirect_uri" Text -- TODO redirect_url = base_url + install_url
   :> QueryParam "state" Text
   :> QueryParams "grant_options" AccessMode
   :> Post '[JSON] NoContent
@@ -36,12 +38,13 @@ oAuthAuthorizeUrl
 
 -- | Get Access Token Request
 
+-- oAuthAccessTokenBasePath :: String
+-- oAuthAccessTokenBasePath = "admin/oauth/access_token"
+
 type OAuthAccessToken
-  = "admin"
-  :> "oauth"
-  :> "accessToken"
+  = "admin" :> "oauth" :> "access_token"
   :> ReqBody '[JSON] OAuthAccessToken.Req
   :> Post '[JSON] OAuthAccessToken.Res
 
-_getAccessToken :: OAuthAccessToken.Req -> ClientM Res
-_getAccessToken = client (Proxy @OAuthAccessToken)
+getAccessToken :: OAuthAccessToken.Req -> RIO BaseHttpClientResources Res
+getAccessToken = getBaseClients (Proxy @OAuthAccessToken)

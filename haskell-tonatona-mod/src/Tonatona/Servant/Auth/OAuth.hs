@@ -1,8 +1,6 @@
 module Tonatona.Servant.Auth.OAuth where
 
 import RIO
-import Network.HTTP.Client
-import Servant
 
 newtype RIOAuthHandler env req res = RIOAuthHandler { unAuthHandler :: req -> RIO env res }
   deriving (Generic, Typeable)

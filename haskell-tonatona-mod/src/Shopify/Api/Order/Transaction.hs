@@ -29,15 +29,15 @@ data Transaction = Transaction
       -- "test": false,
   , _authorization :: !(Maybe Text)
       -- "authorization": "authorization-key",
-  , _location_id :: !(Maybe Word32)
+  , _location_id :: !(Maybe Word64)
       -- "location_id": null,
-  , _user_id :: !(Maybe Word32)
+  , _user_id :: !(Maybe Word64)
       -- "user_id": null,
-  , _parent_id :: !(Maybe Word32)
+  , _parent_id :: !(Maybe Word64)
       -- "parent_id": null,
   , _processed_at :: !(Maybe Text)
       -- "processed_at": "2005-08-01T11:57:11-04:00",
-  , _device_id :: !(Maybe Word32)
+  , _device_id :: !(Maybe Word64)
       -- "device_id": null,
   , _receipt :: !(Maybe Value)
     -- NOTE The value of this field depends on which gateway the shop is using.

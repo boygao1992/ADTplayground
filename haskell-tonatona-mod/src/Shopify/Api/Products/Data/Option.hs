@@ -6,7 +6,7 @@ import Data.Aeson.TH
 import Shopify.Api.Products.Data.ProductId (ProductId)
 
 data Option = Option
-  { _id :: !(Maybe Word32)
+  { _id :: !(Maybe Word64)
     -- "id": 594680422,
   , _product_id :: !(Maybe ProductId)
     -- "product_id": 632910392,

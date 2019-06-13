@@ -8,7 +8,7 @@ import Shopify.Api.Order.Data.OrderId (OrderId)
 import Shopify.Api.Order.Data.PriceSet (PriceSet)
 
 data OrderAdjustment = OrderAdjustment
-  { _id :: !(Maybe Word32)
+  { _id :: !(Maybe Word64)
     -- "id": 4221763620,
   , _order_id :: !(Maybe OrderId)
     -- "order_id": 171016912932,

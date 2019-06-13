@@ -7,30 +7,20 @@ module Shopify.Api.Customer where
 
 import RIO
 import Servant
-import Servant.Client (ClientM, client)
+import Servant.Client.Core (AuthenticatedRequest)
+
+import Shopify.Api.Admin.OAuth.Data.AccessToken (accessTokenL)
 import Shopify.Api.Order (Orders)
 import Shopify.Api.Customer.Data.Customer
 import Shopify.Api.Customer.Data.CustomerId (CustomerId)
-import Servant.Client.Core as Client (AuthenticatedRequest)
+import Shopify.Api.Customer.Data.Req.GetCustomers as GetCustomers (Req(..))
+import Shopify.Api.Customer.Data.Req.SearchCustomers as SearchCustomers (Req(..))
+
 import Shopify.Servant.DotJSON (DotJSON)
+import Shopify.Servant.Client.Util (getApiClients, mkShopifyAuthenticateReq)
 
-data GetCustomersReq = GetCustomersReq
-  { _ids :: Maybe Text
-  , _since_id :: Maybe CustomerId
-  , _created_at_min :: Maybe Text
-  , _created_at_max :: Maybe Text
-  , _updated_at_min :: Maybe Text
-  , _updated_at_max :: Maybe Text
-  , _limit :: Maybe Word8
-  , _fields :: Maybe Text
-  } deriving (Eq, Show)
+import Shopify.TestApp.Types (ApiHttpClientResources)
 
--- data SearchCustomersReq = SearchCustomersReq
---   { _order :: Maybe Text
---   , _query :: Maybe Text
---   , _limit :: Maybe Word8
---   , _fields :: Maybe Text
---   }
 
 type Api = "customers" :> CustomersApi
 type CustomersApi
@@ -161,26 +151,119 @@ type CustomersApi
 -- Update a customer's marketing opt-in state
 -- "marketing_opt_in_level": "confirmed_opt_in"
 
+---------------
+-- getCustomers
 
-_getCustomers :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> Maybe Text -> Maybe CustomerId -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Word8 -> Maybe Text -> ClientM Customers
-_searchCustomers :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> Maybe Text -> Maybe Text -> Maybe Word8 -> Maybe Text -> ClientM Customers
-_getCustomerById :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> ClientM SingleCustomer
-_createCustomer :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> SingleCustomer -> ClientM SingleCustomer
-_updateCustomer :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> SingleCustomer -> ClientM SingleCustomer
-_createAccountActivationUrl :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> ClientM AccountActivationUrl
-_sendAccountInvite :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> SingleCustomerInvite -> ClientM SingleCustomerInvite
-_deleteCustomer :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> ClientM DeleteCustomerResponse
-_countCustomers :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> ClientM GetCustomerCountResponse
-_getOrdersByCustomerId :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> ClientM Orders
+getCustomers :: GetCustomers.Req -> RIO ApiHttpClientResources Customers
+getCustomers (GetCustomers.Req _ids _since_id _created_at_min _created_at_max _updated_at_min _updated_at_max _limit _fields) = do
+  token <- view accessTokenL
+  _getCustomers (mkShopifyAuthenticateReq token)
+      _ids _since_id _created_at_min _created_at_max _updated_at_min _updated_at_max _limit _fields
 
-( _getCustomers
- :<|> _searchCustomers
- :<|> _getCustomerById
- :<|> _createCustomer
- :<|> _updateCustomer
- :<|> _createAccountActivationUrl
- :<|> _sendAccountInvite
- :<|> _deleteCustomer
- :<|> _countCustomers
- :<|> _getOrdersByCustomerId) = client (Proxy @Api)
+_getCustomers :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> Maybe Text -> Maybe CustomerId -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Word8 -> Maybe Text -> RIO ApiHttpClientResources Customers
 
+------------------
+-- searchCustomers
+
+searchCustomers :: SearchCustomers.Req -> RIO ApiHttpClientResources Customers
+searchCustomers (SearchCustomers.Req _order _query _limit _fields) = do
+  token <- view accessTokenL
+  _searchCustomers (mkShopifyAuthenticateReq token)
+      _order _query _limit _fields
+
+_searchCustomers :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> Maybe Text -> Maybe Text -> Maybe Word8 -> Maybe Text -> RIO ApiHttpClientResources Customers
+
+------------------
+-- getCustomerById
+
+getCustomerById :: CustomerId -> RIO ApiHttpClientResources SingleCustomer
+getCustomerById cid = do
+  token <- view accessTokenL
+  _getCustomerById (mkShopifyAuthenticateReq token) cid
+
+_getCustomerById :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> RIO ApiHttpClientResources SingleCustomer
+
+-----------------
+-- createCustomer
+
+createCustomer :: SingleCustomer -> RIO ApiHttpClientResources SingleCustomer
+createCustomer c = do
+  token <- view accessTokenL
+  _createCustomer (mkShopifyAuthenticateReq token) c
+
+_createCustomer :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> SingleCustomer -> RIO ApiHttpClientResources SingleCustomer
+
+-----------------
+-- updateCustomer
+
+updateCustomer :: CustomerId -> SingleCustomer -> RIO ApiHttpClientResources SingleCustomer
+updateCustomer cid c = do
+  token <- view accessTokenL
+  _updateCustomer (mkShopifyAuthenticateReq token) cid c
+
+_updateCustomer :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> SingleCustomer -> RIO ApiHttpClientResources SingleCustomer
+
+-----------------------------
+-- createAccountActivationUrl
+
+createAccountActivationUrl :: CustomerId -> RIO ApiHttpClientResources AccountActivationUrl
+createAccountActivationUrl cid = do
+  token <- view accessTokenL
+  _createAccountActivationUrl (mkShopifyAuthenticateReq token) cid
+
+_createAccountActivationUrl :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> RIO ApiHttpClientResources AccountActivationUrl
+
+--------------------
+-- sendAccountInvite
+
+sendAccountInvite :: CustomerId -> SingleCustomerInvite -> RIO ApiHttpClientResources SingleCustomerInvite
+sendAccountInvite cid s = do
+  token <- view accessTokenL
+  _sendAccountInvite (mkShopifyAuthenticateReq token) cid s
+
+_sendAccountInvite :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> SingleCustomerInvite -> RIO ApiHttpClientResources SingleCustomerInvite
+
+-----------------
+-- deleteCustomer
+
+deleteCustomer :: CustomerId -> RIO ApiHttpClientResources DeleteCustomerResponse
+deleteCustomer cid = do
+  token <- view accessTokenL
+  _deleteCustomer (mkShopifyAuthenticateReq token) cid
+
+_deleteCustomer :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> RIO ApiHttpClientResources DeleteCustomerResponse
+
+-----------------
+-- countCustomers
+
+countCustomers :: CustomerId -> RIO ApiHttpClientResources GetCustomerCountResponse
+countCustomers cid = do
+  token <- view accessTokenL
+  _countCustomers (mkShopifyAuthenticateReq token) cid
+
+_countCustomers :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> RIO ApiHttpClientResources GetCustomerCountResponse
+
+------------------------
+-- getOrdersByCustomerId
+
+getOrdersByCustomerId :: CustomerId -> RIO ApiHttpClientResources Orders
+getOrdersByCustomerId cid = do
+  token <- view accessTokenL
+  _getOrdersByCustomerId (mkShopifyAuthenticateReq token) cid
+
+_getOrdersByCustomerId :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> RIO ApiHttpClientResources Orders
+
+------------------
+-- Client Requests
+
+_getCustomers
+  :<|> _searchCustomers
+  :<|> _getCustomerById
+  :<|> _createCustomer
+  :<|> _updateCustomer
+  :<|> _createAccountActivationUrl
+  :<|> _sendAccountInvite
+  :<|> _deleteCustomer
+  :<|> _countCustomers
+  :<|> _getOrdersByCustomerId
+  = getApiClients (Proxy @Api)

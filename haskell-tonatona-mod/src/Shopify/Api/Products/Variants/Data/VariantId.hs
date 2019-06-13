@@ -4,7 +4,7 @@ import RIO
 import Servant (FromHttpApiData, ToHttpApiData)
 import Data.Aeson (FromJSON, ToJSON)
 
-newtype VariantId = VariantId { unVariantId :: Word32 }
+newtype VariantId = VariantId { unVariantId :: Word64 }
   deriving newtype
     ( Eq, Ord
     , FromHttpApiData, ToHttpApiData

@@ -8,7 +8,7 @@ import Shopify.Api.Order.Data.DiscountAllocation (DiscountAllocation)
 import Shopify.Api.Order.Data.TaxLine (TaxLine)
 
 data ShippingLine = ShippingLine
-  { _id :: !(Maybe Word32)
+  { _id :: !(Maybe Word64)
     -- "id": 369256396,
   , _title :: !(Maybe Text)
     -- "title": "Free Shipping",

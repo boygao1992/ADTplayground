@@ -5,14 +5,17 @@ module Shopify.Api.Products where
 
 import RIO
 import Servant
-import Servant.Client (ClientM, client)
-import Servant.Client.Core as Client (AuthenticatedRequest)
+
+import Servant.Client.Core (AuthenticatedRequest)
 import Shopify.Api.Products.Data.ProductId (ProductId)
 import Shopify.Api.Products.Data.Product (Products, SingleProduct)
-import Shopify.Servant.DotJSON (DotJSON)
 import Shopify.Api.Products.Data.PublishedStatus (PublishedStatus)
-import Shopify.Api.Products.Data.Req.GetProducts as GetProducts (Req(..))
-import Shopify.Api.Admin.OAuth.Data.AccessToken (HasAccessToken, accessTokenL)
+import Shopify.Api.Products.Data.Req.GetProducts as GetProducts
+import Shopify.Api.Admin.OAuth.Data.AccessToken (accessTokenL)
+
+import Shopify.Servant.DotJSON (DotJSON)
+import Shopify.Servant.Client.Util (getApiClients, mkShopifyAuthenticateReq)
+import Shopify.TestApp.Types (ApiHttpClientResources)
 
 type Api = "products" :> ProductApi
 
@@ -63,17 +66,20 @@ type ProductApi
   -- GET /admin/api/2019-04/products.json
   -- Retrieves a list of products
 
+-- TODO
 -- GET /admin/api/2019-04/products/count.json
 -- Retrieves a count of products
 
   :<|> AuthProtect "shopify-access-token"
   :> DotJSON
+  :> Capture "product_id" ProductId
   :> QueryParam "fields" Text -- TODO parse
   -- A comma-separated list of fields to include in the response.
   :> Get '[JSON] SingleProduct
   -- GET /admin/api/2019-04/products/#{product_id}.json
   -- Retrieves a single product
 
+-- TODO
 -- POST /admin/api/2019-04/products.json
 -- Creates a new product
 -- PUT /admin/api/2019-04/products/#{product_id}.json
@@ -81,12 +87,31 @@ type ProductApi
 -- DELETE /admin/api/2019-04/products/#{product_id}.json
 -- Deletes a product
 
--- TODO
--- getProducts :: HasAccessToken env => GetProducts.Req -> RIO env Products
--- getProducts (GetProducts.Req ids limit since_id title vendor handle product_type collection_id created_at_min created_at_max updated_at_min updated_at_max published_at_min published_at_max published_status fields presentment_currencies) = do
---   token <- view accessTokenL
 
-_getProducts :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> Maybe Text -> Maybe Word8 -> Maybe ProductId -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe PublishedStatus -> Maybe Text -> Maybe Text -> ClientM Products
-_getProductById :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> Maybe Text -> ClientM SingleProduct
+--------------
+-- getProducts
+
+getProducts :: GetProducts.Req -> RIO ApiHttpClientResources Products
+getProducts (GetProducts.Req _ids _limit _since_id _title _vendor _handle _product_type _collection_id _created_at_min _created_at_max _updated_at_min _updated_at_max _published_at_min _published_at_max _published_status _fields _presentment_currencies) = do
+  token <- view accessTokenL
+  _getProducts (mkShopifyAuthenticateReq token)
+    _ids _limit _since_id _title _vendor _handle _product_type _collection_id _created_at_min _created_at_max _updated_at_min _updated_at_max _published_at_min _published_at_max _published_status _fields _presentment_currencies
+
+_getProducts :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> Maybe Text -> Maybe Word8 -> Maybe ProductId -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe PublishedStatus -> Maybe Text -> Maybe Text -> RIO ApiHttpClientResources Products
+
+-----------------
+-- getProductById
+
+getProductById :: ProductId -> Maybe Text -> RIO ApiHttpClientResources SingleProduct
+getProductById pid fields = do
+  token <- view accessTokenL
+  _getProductById (mkShopifyAuthenticateReq token) pid fields
+
+_getProductById :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> ProductId -> Maybe Text -> RIO ApiHttpClientResources SingleProduct
+
+------------------
+-- Client Requests
+
 _getProducts
-  :<|> _getProductById = client (Proxy @Api)
+  :<|> _getProductById
+  = getApiClients (Proxy @Api)

@@ -30,7 +30,7 @@ data Fulfillment = Fulfillment
     -- "tracking_company": null,
   , _shipment_status :: !(Maybe ShipmentStatus)
     -- "shipment_status": null,
-  , _location_id :: !(Maybe Word32)
+  , _location_id :: !(Maybe Word64)
     -- "location_id": 905684977,
   , _tracking_number :: !(Maybe Text)
     -- "tracking_number": "1Z2345",

@@ -2,22 +2,27 @@
 module Shopify.TestApp.Api where
 
 import RIO
+import qualified RIO.Text as Text
 import Servant
 import Data.UUID as UUID (toText)
 import Data.UUID.V4 as UUID (nextRandom)
 import Database.Beam.Query
 
-import Tonatona.Servant.Run (PostCreatedRedirect, redirect)
-import Tonatona.Shopify.Options (HasShopifyOptions, shopifyOptionsL, _baseUrl, _apiKey)
-import Tonatona.Beam.MySQL.Resources (HasBeamMySQLResources)
+import Tonatona.Servant.Run (TemporaryRedirect, redirect)
+import Tonatona.Shopify.Options (shopifyOptionsL, _baseUrl, _apiKey, _apiSecret)
 import Tonatona.Beam.MySQL.Run (runBeamMySQLDebug, runBeamMySQLDebugSafe)
 
-import Shopify.Api.Admin.OAuth (oAuthAuthorizeUrl)
-import Shopify.Api.Admin.OAuth.Data.Req.OAuthAuthorize as OAuthAuthorize (Req(..))
+import Shopify.Api.Admin.OAuth (oAuthAuthorizeUrl, getAccessToken)
+import Shopify.Api.Admin.OAuth.Data.AccessToken (AccessToken(..))
+import qualified Shopify.Api.Admin.OAuth.Data.Req.OAuthAuthorize as OAuthAuthorize (Req(..))
+import qualified Shopify.Api.Admin.OAuth.Data.Req.OAuthAccessToken as OAuthAccessToken (Req(..), Res(..), _access_token)
 import Shopify.Api.Admin.Data.Scopes (Scopes(..), Scope(..))
+
 import Shopify.TestApp.Database
 import qualified Shopify.TestApp.Database.Oauth as O
 
+import Shopify.Servant.Client.Util (runBaseHttpClient)
+import Shopify.TestApp.Types (Resources)
 
 ----------
 -- RestApi
@@ -25,23 +30,24 @@ import qualified Shopify.TestApp.Database.Oauth as O
 type RestApi
   = Add
   :<|> Install
-  :<|> InstallConfirm
+  :<|> Home
+
+restApiServer :: ServerT RestApi (RIO Resources)
+restApiServer
+  = add
+  :<|> install
+  :<|> home
 
 type Add
   = "add"
   :> QueryParam' [Required, Strict] "shop" Text
-  :> PostCreatedRedirect Text
+  :> TemporaryRedirect 'GET Text
 
-add
-  :: ( HasShopifyOptions env
-     , HasBeamMySQLResources env
-     , HasLogFunc env
-     )
-  => Text
-  -> RIO env (Headers '[Header "Location" Text] NoContent)
+add :: Text -> RIO Resources (Headers '[Header "Location" Text] NoContent)
 add hostname = do
   opts <- view shopifyOptionsL
   nonce <- UUID.toText <$> liftIO UUID.nextRandom
+
   runBeamMySQLDebugSafe
     $ runInsert
     $ insert (testappDb^.oauth)
@@ -61,8 +67,8 @@ add hostname = do
           (Just $ nonce)
           []
         )
+  logDebug $ display redirect_url
   redirect redirect_url
-
 
 type Install
   = "install"
@@ -71,16 +77,12 @@ type Install
   :> QueryParam' [Required, Strict] "timestamp" Text
   :> QueryParam' [Required, Strict] "state" Text
   :> QueryParam' [Required, Strict] "shop" Text
-  :> PostCreatedRedirect Text
+  :> TemporaryRedirect 'GET Text
 
 install
-  :: ( HasShopifyOptions env
-     , HasBeamMySQLResources env
-     , HasLogFunc env
-     )
-  => Text -> Text -> Text -> Text -> Text
-  -> RIO env (Headers '[Header "Location" Text] NoContent)
-install code hmac timestamp nonce1 hostname = do
+  :: Text -> Text -> Text -> Text -> Text
+  -> RIO Resources (Headers '[Header "Location" Text] NoContent)
+install code _ _ nonce1 hostname = do
   mNonce2 :: Maybe Text
     <- fmap join
     . runBeamMySQLDebug
@@ -95,18 +97,35 @@ install code hmac timestamp nonce1 hostname = do
     | ((==) <$> pure nonce1 <*> mNonce2) == (Just True) -> pure ()
     | otherwise -> throwM err401
 
-  -- TODO
-  redirect ""
 
+  apiKey <- view (shopifyOptionsL._apiKey)
+  apiSecret <- view (shopifyOptionsL._apiSecret)
 
-type InstallConfirm
-  = "install-confirm"
-  :> QueryParam "hmac" Text
-  :> QueryParam "code" Text
-  :> QueryParam "timestamp" Text
-  :> QueryParam "nonce" Text
-  :> QueryParam "shop" Text
-  :> PostCreatedRedirect Text
+  res :: AccessToken
+    <- fmap OAuthAccessToken._access_token
+    . runBaseHttpClient (Text.unpack hostname)
+    $ getAccessToken
+    $ OAuthAccessToken.Req apiKey apiSecret code
+
+  runBeamMySQLDebugSafe
+    $ runUpdate
+    $ update (testappDb^.oauth)
+      (\table -> mconcat
+        [ table^.O.access_token <-. just_ (val_ res)
+        , table^.O.nonce <-. nothing_
+        ]
+      )
+      (\table -> table^.O.shopname ==. val_ hostname)
+
+  base_url <- view (shopifyOptionsL._baseUrl)
+  redirect $ base_url <> "home"
+
+type Home
+  = "home"
+  :> Get '[JSON] Text
+
+home :: RIO Resources Text
+home = pure "welcome"
 
 ------
 -- Api
@@ -114,3 +133,7 @@ type InstallConfirm
 type Api
   = RestApi
   :<|> Raw
+
+server :: ServerT Api (RIO Resources)
+server = restApiServer
+  :<|> serveDirectoryFileServer "public"

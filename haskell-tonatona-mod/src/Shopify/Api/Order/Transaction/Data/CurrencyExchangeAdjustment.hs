@@ -5,7 +5,7 @@ import RIO
 import Data.Aeson.TH
 
 data CurrencyExchangeAdjustment = CurrencyExchangeAdjustment
-  { _id :: !(Maybe Word32)
+  { _id :: !(Maybe Word64)
     -- "id": 1,
   , _adjustment :: !(Maybe Text)
     -- "adjustment": "-0.01",

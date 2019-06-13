@@ -14,7 +14,7 @@ import Shopify.Api.Customer.Address.Data.AddressId (AddressId)
 data Address = Address
   { _id :: !(Maybe AddressId)
     -- "id": 207119551,
-  , _customer_id :: !(Maybe Word32)
+  , _customer_id :: !(Maybe CustomerId)
     -- "customer_id": 207119551,
   , _first_name :: !(Maybe Text)
     -- "first_name": null,
@@ -87,8 +87,8 @@ type Api = "customers" :> AddressApi
 type AddressApi
   = Capture "customer_id" CustomerId
     :> "addresses"
-    :> QueryParam "limit" Word32
-    :> QueryParam "page" Word32
+    :> QueryParam "limit" Word64
+    :> QueryParam "page" Word64
     :> Get '[JSON] Addresses
     -- GET /admin/api/2019-04/customers/#{customer_id}/addresses.json
     -- Retrieves a list of addresses for a customer
@@ -119,7 +119,7 @@ type AddressApi
   :<|> Capture "customer_id" CustomerId
     :> "addresses"
     :> "set"
-    :> QueryParams "address_ids" Word32
+    :> QueryParams "address_ids" Word64
     :> QueryParam "operation" AddressOperation
     :> Put '[JSON] Errors
     -- PUT /admin/api/2019-04/customers/#{customer_id}/addresses/set.json?address_ids[]=1053317329&operation=destroy
@@ -132,12 +132,12 @@ type AddressApi
     -- PUT /admin/api/2019-04/customers/#{customer_id}/addresses/#{address_id}/default.json
     -- Sets the default address for a customer
 
-_getAddresses :: CustomerId -> Maybe Word32 -> Maybe Word32 -> ClientM Addresses
+_getAddresses :: CustomerId -> Maybe Word64 -> Maybe Word64 -> ClientM Addresses
 _getAddressById :: CustomerId -> AddressId -> ClientM SingleAddress
 _createAddress :: CustomerId -> SingleAddress -> ClientM SingleAddress
 _updateAddress :: CustomerId -> SingleAddress -> ClientM SingleAddress
 _deleteAddress :: CustomerId -> AddressId -> ClientM Errors
-_bulkAddressOp :: CustomerId -> [Word32] -> Maybe AddressOperation -> ClientM Errors
+_bulkAddressOp :: CustomerId -> [Word64] -> Maybe AddressOperation -> ClientM Errors
 _setDefaultAddress :: CustomerId -> AddressId -> ClientM SingleAddress
 ( _getAddresses
   :<|> _getAddressById

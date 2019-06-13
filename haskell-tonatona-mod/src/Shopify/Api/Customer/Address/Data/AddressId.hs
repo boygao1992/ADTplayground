@@ -4,7 +4,7 @@ import RIO
 import Servant
 import Data.Aeson (FromJSON, ToJSON)
 
-newtype AddressId = AddressId { unAddressId :: Word32 }
+newtype AddressId = AddressId { unAddressId :: Word64 }
   deriving newtype
     ( Eq, Ord
     , ToHttpApiData, FromHttpApiData

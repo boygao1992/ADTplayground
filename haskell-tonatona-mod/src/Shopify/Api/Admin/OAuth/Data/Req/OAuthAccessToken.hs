@@ -38,7 +38,7 @@ $(deriveJSON
 data Res = Res
   -- Offline Mode
   { _access_token :: !AccessToken
-  , _scopes :: !Scopes
+  , _scope :: !Scopes
   -- Online Mode
   , _expired_in :: !(Maybe Word32)
   , _associated_user_scope :: !(Maybe Scopes)

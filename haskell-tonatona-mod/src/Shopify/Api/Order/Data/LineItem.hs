@@ -22,13 +22,13 @@ $(deriveJSON
 
 
 data LineItem = LineItem
-  { _id :: !(Maybe Word32)
+  { _id :: !(Maybe Word64)
     -- "id": 466157049,
-  , _variant_id :: !(Maybe Word32)
+  , _variant_id :: !(Maybe Word64)
     -- "variant_id": 39072856,
   , _title :: !(Maybe Text)
     -- "title": "IPod Nano - 8gb",
-  , _quantity :: !(Maybe Word32)
+  , _quantity :: !(Maybe Word64)
     -- "quantity": 1,
   , _sku :: !(Maybe Text)
     -- "sku": "IPOD2008GREEN",
@@ -38,7 +38,7 @@ data LineItem = LineItem
     -- "vendor": null,
   , _fulfillment_service :: !(Maybe Text)
     -- "fulfillment_service": "manual",
-  , _product_id :: !(Maybe Word32)
+  , _product_id :: !(Maybe Word64)
     -- "product_id": 632910392,
   , _requires_shipping :: !(Maybe Bool)
     -- "requires_shipping": true,
@@ -54,9 +54,9 @@ data LineItem = LineItem
 
   , _product_exists :: !(Maybe Bool)
     -- "product_exists": true,
-  , _fulfillable_quantity :: !(Maybe Word32)
+  , _fulfillable_quantity :: !(Maybe Word64)
     -- "fulfillable_quantity": 1,
-  , _grams :: !(Maybe Word32)
+  , _grams :: !(Maybe Word64)
     -- "grams": 200,
   , _price :: !(Maybe Text)
     -- "price": "199.00",

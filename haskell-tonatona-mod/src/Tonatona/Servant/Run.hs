@@ -5,9 +5,12 @@ module Tonatona.Servant.Run where
 
 import RIO
 
+import Network.HTTP.Client (Manager)
 import Network.HTTP.Types.Header (hLocation)
 import Servant (Application, Handler, HasServer, Header, Headers, JSON, PostCreated, NoContent(..), ServantErr, ServerT, ToHttpApiData, Verb, addHeader, errHeaders, err302, err500, hoistServer, serve, throwError)
-import Servant.Client (ClientEnv, HasClient, ClientM, Client, hoistClient, client, runClientM)
+import Servant.Client (BaseUrl, ClientEnv, HasClient, ClientM, Client, hoistClient, client, runClientM)
+import qualified Servant.Client as Client (mkClientEnv)
+import Servant.HTML.Lucid (HTML)
 
 import Tonatona.Servant.Resources (HasServantResources, servantResourcesL, _loggerMiddleware, _runApplication, _gzipMiddleware)
 
@@ -65,11 +68,11 @@ redirect' redirectLocation =
       }
 
 type PostCreatedRedirect url -- 201
-  = PostCreated '[JSON] (Headers '[Header "Location" url] NoContent)
+  = PostCreated '[JSON, HTML] (Headers '[Header "Location" url] NoContent)
 type PermanentRedirect verb url
-  = Verb verb 301 '[JSON] (Headers '[Header "Location" url] NoContent)
+  = Verb verb 301 '[JSON, HTML] (Headers '[Header "Location" url] NoContent)
 type TemporaryRedirect verb url
-  = Verb verb 302 '[JSON] (Headers '[Header "Location" url] NoContent)
+  = Verb verb 302 '[JSON, HTML] (Headers '[Header "Location" url] NoContent)
 redirect
   :: ToHttpApiData url
   => url -- ^ what to put in the 'Location' header
@@ -80,9 +83,14 @@ redirect url = return (addHeader url NoContent)
 -- Server-side Client (ServerError)
 
 class HasServantClientEnv env where
-  servantClientEnvL :: Lens' env ClientEnv
-instance HasServantClientEnv ClientEnv where
+  servantClientEnvL :: Lens' env ServantClientEnv
+instance HasServantClientEnv ServantClientEnv where
   servantClientEnvL = id
+
+newtype ServantClientEnv = ServantClientEnv { unServantClientEnv :: ClientEnv }
+
+mkClientEnv :: Manager -> BaseUrl -> ServantClientEnv
+mkClientEnv = (ServantClientEnv .) . Client.mkClientEnv
 
 getClients
   :: forall api env
@@ -99,7 +107,7 @@ getClients hoistClientApi
   where
     transformation :: ClientM a -> RIO env a
     transformation cm = do
-      clientEnv <- view servantClientEnvL
+      clientEnv <- unServantClientEnv <$> view servantClientEnvL
       e <- liftIO $ runClientM cm clientEnv
       case e of
         Left servantErr -> do

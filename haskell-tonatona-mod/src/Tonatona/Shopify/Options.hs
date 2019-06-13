@@ -1,7 +1,7 @@
 module Tonatona.Shopify.Options where
 
 import RIO
-import Options.Applicative (strOption, long, metavar, help)
+import Options.Applicative (strOption, long, metavar, help, value, showDefault)
 
 import Tonatona.Options.Parser (HasParser, parser)
 
@@ -47,15 +47,17 @@ instance HasParser ApiSecret where
     <> metavar "Api Secret"
     <> help "set Shopify Api Secret"
 
-newtype ApiVersion = ApiVersion { unApiVersion :: Text }
+newtype ApiVersion = ApiVersion { unApiVersion :: String }
   deriving newtype (Eq, Show, IsString)
-_apiVersion :: Lens' ShopifyOptions Text
+_apiVersion :: Lens' ShopifyOptions String
 _apiVersion = lens (unApiVersion . apiVersion) \x y -> x { apiVersion = ApiVersion y }
 instance HasParser ApiVersion where
   parser =
     strOption
     $ long "spv"
     <> metavar "Api Version"
+    <> value "2019-04"
+    <> showDefault
     <> help "set Shopify Api Version"
 
 newtype BaseUrl = BaseUrl { unBaseUrl :: Text }

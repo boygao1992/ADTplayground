@@ -6,10 +6,11 @@ import Network.Wai (Middleware)
 import qualified Network.Wai.Handler.Warp as Warp
 import Network.Wai.Middleware.RequestLogger (logStdout, logStdoutDev)
 import Network.Wai.Middleware.Gzip (gzip, def, gzipFiles, GzipFiles(..))
+import qualified Network.Wai.Handler.WarpTLS as WarpTLS
 import Servant (Application)
 
 import Tonatona.Logger.Options (HasLoggerOptions, loggerOptionsL, _mode, _verbose, defaultVerbosity)
-import Tonatona.Servant.Options (HasServantOptions, servantOptionsL, _host, _port, _logging, _gzip)
+import Tonatona.Servant.Options (HasServantOptions, Protocol(..), servantOptionsL, _host, _port, _logging, _gzip, _protocol, _tlsCertFilePath, _tlsCertKeyFilePath, _tlsCertChainFilePaths)
 import Tonatona.WithResource (With, withResource, hoistWithResource)
 
 emptyMiddleware :: Middleware -- NOTE = Wai.Application -> Wai.Application
@@ -65,14 +66,24 @@ newtype ServantRunApplication = ServantRunApplication
   { unRunApplication :: Application -> IO () }
 _runApplication :: Lens' ServantResources (Application -> IO ())
 _runApplication = lens (unRunApplication . servantRunApplication) \x y -> x { servantRunApplication = ServantRunApplication y }
-instance (HasServantOptions options
+instance ( HasServantOptions options
          ) => With options (ServantRunApplication) where
   withResource = hoistWithResource \options cont -> do
-    let host = options^.servantOptionsL._host
+    let protocol = options^.servantOptionsL._protocol
+        host = options^.servantOptionsL._host
         port = options^.servantOptionsL._port
         settings =
           Warp.setPort port
           . Warp.setHost host
           $ Warp.defaultSettings
     cont . ServantRunApplication
-      $ Warp.runSettings settings
+      $ if protocol == Https
+        then
+          let
+            cert = options^.servantOptionsL._tlsCertFilePath
+            chains = options^.servantOptionsL._tlsCertChainFilePaths
+            key = options^.servantOptionsL._tlsCertKeyFilePath
+            tlsSettings = WarpTLS.tlsSettingsChain cert chains key
+          in
+            WarpTLS.runTLS tlsSettings settings
+        else Warp.runSettings settings

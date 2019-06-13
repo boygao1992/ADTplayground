@@ -45,7 +45,7 @@ data Variant = Variant
     -- "barcode": "1234_pink",
   , _grams :: !(Maybe Double)
     -- "grams": 567,
-  , _image_id :: !(Maybe Word32)
+  , _image_id :: !(Maybe Word64)
     -- "image_id": 562641783,
   , _weight :: !(Maybe Double)
     -- "weight": 1.25,
@@ -53,7 +53,7 @@ data Variant = Variant
     -- "weight_unit": "lb",
   , _inventory_item_id :: !(Maybe InventoryItemId)
     -- "inventory_item_id": 808950810,
-  , _inventory_quantity :: !(Maybe Word32)
+  , _inventory_quantity :: !(Maybe Word64)
     -- "inventory_quantity": 10,
   , _requires_shipping :: !(Maybe Bool)
     -- "requires_shipping": true,

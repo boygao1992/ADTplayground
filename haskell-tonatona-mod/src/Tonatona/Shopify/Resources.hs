@@ -1,8 +1,8 @@
 module Tonatona.Shopify.Resources where
 
 import RIO
-import Network.HTTP.Client (Manager, newManager, defaultManagerSettings)
--- import Network.HTTP.Client.TLS (tlsManagerSettings)
+import Network.HTTP.Client (Manager, newManager)
+import Network.HTTP.Client.TLS (tlsManagerSettings)
 
 import qualified Tonatona.Shopify.Options as Options (ShopifyOptions, HasShopifyOptions, shopifyOptionsL)
 import Tonatona.WithResource (With, withResource, hoistWithResource)
@@ -25,15 +25,16 @@ newtype ShopifyOptions = ShopifyOptions
   { unShopifyOptions :: Options.ShopifyOptions }
 _shopifyOptions :: Lens' ShopifyResources Options.ShopifyOptions
 _shopifyOptions = lens (unShopifyOptions . shopifyOptions) \x y -> x { shopifyOptions = ShopifyOptions y }
-instance (Options.HasShopifyOptions options) => With options ShopifyOptions where
-  withResource = hoistWithResource \option cont -> do
-    let shipifyOption = view Options.shopifyOptionsL option
+instance Options.HasShopifyOptions options => With options ShopifyOptions where
+  withResource = hoistWithResource \options cont -> do
+    let shipifyOption = options^.Options.shopifyOptionsL
     cont $ ShopifyOptions shipifyOption
 
 newtype ShopifyHttpClientManager = ShopifyHttpClientManager { unShopifyHttpClientManager :: Manager }
-_shopifyHttpClientManager :: Lens' ShopifyResources Manager
-_shopifyHttpClientManager = lens (unShopifyHttpClientManager . shopifyHttpClientManager) \x y -> x { shopifyHttpClientManager = ShopifyHttpClientManager y }
+_manager :: Lens' ShopifyResources Manager
+_manager = lens (unShopifyHttpClientManager . shopifyHttpClientManager) \x y -> x { shopifyHttpClientManager = ShopifyHttpClientManager y }
 instance With options ShopifyHttpClientManager where
   withResource = hoistWithResource \_ cont -> do
-    manager <- liftIO $ newManager defaultManagerSettings
+    manager <- liftIO $ newManager tlsManagerSettings
     cont $ ShopifyHttpClientManager manager
+
