@@ -7,6 +7,8 @@ import Servant
 import Data.UUID as UUID (toText)
 import Data.UUID.V4 as UUID (nextRandom)
 import Database.Beam.Query
+import Lucid
+import Servant.HTML.Lucid (HTML)
 
 import Tonatona.Servant.Run (TemporaryRedirect, redirect)
 import Tonatona.Shopify.Options (shopifyOptionsL, _baseUrl, _apiKey, _apiSecret)
@@ -21,8 +23,12 @@ import Shopify.Api.Admin.Data.Scopes (Scopes(..), Scope(..))
 import Shopify.TestApp.Database
 import qualified Shopify.TestApp.Database.Oauth as O
 
-import Shopify.Servant.Client.Util (runBaseHttpClient)
+import Shopify.Servant.Client.Util (runBaseHttpClient, runApiHttpClient)
 import Shopify.TestApp.Types (Resources)
+
+import Shopify.Api.Products.Data.Product (Products)
+import qualified Shopify.Api.Products as GetProducts (getProducts)
+import qualified Shopify.Api.Products.Data.Req.GetProducts as GetProducts (emptyReq)
 
 ----------
 -- RestApi
@@ -30,12 +36,14 @@ import Shopify.TestApp.Types (Resources)
 type RestApi
   = Add
   :<|> Install
+  :<|> GetProducts
   :<|> Home
 
 restApiServer :: ServerT RestApi (RIO Resources)
 restApiServer
   = add
   :<|> install
+  :<|> getProducts
   :<|> home
 
 type Add
@@ -118,22 +126,71 @@ install code _ _ nonce1 hostname = do
       (\table -> table^.O.shopname ==. val_ hostname)
 
   base_url <- view (shopifyOptionsL._baseUrl)
+  -- TODO https://{hostname}/admin/apps/{appname}
   redirect $ base_url <> "home"
 
 type Home
   = "home"
-  :> Get '[JSON] Text
+  :> QueryParam' [Required, Strict] "shop" Text
+  :> Get '[HTML] (Html ())
 
-home :: RIO Resources Text
-home = pure "welcome"
+home :: Text -> RIO Resources (Html ())
+home hostname = pure $ doctypehtml_ do
+  head_ do
+    meta_ [charset_ "utf-8"]
+    meta_
+      [ name_ "viewport"
+      , content_ "width=device-width, initial-scale=1"
+      ]
+    link_
+      [ rel_ "icon"
+      , href_ "assets/favicon.ico"
+      ]
+    link_
+      [ rel_ "stylesheet"
+      , href_ "assets/polaris.css"
+      , type_ "text/css"
+      ]
+    title_ "TestApp"
+  body_ do
+    script_ [src_ "assets/app.js"] ("" :: Text)
+    script_ [] ("PS[\"Main\"][\"main\"](\"" <> hostname <> "\")()" :: Text)
+
+type GetProducts
+  = "products"
+  :> QueryParam' [Required, Strict] "shop" Text
+  :> Get '[JSON] Products
+
+getProducts :: Text -> RIO Resources Products
+getProducts hostname = do
+  mToken :: Maybe AccessToken
+    <- fmap join
+    . runBeamMySQLDebug
+    $ runSelectReturningOne
+    $ select do
+      table_oauth <- all_ (testappDb^.oauth)
+      guard_ $ table_oauth^.O.shopname ==. val_ hostname
+      pure $ table_oauth^.O.access_token
+
+  logDebug $ displayShow mToken
+
+  case mToken of
+    Nothing -> throwM err401
+    Just token ->
+      runApiHttpClient (Text.unpack hostname) token
+      $ GetProducts.getProducts GetProducts.emptyReq
+
+
 
 ------
 -- Api
 
 type Api
   = RestApi
-  :<|> Raw
+  :<|> "assets" :> Raw
+  :<|> "public" :> Raw
 
 server :: ServerT Api (RIO Resources)
 server = restApiServer
+  :<|> serveDirectoryFileServer "assets"
   :<|> serveDirectoryFileServer "public"

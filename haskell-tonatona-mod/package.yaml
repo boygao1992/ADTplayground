@@ -48,6 +48,7 @@ dependencies:
 - servant-lucid >= 0.8
 - http-client-tls >= 0.3.5
 - warp-tls >= 3.2
+- lucid >= 2.9
 
 
 
