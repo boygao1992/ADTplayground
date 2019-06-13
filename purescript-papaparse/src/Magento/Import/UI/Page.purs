@@ -12,7 +12,7 @@ import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
-import Halogen.Util (debug, debugShow)
+import Halogen.Util (debugShow)
 import Magento.Import.Data.Categories (VerifiedCategory, columnName) as Categories
 import Magento.Import.Data.Options (Options, defaultOptions)
 import Magento.Import.Data.Skus (Sku)
@@ -120,10 +120,10 @@ handleAction = case _ of
       case File.parseRowTable file of
         Nothing -> do
           void $ H.query _popup unit $ H.tell
-            $ Popup.PushNew { status: Popup.Error , message: show "Failure when parsing File" }
+            $ Popup.PushNew { status: Popup.Error , message: "Failure when parsing File" }
         Just rowTable -> do
-          debug "HandleFilePicker > FileLoaded > parseRowTable"
-          -- NOTE debug
+          void $ H.query _popup unit $ H.tell
+            $ Popup.PushNew { status: Popup.Warning , message: "Validation starts" }
           mCategoryValidationResult <- runMaybeT $ do
             rowTableHeaded <- MaybeT $ pure $ _parseRowTableHeaded rowTable
             categoryColumn <- MaybeT $ pure $ File.parseSingleColumn Categories.columnName rowTableHeaded
@@ -132,7 +132,16 @@ handleAction = case _ of
               $ categoryColumn
             pure $ CategoryApi.parseBatchValidationResult result rowTableHeaded
           H.modify_ _ { categoryValidationResult = mCategoryValidationResult }
-
+          void $ H.query _popup unit $ H.tell
+            $ Popup.PushNew case mCategoryValidationResult of
+              Just categoryValidationResult ->
+                { status: Popup.Success
+                , message: "Category validation succeeded" -- TODO report # of errors
+                }
+              Nothing ->
+                { status: Popup.Error
+                , message: "Category validation failed"
+                }
     FilePicker.Error err -> do
       void $ H.query _popup unit
         $ H.tell $ Popup.PushNew { status: Popup.Error , message: show err }

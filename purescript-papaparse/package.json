@@ -1,7 +1,9 @@
 {
   "scripts":{
     "start": "parcel assets/index.html",
-    "build": "pulp build -O --to ../haskell-tonatona-mod/public/app.js"
+    "build": "pulp build -O --to ../haskell-tonatona-mod/public/app.js",
+    "table-start": "parcel assets/Table/index.html",
+    "table-build": "pulp build --skip-entry-point -O --to ../haskell-tonatona-mod/assets/app.js"
   },
   "name": "purescript-papaparse",
   "version": "1.0.0",
