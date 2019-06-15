@@ -14,7 +14,7 @@ import Web.HTML (HTMLElement)
 
 
 runUI :: HTMLElement -> Aff Unit
-runUI = void <<< HD.runUI component unit
+runUI = void <<< HD.runUI component "hello world"
 
 reRunUI :: HTMLElement -> Effect Unit
 reRunUI body = HA.runHalogenAff $ runUI body

@@ -2,7 +2,6 @@ module Polaris.UI.Component.Table.Cell where
 
 import Prelude
 
-import Data.Const (Const)
 import Data.Maybe (Maybe(..))
 import Effect.Aff.Class (class MonadAff)
 import Effect.Console (log)
@@ -25,19 +24,20 @@ type State =
 defaultInitialState :: State
 defaultInitialState =
   { editing: false
-  , value: "hello world"
+  , value: ""
   , cache: ""
   }
 
 data Action
   = Edit
-  | OnInput String
-  | OnKeyEvent KE.KeyboardEvent
+  | OnValueInput String
+  | OnKeyDown KE.KeyboardEvent
   | OnBlur
 
-type Query = Const Void
+data Query a
+  = GetValue (String -> a)
 
-type Input = Unit
+type Input = String
 
 type Output = Void
 
@@ -52,10 +52,14 @@ type Slot = H.Slot Query Output
 
 component :: forall m. MonadAff m => Component m
 component = H.mkComponent
-  { initialState: const defaultInitialState
+  { initialState: \value ->
+      defaultInitialState
+        { value = value
+        }
   , render
   , eval: H.mkEval H.defaultEval
       { handleAction = handleAction
+      , handleQuery = handleQuery
       }
   }
 
@@ -68,8 +72,8 @@ render { editing, value, cache } =
   [ if editing
     then
       HH.input [ HP.value cache
-               , HE.onKeyDown $ Just <<< OnKeyEvent
-               , HE.onValueInput $ Just <<< OnInput
+               , HE.onKeyDown $ Just <<< OnKeyDown
+               , HE.onValueInput $ Just <<< OnValueInput
                , HE.onBlur $ Just <<< const OnBlur
                , HP.ref $ _input]
     else
@@ -86,10 +90,10 @@ handleAction = case _ of
       el <- MaybeT $ H.getHTMLElementRef _input
       H.lift $ H.liftEffect $ WHE.focus el
 
-  OnInput str -> do
+  OnValueInput str -> do
     H.modify_ _ { cache = str }
 
-  OnKeyEvent ke -> do
+  OnKeyDown ke -> do
     H.liftEffect $ log $ KE.key ke
     case KE.key ke of
       "Enter" -> do
@@ -97,17 +101,22 @@ handleAction = case _ of
         H.modify_ \st -> st { editing = false, value = st.cache }
         void $ runMaybeT do
           el <- MaybeT $ H.getHTMLElementRef _input
-          H.lift $ H.liftEffect $ WHE.focus el
+          H.lift $ H.liftEffect $ WHE.blur el
       "Escape" -> do
         H.liftEffect $ WE.preventDefault $ KE.toEvent ke
         H.modify_ \st -> st { editing = false }
         void $ runMaybeT do
           el <- MaybeT $ H.getHTMLElementRef _input
-          H.lift $ H.liftEffect $ WHE.focus el
+          H.lift $ H.liftEffect $ WHE.blur el
       _ -> do
         pure unit
 
   OnBlur -> do
     H.modify_ \st -> st { editing = false }
 
+handleQuery :: forall m a. MonadAff m => Query a -> ComponentM m (Maybe a)
+handleQuery = case _ of
+  GetValue reply -> do
+    value <- H.gets _.value
+    pure $ Just <<< reply $ value
 
