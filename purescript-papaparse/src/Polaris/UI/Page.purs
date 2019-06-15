@@ -11,7 +11,7 @@ import Effect.Aff.Class (class MonadAff)
 import Effect.Console (log, logShow)
 import Halogen as H
 import Halogen.HTML as HH
-import Polaris.UI.Component.Table.Product (Slot, component) as Table
+import Polaris.UI.Component.DataTable.Product (Slot, component) as DataTable
 import Type.Data.Symbol (SProxy(..))
 
 import Polaris.Data.Product (Product)
@@ -38,7 +38,7 @@ type Input = String
 type Output = Void
 
 type ChildSlots =
-  ( table :: Table.Slot Unit
+  ( table :: DataTable.Slot Unit
   )
 _table = SProxy :: SProxy "table"
 
@@ -60,11 +60,11 @@ component = H.mkComponent
   }
 
 render :: forall m. MonadAff m => ComponentRender m
-render { tableData: mTableData } =
-  case mTableData of
+render { tableData: mDataTableData } =
+  case mDataTableData of
     Nothing -> HH.text ""
     Just tableData ->
-      HH.slot _table unit Table.component tableData (const Nothing)
+      HH.slot _table unit DataTable.component tableData (const Nothing)
 
 handleAction :: forall m. MonadAff m => Action -> ComponentM m Unit
 handleAction = case _ of

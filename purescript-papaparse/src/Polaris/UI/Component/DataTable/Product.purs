@@ -1,4 +1,4 @@
-module Polaris.UI.Component.Table.Product where
+module Polaris.UI.Component.DataTable.Product where
 
 import Prelude
 
@@ -9,7 +9,7 @@ import Halogen as H
 import Halogen.HTML as HH
 -- import Halogen.HTML.Events as HE
 -- import Halogen.HTML.Properties as HP
-import Polaris.UI.Block.Table as Table
+import Polaris.UI.Block.DataTable as DataTable
 
 import Polaris.Data.Product (Product(..))
 
@@ -54,22 +54,22 @@ component = H.mkComponent
   }
 
 render :: forall m. MonadAff m => ComponentRender m
-render { tableData } = renderTable
+render { tableData } = renderDataTable
   where
-    renderTable :: forall p i. HH.HTML p i
-    renderTable = Table.table_ $ [ renderHeader ] <> renderBody
+    renderDataTable :: forall p i. HH.HTML p i
+    renderDataTable = DataTable.table_ $ [ renderHeader ] <> renderBody
 
     renderHeader :: forall p i. HH.HTML p i
     renderHeader =
-      Table.row_
-      [ Table.header_ [ HH.text "id"]
-      , Table.header_ [ HH.text "title" ]
-      , Table.header_ [ HH.text "vendor" ]
-      , Table.header_ [ HH.text "product type" ]
+      DataTable.row_
+      [ DataTable.header_ [ HH.text "id"]
+      , DataTable.header_ [ HH.text "title" ]
+      , DataTable.header_ [ HH.text "vendor" ]
+      , DataTable.header_ [ HH.text "product type" ]
       ]
 
     renderBody :: forall p i. Array (HH.HTML p i)
-    renderBody = Table.row_ <$> ( renderData <$> tableData )
+    renderBody = DataTable.row_ <$> ( renderData <$> tableData )
 
     renderData :: forall p i. Product -> Array (HH.HTML p i)
     renderData (Product { id, title, vendor, product_type }) =
@@ -80,8 +80,8 @@ render { tableData } = renderTable
       ]
 
     renderCell :: forall a p i. Show a => Maybe a -> HH.HTML p i
-    renderCell = Table.cell_ <<< (\x -> [x]) <<< HH.text <<< fromMaybe "" <<< map show
+    renderCell = DataTable.cell_ <<< (\x -> [x]) <<< HH.text <<< fromMaybe "" <<< map show
 
     renderTextCell :: forall p i. Maybe String -> HH.HTML p i
-    renderTextCell = Table.cell_ <<< (\x -> [x]) <<< HH.text <<< fromMaybe ""
+    renderTextCell = DataTable.cell_ <<< (\x -> [x]) <<< HH.text <<< fromMaybe ""
 

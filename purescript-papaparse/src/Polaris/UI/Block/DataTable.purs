@@ -1,4 +1,4 @@
-module Polaris.UI.Block.Table where
+module Polaris.UI.Block.DataTable where
 
 import Prelude
 
