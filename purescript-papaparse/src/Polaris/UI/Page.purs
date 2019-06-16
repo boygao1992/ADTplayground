@@ -5,10 +5,9 @@ import Prelude
 
 import Data.Const (Const)
 import Data.Maybe (Maybe(..))
-import Data.Either (either)
+import Data.Either (hush)
 import Data.Newtype (unwrap)
 import Effect.Aff.Class (class MonadAff)
-import Effect.Console (log, logShow)
 import Halogen as H
 import Halogen.HTML as HH
 import Polaris.UI.Component.DataTable.Product (Slot, component) as DataTable
@@ -69,15 +68,12 @@ render { tableData: mDataTableData } =
 handleAction :: forall m. MonadAff m => Action -> ComponentM m Unit
 handleAction = case _ of
   Initialize -> do
-    -- TODO debug
-    H.liftEffect $ log "initialize"
-
-    hostname <- H.gets _.hostname
-    res
-      <- H.liftAff $ map _.body <<< getProducts $ hostname
-
-    -- TODO debug
-    H.liftEffect $ logShow res
-
-    H.modify_ _ { tableData = (map (_.products <<< unwrap) <<< either (const Nothing) Just) $ res }
-    pure unit
+    hostname :: String
+      <- H.gets _.hostname
+    res :: Maybe (Array Product)
+      <- H.liftAff
+      <<< map (map (_.products <<< unwrap) <<< hush)
+      <<< map _.body
+      <<< getProducts
+      $ hostname
+    H.modify_ _ { tableData = res }

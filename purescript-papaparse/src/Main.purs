@@ -7,14 +7,15 @@ import Effect.Aff (Aff)
 -- import Effect.Console (log)
 -- import Magento.Import.UI.Page (component)
 -- import Polaris.UI.Page (component)
-import Polaris.UI.Component.Table.Cell (component)
+-- import Polaris.UI.Component.Table.Cell (component)
+import Polaris.UI.Page2 (component)
 import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI) as HD
 import Web.HTML (HTMLElement)
 
 
 runUI :: HTMLElement -> Aff Unit
-runUI = void <<< HD.runUI component "hello world"
+runUI = void <<< HD.runUI component unit
 
 reRunUI :: HTMLElement -> Effect Unit
 reRunUI body = HA.runHalogenAff $ runUI body

@@ -59,7 +59,7 @@ component = H.mkComponent
 
 render :: forall m. MonadAff m => ComponentRender m
 render { value } =
-  DataTable.row_
+  DataTable.table_
   $ Array.mapWithIndex renderRow value
   where
     renderRow :: Int -> Array (Tuple String String) -> ComponentHTML m
