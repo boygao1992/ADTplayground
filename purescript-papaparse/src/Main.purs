@@ -8,7 +8,8 @@ import Effect.Aff (Aff)
 -- import Magento.Import.UI.Page (component)
 -- import Polaris.UI.Page (component)
 -- import Polaris.UI.Component.Table.Cell (component)
-import Polaris.UI.Page2 (component)
+-- import Polaris.UI.Page2 (component)
+import Polaris.UI.PageSvg (component)
 import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI) as HD
 import Web.HTML (HTMLElement)

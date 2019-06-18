@@ -32,31 +32,31 @@ import Halogen.HTML.Core as HC
 -- |                      display block ]
 -- |       [ ... ]
 -- | ```
-style ∷ ∀ i r. CSS → HP.IProp (style ∷ String|r) i
+style :: forall i r. CSS -> HP.IProp (style :: String | r) i
 style =
   HP.attr (HC.AttrName "style")
     <<< toString
     <<< rules
     <<< runS
   where
-  toString ∷ Object.Object String → String
-  toString = joinWith "; " <<< Object.foldMap (\key val → [ key <> ": " <> val])
+  toString :: Object.Object String -> String
+  toString = joinWith "; " <<< Object.foldMap (\key val -> [ key <> ": " <> val])
 
-  rules ∷ Array Rule → Object.Object String
+  rules :: Array Rule -> Object.Object String
   rules rs = Object.fromFoldable properties
     where
-    properties ∷ Array (Tuple String String)
+    properties :: Array (Tuple String String)
     properties = mapMaybe property rs >>= collect >>> rights
 
-  property ∷ Rule → Maybe (Tuple (Key Unit) Value)
+  property :: Rule -> Maybe (Tuple (Key Unit) Value)
   property (Property k v) = Just (Tuple k v)
   property _              = Nothing
 
-  rights ∷ ∀ a b. Array (Either a b) → Array b
+  rights :: forall a b. Array (Either a b) -> Array b
   rights = concatMap $ foldMap singleton
 
 -- | Render a set of rules as a `style` element.
-stylesheet ∷ ∀ p i. CSS → HC.HTML p i
+stylesheet :: forall p i. CSS -> HC.HTML p i
 stylesheet css =
   HE.style [ HP.type_ $ MediaType "text/css" ] [ HH.text content ]
   where
