@@ -3,8 +3,10 @@ module Polaris.UI.Block.Button where
 import Prelude
 
 import DOM.HTML.Indexed (HTMLbutton)
+import Data.Monoid (guard)
 import Halogen.HTML (HTML, IProp, ClassName(..))
 import Halogen.HTML as HH
+
 import Ocelot.Block.Builder (blockBuilder)
 
 _button = "Polaris-Button" :: String
@@ -85,24 +87,24 @@ buttonClasses
 buttonClasses { primary, outline, destructive, isDisabled, loading, plain, monochrome, size, textAlign, fullWidth, iconOnly }
   = ClassName <$>
     [ _button
+    , _buttonPrimary # guard primary
+    , _buttonOutline # guard outline
+    , _buttonDestructive # guard destructive
+    , _buttonDisabled # guard isDisabled
+    , _buttonLoading # guard loading
+    , _buttonPlain # guard plain
+    , _buttonMonochrome  # guard monochrome
+    , _buttonFullWidth # guard fullWidth
+    , _buttonIconOnly # guard iconOnly
+    , case size of
+        SizeSlim -> _buttonSizeSlim
+        SizeLarge -> _buttonSizeLarge
+        SizeMedium -> ""
+    , case textAlign of
+        TextAlignLeft -> _buttonTextAlignLeft
+        TextAlignCenter -> _buttonTextAlignCenter
+        TextAlignRight -> _buttonTextAlignRight
     ]
-    <> if primary then [_buttonPrimary] else []
-    <> if outline then [_buttonOutline] else []
-    <> if destructive then [_buttonDestructive] else []
-    <> if isDisabled then [_buttonDisabled] else []
-    <> if loading then [_buttonLoading] else []
-    <> if plain then [_buttonPlain] else []
-    <> if monochrome then [_buttonMonochrome] else []
-    <> case size of
-        SizeSlim -> [_buttonSizeSlim]
-        SizeLarge -> [_buttonSizeLarge]
-        SizeMedium -> []
-    <> case textAlign of
-        TextAlignLeft -> [_buttonTextAlignLeft]
-        TextAlignCenter -> [_buttonTextAlignCenter]
-        TextAlignRight -> [_buttonTextAlignRight]
-    <> if fullWidth then [_buttonFullWidth] else []
-    <> if iconOnly then [_buttonIconOnly] else []
 
 button
   :: forall p i

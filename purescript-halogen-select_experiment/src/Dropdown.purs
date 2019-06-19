@@ -2,16 +2,12 @@ module Dropdown where
 
 import Prelude
 
-import Data.Const (Const)
 import Data.Array as Array
+import Data.Const (Const)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
--- import Halogen.HTML.Events as HE
--- import Halogen.HTML.Properties as HP
--- import Type.Data.Symbol (SProxy(..))
-
 import Select as S
 import Select.Setters as SS
 
@@ -59,10 +55,8 @@ type EmbeddedComponentRender m = EmbeddedState -> EmbeddedComponentHTML m
 
 type EmbeddedSlot = S.Slot Query ChildSlots Output
 
-type EmbeddedSpec m = S.Spec StateRow Query Action ChildSlots Output m
-
-input :: Input -> EmbeddedInput
-input { items, buttonLabel } =
+inputAdapter :: Input -> EmbeddedInput
+inputAdapter { items, buttonLabel } =
   { inputType: S.Toggle
   , search: Nothing
   , debounceTime: Nothing
@@ -70,6 +64,14 @@ input { items, buttonLabel } =
   , items
   , selection: Nothing
   , buttonLabel
+
+  , debug: "Dropdown"
+  }
+
+component :: forall m. MonadAff m => EmbeddedComponent m
+component = S.component inputAdapter $ S.defaultSpec
+  { render = render
+  , handleOutput = handleOutput
   }
 
 render :: forall m. MonadAff m => EmbeddedComponentRender m
@@ -100,8 +102,8 @@ render { buttonLabel, selection, visibility, items } =
       HH.div ( SS.setItemProps idx [] )
       [ HH.text item ]
 
-handleMessage :: forall m. MonadAff m => S.Message -> EmbeddedComponentM m Unit
-handleMessage = case _ of
+handleOutput :: forall m. MonadAff m => S.Output -> EmbeddedComponentM m Unit
+handleOutput = case _ of
   S.Selected idx -> do
     prev <- H.gets _.selection
     selection <- H.gets $ (Array.index <@> idx) <<< _.items

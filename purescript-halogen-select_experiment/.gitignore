@@ -7,3 +7,5 @@
 /.psc*
 /.purs*
 /.psa*
+/.cache/
+/dist/
