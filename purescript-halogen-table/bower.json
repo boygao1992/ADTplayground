@@ -1,0 +1,24 @@
+{
+  "name": "purescript-halogen-table",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.1.1",
+    "purescript-console": "^4.2.0",
+    "purescript-halogen": "https://github.com/slamdata/purescript-halogen.git#5.0.0-rc.4",
+    "purescript-effect": "^2.0.1",
+    "purescript-record": "^2.0.1",
+    "purescript-affjax": "^9.0.0",
+    "purescript-remotedata": "^4.2.0",
+    "purescript-argonaut": "^6.0.0",
+    "purescript-css": "^4.0.0",
+    "purescript-variant": "^6.0.1"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^4.0.0"
+  }
+}
