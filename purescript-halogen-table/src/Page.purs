@@ -51,7 +51,7 @@ render _ =
       , "purescript-svgo"
       , "svgen"
       ]
-    , enum: false
+    , isEnum: true
     }
     (const Nothing)
 
