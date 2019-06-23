@@ -1,4 +1,4 @@
-module Adhoc.Cell.Text.Setters where
+module Adhoc.Cell.Setters where
 
 import Prelude
 
@@ -15,7 +15,7 @@ import Web.UIEvent.FocusEvent as FE
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.MouseEvent as ME
 
-import Adhoc.Cell.Text.Renderless (Action(..), ghostRef, inputRef, menuRef, selectedItemRef)
+import Adhoc.Cell.Renderless (Action(..), ghostRef, inputRef, menuRef, selectedItemRef)
 
 type InputProps p =
   ( value :: String
@@ -75,18 +75,18 @@ setDisplayProps
 setDisplayProps props = props <>
   [ HE.onClick $ Just <<< const Edit ]
 
-type ToggleProps p =
-  ( onMouseDown :: ME.MouseEvent
-  | p
-  )
+-- type ToggleProps p =
+--   ( onMouseDown :: ME.MouseEvent
+--   | p
+--   )
 
-setToggleProps
-  :: forall p m
-  . Array (HH.IProp (ToggleProps p) (Action m))
-  -> Array (HH.IProp (ToggleProps p) (Action m))
-setToggleProps props = props <>
-  [ HE.onMouseDown $ Just <<< const OnMouseDownToggle
-  ]
+-- setToggleProps
+--   :: forall p m
+--   . Array (HH.IProp (ToggleProps p) (Action m))
+--   -> Array (HH.IProp (ToggleProps p) (Action m))
+-- setToggleProps props = props <>
+--   [ HE.onMouseDown $ Just <<< const OnMouseDownToggle
+--   ]
 
 type MenuProps p =
   ( style :: String

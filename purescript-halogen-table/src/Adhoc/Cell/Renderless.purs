@@ -1,11 +1,14 @@
-module Adhoc.Cell.Text.Renderless where
+module Adhoc.Cell.Renderless where
 
 import Prelude
 
 import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 import Data.Array ((!!))
 import Data.Array as Array
+import Data.Fixed as Fixed
+import Data.Int (fromString) as Int
 import Data.Maybe (Maybe(..))
+import Data.Number (fromString) as Number
 import Data.String as String
 import Data.Traversable (for_)
 import Effect.Aff.Class (class MonadAff)
@@ -17,22 +20,46 @@ import Web.Event.Event as WE
 import Web.HTML.HTMLElement as WHE
 import Web.UIEvent.KeyboardEvent as KE
 
+data CellType
+  = CellTypeInt Int
+  | CellTypeNumber Number
+  | CellTypeFixed Int Number
+  | CellTypeString String
+  | CellTypeEnum (Array String) String
+derive instance eqCellType :: Eq CellType
+derive instance ordCellType :: Ord CellType
+instance showCellType :: Show CellType where
+  show (CellTypeInt int) = show int
+  show (CellTypeNumber num) = show num
+  show (CellTypeFixed p num) = show num
+  show (CellTypeString str) = str
+  show (CellTypeEnum _ str) = str
+fromString :: CellType -> String -> Maybe CellType
+fromString cellType input = case cellType of
+  CellTypeInt _ -> CellTypeInt <$> Int.fromString input
+  CellTypeNumber _ -> CellTypeNumber <$> Number.fromString input
+  CellTypeFixed p _ -> CellTypeFixed p <$> join (Fixed.reifyPrecision p (map Fixed.toNumber <<< fromString' input))
+  CellTypeString _ -> Just $ CellTypeString input
+  CellTypeEnum available _ ->
+    if (Array.elem input available)
+    then Just $ CellTypeEnum available input
+    else Nothing
+  where
+    fromString' :: forall precision. Fixed.KnownPrecision precision => String -> Fixed.PProxy precision -> Maybe (Fixed.Fixed precision)
+    fromString' x _ = Fixed.fromString x
 
 type State =
   { editing :: Boolean
-  , value :: String
   , cache :: String
   , width :: Number
 
-  , clickedInside :: Boolean
   , isOpen :: Boolean
   , highlightedIndex :: Int
 
   , candidates :: Array String
-  , available :: Array String
 
-  , displayMessage :: Boolean
-  , isEnum :: Boolean
+  , displayMessage :: Maybe String
+  , value :: CellType
   }
 
 type StateStore m = Store State (ComponentHTML m)
@@ -40,19 +67,16 @@ type StateStore m = Store State (ComponentHTML m)
 defaultInitialState :: State
 defaultInitialState =
   { editing: false
-  , value: ""
   , cache: ""
   , width: 0.0
 
-  , clickedInside: false
   , isOpen: false
   , highlightedIndex: 0
 
   , candidates: []
-  , available: []
 
-  , displayMessage: false
-  , isEnum: false
+  , displayMessage: Nothing
+  , value: CellTypeString ""
   }
 
 data Action m
@@ -60,21 +84,20 @@ data Action m
   | OnValueInput String
   | OnKeyDown KE.KeyboardEvent
   | OnBlurInput -- TODO replace by ??
-  | OnMouseDownToggle
+  -- | OnMouseDownToggle
   | OnClickItem Int
   | OnMouseEnterItem Int
   | Receive (Input m)
 
 data Query a
-  = GetValue (String -> a)
+  = GetValue (CellType -> a)
 
 type Input m =
   { render :: ComponentRender m
   -- External State
-  , available :: Array String
+  -- , available :: Array String
   -- Config
-  , value :: String
-  , isEnum :: Boolean
+  , value :: CellType
   }
 
 type Output = Void
@@ -95,11 +118,10 @@ selectedItemRef = H.RefLabel "__nselect_selectedItem" :: H.RefLabel
 
 component :: forall m. MonadAff m => Component m
 component = H.mkComponent
-  { initialState: \({ render, value, available, isEnum }) ->
+  { initialState: \({ render, value }) ->
      store render defaultInitialState
       { value = value
-      , available = available
-      , isEnum = isEnum
+      -- , available = available
       }
   , render: extract
   , eval: H.mkEval H.defaultEval
@@ -112,36 +134,44 @@ component = H.mkComponent
 handleAction :: forall m. MonadAff m => Action m -> ComponentM m Unit
 handleAction = case _ of
   Edit -> do
-    modifyState_ \st -> st { editing = true, cache = st.value }
-    focusInput
+    modifyState_ \st -> st { editing = true, cache = show st.value }
     updateInputWidth
+    focusInput
 
   OnValueInput str -> do
-    available <- getsState _.available
-    let candidates = Array.filter (String.contains (String.Pattern str)) available
     modifyState_ \st -> st
-      { cache = str
-      , candidates = candidates
-      -- , highlightedIndex = 0
-      , displayMessage = false
-      }
-    handleMenuVisibilityChange $ Array.length candidates > 0
+          { cache = str
+          , displayMessage = Nothing
+          }
     updateInputWidth
+
+    getsState _.value >>= case _ of
+      CellTypeEnum available _ -> do
+        let candidates = Array.filter (String.contains (String.Pattern str)) available
+        modifyState_ \st -> st
+          { candidates = candidates
+          -- , highlightedIndex = 0
+          }
+        handleMenuVisibilityChange $ Array.length candidates > 0
+      _ -> pure unit
 
   OnKeyDown ke -> do
     case KE.key ke of
       "ArrowUp" -> do
         H.liftEffect $ WE.preventDefault $ KE.toEvent ke
         s <- getState
-        let nextIndex = max 0 (s.highlightedIndex - 1)
-        when (nextIndex /= s.highlightedIndex) $
-        handleHighlightedIndexChange nextIndex
+        when s.isOpen do
+          let nextIndex = max 0 (s.highlightedIndex - 1)
+          when (nextIndex /= s.highlightedIndex) do
+            handleHighlightedIndexChange nextIndex
       "ArrowDown" -> do
         H.liftEffect $ WE.preventDefault $ KE.toEvent ke
         s <- getState
-        let nextIndex = min (Array.length s.candidates - 1) (s.highlightedIndex + 1)
-        when (nextIndex /= s.highlightedIndex) $
-          handleHighlightedIndexChange nextIndex
+        when s.isOpen do
+          let nextIndex
+                = min (Array.length s.candidates - 1) (s.highlightedIndex + 1)
+          when (nextIndex /= s.highlightedIndex) do
+            handleHighlightedIndexChange nextIndex
       "Enter" -> do
         H.liftEffect $ WE.preventDefault $ KE.toEvent ke
         s <- getState
@@ -153,15 +183,29 @@ handleAction = case _ of
                 handleMenuVisibilityChange false
                 updateInputWidth
           else do
-            if (s.isEnum && not Array.elem s.cache s.available)
-              then do
-                modifyState_ _ { displayMessage = true }
-              else do
-                modifyState_ _ { editing = false, value = s.cache }
+            case fromString s.value s.cache of
+              Nothing ->
+                modifyState_
+                  _ { displayMessage = Just $ "not an valid " <> case s.value of
+                        CellTypeInt _ -> "integer"
+                        CellTypeNumber _ -> "number"
+                        CellTypeFixed _ _ -> "number"
+                        CellTypeString _ -> "input"
+                        CellTypeEnum _ _ -> "option"
+                    }
+              Just value ->
+                modifyState_ _ { editing = false, value = value }
+
+            -- case s.value of
+            --   CellTypeEnum _ _ ->
+            --     when (not Array.elem s.cache s.available) do
+            --       modifyState_ _ { displayMessage = Just "not an valid option" }
+            --   _ ->
+            --     modifyState_ _ { editing = false, value = s.cache }
 
       "Escape" -> do
         H.liftEffect $ WE.preventDefault $ KE.toEvent ke
-        isOpen <- getsState _.isOpen
+        -- isOpen <- getsState _.isOpen
         -- if isOpen
         --   then do
         --     handleMenuVisibilityChange false
@@ -183,22 +227,27 @@ handleAction = case _ of
         handleMenuVisibilityChange false
         modifyState_ _ { editing = false }
 
-  OnMouseDownToggle -> do
-    isOpen <- getsState _.isOpen
-    handleMenuVisibilityChange $ not isOpen
+  -- OnMouseDownToggle -> do
+  --   isOpen <- getsState _.isOpen
+  --   handleMenuVisibilityChange $ not isOpen
 
   OnClickItem index -> do
-    available <- getsState _.available
-    for_ (available !! index) \selection -> do
-      modifyState_ _ { cache = selection }
-      handleMenuVisibilityChange false
-      updateInputWidth
+    getsState _.value >>= case _ of
+      CellTypeEnum available _ -> do
+        for_ (available !! index) \selection -> do
+          modifyState_ _ { cache = selection }
+          handleMenuVisibilityChange false
+          updateInputWidth
+      _ -> pure unit
 
   OnMouseEnterItem index -> do
-    modifyState_ _ { highlightedIndex = index }
+    getsState _.value >>= case _ of
+      CellTypeEnum _ _ -> do
+        modifyState_ _ { highlightedIndex = index }
+      _ -> pure unit
 
-  Receive { render, available } -> do
-    modifyStore_ render (_ { available = available })
+  Receive { render } -> do
+    modifyStore_ render identity
 
   where
     updateInputWidth :: ComponentM m Unit

@@ -38,8 +38,7 @@ render :: forall m. MonadAff m => ComponentRender m
 render _ =
   HH.slot _cell unit Cell.component
     { render: Cell.defaultRender
-    , value: "hello world"
-    , available:
+    , value: Cell.CellTypeEnum
       [ "purescript-css-validate"
       , "purescript-halogen-color-picker"
       , "purescript-halogen-day-picker"
@@ -51,7 +50,7 @@ render _ =
       , "purescript-svgo"
       , "svgen"
       ]
-    , isEnum: true
+      "purescript-svgo"
     }
     (const Nothing)
 

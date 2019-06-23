@@ -1,8 +1,5 @@
 {
-  "scripts": {
-    "start": "parcel assets/index.html"
-  },
-  "name": "purescript-halogen-table",
+  "name": "purescript-fixed-precision_experiment",
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",

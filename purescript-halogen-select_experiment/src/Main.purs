@@ -5,7 +5,8 @@ import Prelude
 import Effect (Effect)
 import Effect.Aff (Aff)
 -- import Effect.Console (log)
-import Typeahead (component)
+-- import NSelect.Example.ComponentInDropdown (component)
+import NSelect.Example.Autocomplete (component)
 import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI) as HD
 import Web.HTML (HTMLElement)

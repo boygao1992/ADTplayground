@@ -1,15 +1,16 @@
-module Adhoc.Cell.Text.Render where
+module Adhoc.Cell.Render where
 
 import Prelude
 
 import Data.Array as Array
+import Data.Maybe (Maybe(..))
 import Data.Monoid (guard) as Monoid
 import Effect.Aff.Class (class MonadAff)
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 
-import Adhoc.Cell.Text.Renderless (ComponentRender)
-import Adhoc.Cell.Text.Setters (setDisplayProps, setGhostElementProps, setInputProps, setItemProps, setMenuProps)
+import Adhoc.Cell.Renderless (ComponentRender)
+import Adhoc.Cell.Setters (setDisplayProps, setGhostElementProps, setInputProps, setItemProps, setMenuProps)
 
 defaultRender :: forall m. MonadAff m => ComponentRender m
 defaultRender { editing, value, cache, width, isOpen, highlightedIndex, candidates, displayMessage } =
@@ -17,11 +18,11 @@ defaultRender { editing, value, cache, width, isOpen, highlightedIndex, candidat
   then
     HH.div []
     [ HH.input $ setInputProps { cache, width } []
-    , if displayMessage
-      then
-        HH.p [ HP.class_ $ HH.ClassName "text-red-600" ]
-        [ HH.text "not an valid input" ]
-      else HH.text ""
+    , case displayMessage of
+        Nothing -> HH.text ""
+        Just message ->
+          HH.p [ HP.class_ $ HH.ClassName "text-red-600" ]
+          [ HH.text message ]
     , if isOpen
       then
         HH.ul ( setMenuProps
@@ -35,7 +36,7 @@ defaultRender { editing, value, cache, width, isOpen, highlightedIndex, candidat
     ]
   else
     HH.p (setDisplayProps [])
-    [ HH.text value ]
+    [ HH.text $ show value ]
 
   where
     renderItem index item =

@@ -214,7 +214,7 @@ component mkInput spec = H.mkComponent
 
 handleQuery
   :: forall st query action slots msg m a
-   . MonadAff m
+  . MonadAff m
   => (query a -> H.HalogenM (State st) (Action action) slots msg m (Maybe a))
   -> Query query slots a
   -> H.HalogenM (State st) (Action action) slots msg m (Maybe a)
