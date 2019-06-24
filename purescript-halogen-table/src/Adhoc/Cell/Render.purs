@@ -9,7 +9,7 @@ import Effect.Aff.Class (class MonadAff)
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 
-import Adhoc.Cell.Renderless (ComponentRender)
+import Adhoc.Cell.Renderless (ComponentRender, displayCellType)
 import Adhoc.Cell.Setters (setDisplayProps, setGhostElementProps, setInputProps, setItemProps, setMenuProps)
 
 defaultRender :: forall m. MonadAff m => ComponentRender m
@@ -36,7 +36,7 @@ defaultRender { editing, value, cache, width, isOpen, highlightedIndex, candidat
     ]
   else
     HH.p (setDisplayProps [])
-    [ HH.text $ show value ]
+    [ HH.text $ displayCellType value ]
 
   where
     renderItem index item =

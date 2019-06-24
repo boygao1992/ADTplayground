@@ -1,5 +1,5 @@
 {
-  "name": "purescript-halogen-table",
+  "name": "purescript-halogen-datetimepicker",
   "ignore": [
     "**/.*",
     "node_modules",
@@ -8,18 +8,16 @@
   ],
   "dependencies": {
     "purescript-prelude": "^4.1.1",
-    "purescript-console": "^4.2.0",
     "purescript-halogen": "https://github.com/slamdata/purescript-halogen.git#5.0.0-rc.4",
+    "purescript-halogen-select": "https://github.com/citizennet/purescript-halogen-select.git#v5.0.0-rc.2",
+    "purescript-console": "^4.2.0",
     "purescript-effect": "^2.0.1",
-    "purescript-record": "^2.0.1",
-    "purescript-affjax": "^9.0.0",
-    "purescript-remotedata": "^4.2.0",
     "purescript-argonaut": "^6.0.0",
-    "purescript-css": "^4.0.0",
-    "purescript-variant": "^6.0.1",
-    "purescript-fixed-precision": "^4.0.1",
-    "purescript-numbers": "^6.0.0",
-    "purescript-formatters": "^4.0.1"
+    "purescript-read": "^1.0.1",
+    "purescript-rationals": "^5.0.0",
+    "purescript-datetime": "^4.1.1",
+    "purescript-formatters": "^4.0.1",
+    "purescript-fuzzy": "^0.2.1"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"

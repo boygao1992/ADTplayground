@@ -16,7 +16,7 @@ type Query = Const Void
 type Input = Unit
 type Output = Void
 type ChildSlots =
-  ( cell :: Cell.Slot Unit
+  ( cell :: Cell.Slot Int
   )
 _cell = SProxy :: SProxy "cell"
 
@@ -36,21 +36,43 @@ component = H.mkComponent
 
 render :: forall m. MonadAff m => ComponentRender m
 render _ =
-  HH.slot _cell unit Cell.component
+  HH.div_
+  [ HH.slot _cell 0 Cell.component
     { render: Cell.defaultRender
-    , value: Cell.CellTypeEnum
-      [ "purescript-css-validate"
-      , "purescript-halogen-color-picker"
-      , "purescript-halogen-day-picker"
-      , "purescript-halogen-nselect"
-      , "purescript-halogen-storybook"
-      , "purescript-halogen-transition"
-      , "purescript-jest"
-      , "purescript-svg-parser"
-      , "purescript-svgo"
-      , "svgen"
-      ]
-      "purescript-svgo"
+    , value: Cell.CellTypeInt 123
     }
     (const Nothing)
+  , HH.slot _cell 0 Cell.component
+    { render: Cell.defaultRender
+    , value: Cell.CellTypeNumber 1234.56789
+    }
+    (const Nothing)
+  , HH.slot _cell 0 Cell.component
+    { render: Cell.defaultRender
+    , value: Cell.CellTypeFixed 3 12345.678
+    }
+    (const Nothing)
+  , HH.slot _cell 0 Cell.component
+    { render: Cell.defaultRender
+    , value: Cell.CellTypeString "hello world"
+    }
+    (const Nothing)
+  , HH.slot _cell 0 Cell.component
+    { render: Cell.defaultRender
+    , value: Cell.CellTypeEnum
+        [ "purescript-css-validate"
+        , "purescript-halogen-color-picker"
+        , "purescript-halogen-day-picker"
+        , "purescript-halogen-nselect"
+        , "purescript-halogen-storybook"
+        , "purescript-halogen-transition"
+        , "purescript-jest"
+        , "purescript-svg-parser"
+        , "purescript-svgo"
+        , "svgen"
+        ]
+        "purescript-svgo"
+    }
+    (const Nothing)
+  ]
 

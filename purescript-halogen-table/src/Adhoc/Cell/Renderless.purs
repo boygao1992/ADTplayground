@@ -6,9 +6,10 @@ import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 import Data.Array ((!!))
 import Data.Array as Array
 import Data.Fixed as Fixed
-import Data.Int (fromString) as Int
+import Data.Int (fromString, toNumber) as Int
 import Data.Maybe (Maybe(..))
 import Data.Number (fromString) as Number
+import Data.Formatter.Number (Formatter(..), format) as Number
 import Data.String as String
 import Data.Traversable (for_)
 import Effect.Aff.Class (class MonadAff)
@@ -34,6 +35,25 @@ instance showCellType :: Show CellType where
   show (CellTypeFixed p num) = show num
   show (CellTypeString str) = str
   show (CellTypeEnum _ str) = str
+
+displayCellType :: CellType -> String
+displayCellType = case _ of
+  CellTypeInt int -> Number.format (numberFormatter 0) <<< Int.toNumber $ int
+  CellTypeNumber num -> Number.format (numberFormatter 3) num
+  CellTypeFixed p num -> Number.format (numberFormatter p) num
+  CellTypeString str -> str
+  CellTypeEnum _ str -> str
+
+  where
+    numberFormatter :: Int -> Number.Formatter
+    numberFormatter precision = Number.Formatter
+      { comma: true
+      , before: 0
+      , after: precision
+      , abbreviations: false
+      , sign: false
+      }
+
 fromString :: CellType -> String -> Maybe CellType
 fromString cellType input = case cellType of
   CellTypeInt _ -> CellTypeInt <$> Int.fromString input

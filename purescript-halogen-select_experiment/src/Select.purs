@@ -18,7 +18,7 @@ import Effect.Aff (Fiber, delay, error, forkAff, killFiber)
 import Effect.Aff.AVar (AVar)
 import Effect.Aff.AVar as AVar
 import Effect.Aff.Class (class MonadAff)
-import Effect.Console (log)
+-- import Effect.Console (log)
 import Effect.Ref (Ref)
 import Effect.Ref as Ref
 import Halogen as H
@@ -39,13 +39,13 @@ data Action action
   | ToggleClick ME.MouseEvent
   | Focus Boolean
   | Key KE.KeyboardEvent
-  -- | PreventClick ME.MouseEvent
+  | PreventClick ME.MouseEvent
   | SetVisibility Visibility
   | Initialize (Maybe action)
   | Action action
-  | OnMouseDownContainer ME.MouseEvent
-  | OnMouseUpContainer ME.MouseEvent
-  | OnBlur
+  -- | OnMouseDownContainer ME.MouseEvent
+  -- | OnMouseUpContainer ME.MouseEvent
+  -- | OnBlur
 
 type Action' = Action Void
 
@@ -106,8 +106,8 @@ type State st =
   , getItemCount :: {| st } -> Int
 
   -- TODO
-  , clickedInside :: Boolean
-  , debug :: String
+  -- , clickedInside :: Boolean
+  -- , debug :: String
   | st
   }
 
@@ -123,7 +123,7 @@ type Input st =
   , getItemCount :: {| st } -> Int
 
   -- TODO
-  , debug :: String
+  -- , debug :: String
   | st
   }
 
@@ -185,7 +185,7 @@ component
   => Row.Lacks "debounceRef" st
   => Row.Lacks "visibility" st
   => Row.Lacks "highlightedIndex" st
-  => Row.Lacks "clickedInside" st
+  -- => Row.Lacks "clickedInside" st
   => (input -> Input st)
   -> Spec st query action slots input msg m
   -> H.Component HH.HTML (Query query slots) input msg m
@@ -210,7 +210,7 @@ component mkInput spec = H.mkComponent
         >>> Builder.insert (SProxy :: _ "debounceRef") Nothing
         >>> Builder.insert (SProxy :: _ "visibility") Off
         >>> Builder.insert (SProxy :: _ "highlightedIndex") Nothing
-        >>> Builder.insert (SProxy :: _ "clickedInside") false
+        -- >>> Builder.insert (SProxy :: _ "clickedInside") false
 
 handleQuery
   :: forall st query action slots msg m a
@@ -231,7 +231,7 @@ handleAction
   => Row.Lacks "debounceRef" st
   => Row.Lacks "visibility" st
   => Row.Lacks "highlightedIndex" st
-  => Row.Lacks "clickedInside" st
+  -- => Row.Lacks "clickedInside" st
   => (action -> H.HalogenM (State st) (Action action) slots msg m Unit)
   -> (Output -> H.HalogenM (State st) (Action action) slots msg m Unit)
   -> Action action
@@ -239,17 +239,17 @@ handleAction
 handleAction handleAction' handleOutput = case _ of
   Initialize mbAction -> do
     -- TODO debug
-    debug <- H.gets _.debug
-    H.liftEffect $ log $ debug <> ": Initialize"
+    -- debug <- H.gets _.debug
+    -- H.liftEffect $ log $ debug <> ": Initialize"
 
     ref <- H.liftEffect $ Ref.new Nothing
     H.modify_ _ { debounceRef = Just ref }
     for_ mbAction handleAction'
 
   Search str -> do
-    -- TODO debug
-    debug <- H.gets _.debug
-    H.liftEffect $ log $ debug <> ": Search"
+    -- -- TODO debug
+    -- debug <- H.gets _.debug
+    -- H.liftEffect $ log $ debug <> ": Search"
 
     st <- H.get
     ref <- H.liftEffect $ map join $ traverse Ref.read st.debounceRef
@@ -287,21 +287,20 @@ handleAction handleAction' handleOutput = case _ of
       _ -> pure unit
 
   Highlight target -> do
-    -- TODO debug
-    debug <- H.gets _.debug
-    H.liftEffect $ log $ debug <> ": Highlight"
+    -- -- TODO debug
+    -- debug <- H.gets _.debug
+    -- H.liftEffect $ log $ debug <> ": Highlight"
 
     st <- H.get
     when (st.visibility == On) do
       H.modify_ _ { highlightedIndex = Just $ getTargetIndex st target }
 
   Select target mbEv -> do
-    -- TODO debug
-    debug <- H.gets _.debug
-    H.liftEffect $ log $ debug <> ": Select"
+    -- -- TODO debug
+    -- debug <- H.gets _.debug
+    -- H.liftEffect $ log $ debug <> ": Select"
 
-    -- TODO
-    -- for_ mbEv (H.liftEffect <<< preventDefault <<< ME.toEvent)
+    for_ mbEv (H.liftEffect <<< preventDefault <<< ME.toEvent)
     st <- H.get
     when (st.visibility == On) case target of
       Index ix -> handleOutput $ Selected ix
@@ -310,11 +309,11 @@ handleAction handleAction' handleOutput = case _ of
 
   ToggleClick ev -> do
     -- TODO debug
-    debug <- H.gets _.debug
-    H.liftEffect $ log $ debug <> ": ToggleClick"
+    -- debug <- H.gets _.debug
+    -- H.liftEffect $ log $ debug <> ": ToggleClick"
 
     -- TODO
-    -- H.liftEffect $ preventDefault $ ME.toEvent ev
+    H.liftEffect $ preventDefault $ ME.toEvent ev
     st <- H.get
     case st.visibility of
       On -> do
@@ -328,8 +327,8 @@ handleAction handleAction' handleOutput = case _ of
 
   Focus shouldFocus -> do
     -- TODO debug
-    debug <- H.gets _.debug
-    H.liftEffect $ log $ debug <> ": Focus"
+    -- debug <- H.gets _.debug
+    -- H.liftEffect $ log $ debug <> ": Focus"
 
     inputElement <- H.getHTMLElementRef $ H.RefLabel "select-input"
     for_ inputElement \el -> H.liftEffect case shouldFocus of
@@ -338,8 +337,8 @@ handleAction handleAction' handleOutput = case _ of
 
   Key ev -> do
     -- TODO debug
-    debug <- H.gets _.debug
-    H.liftEffect $ log $ debug <> ": Key"
+    -- debug <- H.gets _.debug
+    -- H.liftEffect $ log $ debug <> ": Key"
 
     void $ H.fork $ handle $ SetVisibility On
     let preventIt = H.liftEffect $ preventDefault $ KE.toEvent ev
@@ -359,13 +358,13 @@ handleAction handleAction' handleOutput = case _ of
           handle $ Select (Index ix) Nothing
       otherKey -> pure unit
 
-  -- PreventClick ev ->
-  --   H.liftEffect $ preventDefault $ ME.toEvent ev
+  PreventClick ev ->
+    H.liftEffect $ preventDefault $ ME.toEvent ev
 
   SetVisibility v -> do
     -- TODO debug
-    debug <- H.gets _.debug
-    H.liftEffect $ log $ debug <> ": SetVisibility " <> if v == On then "On" else "Off"
+    -- debug <- H.gets _.debug
+    -- H.liftEffect $ log $ debug <> ": SetVisibility " <> if v == On then "On" else "Off"
 
     st <- H.get
     when (st.visibility /= v) do
@@ -374,30 +373,30 @@ handleAction handleAction' handleOutput = case _ of
 
   Action action -> handleAction' action
 
-  OnMouseDownContainer me -> do
-    -- TODO debug
-    debug <- H.gets _.debug
-    H.liftEffect $ log $ debug <> ": OnMouseDownContainer"
+  -- OnMouseDownContainer me -> do
+  --   -- TODO debug
+  --   debug <- H.gets _.debug
+  --   H.liftEffect $ log $ debug <> ": OnMouseDownContainer"
 
-    -- TODO
-    -- H.liftEffect $ preventDefault $ ME.toEvent me
-    H.modify_ _ { clickedInside = true }
-  OnMouseUpContainer me -> do
-    -- TODO debug
-    debug <- H.gets _.debug
-    H.liftEffect $ log $ debug <> ": OnMouseUpContainer"
+  --   -- TODO
+  --   -- H.liftEffect $ preventDefault $ ME.toEvent me
+  --   H.modify_ _ { clickedInside = true }
+  -- OnMouseUpContainer me -> do
+  --   -- TODO debug
+  --   debug <- H.gets _.debug
+  --   H.liftEffect $ log $ debug <> ": OnMouseUpContainer"
 
-    -- TODO
-    -- H.liftEffect $ preventDefault $ ME.toEvent me
-    H.modify_ _ { clickedInside = false }
-  OnBlur -> do
-    -- TODO debug
-    debug <- H.gets _.debug
-    clickedInside <- H.gets _.clickedInside
-    H.liftEffect $ log $ debug <> ": OnBlur, " <> "clickInside: " <> show clickedInside
+  --   -- TODO
+  --   -- H.liftEffect $ preventDefault $ ME.toEvent me
+  --   H.modify_ _ { clickedInside = false }
+  -- OnBlur -> do
+  --   -- TODO debug
+  --   debug <- H.gets _.debug
+  --   clickedInside <- H.gets _.clickedInside
+  --   H.liftEffect $ log $ debug <> ": OnBlur, " <> "clickInside: " <> show clickedInside
 
-    when (not clickedInside) do
-      handle $ SetVisibility Off
+  --   when (not clickedInside) do
+  --     handle $ SetVisibility Off
 
   where
   -- eta-expansion is necessary to avoid infinite recursion
