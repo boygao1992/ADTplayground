@@ -23,7 +23,7 @@ dependencies:
 - base >= 4.11 && < 10
 - http-types >= 0.12
 - optparse-applicative >= 0.14
-- rio >= 0.1.8.0
+- rio
 - servant >= 0.15
 - servant-server >= 0.15
 - servant-client >= 0.15
@@ -49,6 +49,9 @@ dependencies:
 - http-client-tls >= 0.3.5
 - warp-tls >= 3.2
 - lucid >= 2.9
+- th-format
+- data-default >= 0.7
+- microlens-th >= 0.4
 
 
 

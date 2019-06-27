@@ -1,6 +1,6 @@
 module Magento.Import.Api.Category.GetCategoryPaths where
 
-import RIO
+import RIO hiding (Category)
 import qualified Data.List.Util as List
 import qualified Data.List.Util as List (returningOne)
 import qualified Data.Set as Set

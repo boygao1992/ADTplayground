@@ -4,7 +4,6 @@ module Shopify.Api.Admin.OAuth.Data.Req.OAuthAccessToken where
 import RIO
 import Data.Aeson.TH
 
-import Shopify.Api.Customer.Data.CustomerId (CustomerId)
 import Shopify.Api.Admin.Data.Scopes (Scopes)
 import Shopify.Api.Admin.OAuth.Data.AccessToken (AccessToken)
 
@@ -20,7 +19,7 @@ $(deriveJSON
     ''Req)
 
 data AssociatedUser = AssociatedUser
-  { _id :: !(Maybe CustomerId)
+  { _id :: !(Maybe Word32)
   , _first_name :: !(Maybe Text)
   , _last_name :: !(Maybe Text)
   , _email :: !(Maybe Text)

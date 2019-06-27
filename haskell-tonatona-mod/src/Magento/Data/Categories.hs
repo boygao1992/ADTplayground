@@ -1,6 +1,6 @@
 module Magento.Data.Categories where
 
-import RIO
+import RIO hiding (Category)
 import qualified RIO.List as List (intercalate, lastMaybe, length)
 import qualified RIO.Text as Text
 import Data.Aeson (FromJSON, ToJSON, Value(String), parseJSON, toEncoding)

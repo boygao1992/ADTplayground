@@ -19,9 +19,10 @@ data ShopifyOptions = ShopifyOptions
   , apiSecret :: !ApiSecret
   , apiVersion :: !ApiVersion
   , baseUrl :: !BaseUrl
+  , appName :: !AppName
   } deriving (Eq, Show)
 instance HasParser ShopifyOptions where
-  parser = ShopifyOptions <$> parser <*> parser <*> parser <*> parser
+  parser = ShopifyOptions <$> parser <*> parser <*> parser <*> parser <*> parser
 instance HasShopifyOptions ShopifyOptions where
   shopifyOptionsL = id
 
@@ -70,3 +71,14 @@ instance HasParser BaseUrl where
     $ long "spu"
     <> metavar "Base Url"
     <> help "set Shopify App Base Url"
+
+newtype AppName = AppName { unAppName :: Text }
+  deriving newtype (Eq, Show, IsString)
+_appName :: Lens' ShopifyOptions Text
+_appName = lens (unAppName . appName) \x y -> x { appName = AppName y }
+instance HasParser AppName where
+  parser =
+    strOption
+    $ long "spn"
+    <> metavar "Name"
+    <> help "set Shopify App Name"

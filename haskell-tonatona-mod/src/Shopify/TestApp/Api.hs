@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE QuasiQuotes #-}
 module Shopify.TestApp.Api where
 
 import RIO
@@ -9,9 +10,11 @@ import Data.UUID.V4 as UUID (nextRandom)
 import Database.Beam.Query
 import Lucid
 import Servant.HTML.Lucid (HTML)
+import Data.Format
+import Data.Default (def)
 
 import Tonatona.Servant.Run (TemporaryRedirect, redirect)
-import Tonatona.Shopify.Options (shopifyOptionsL, _baseUrl, _apiKey, _apiSecret)
+import Tonatona.Shopify.Options (shopifyOptionsL, _baseUrl, _apiKey, _apiSecret, _appName)
 import Tonatona.Beam.MySQL.Run (runBeamMySQLDebug, runBeamMySQLDebugSafe)
 
 import Shopify.Api.Admin.OAuth (oAuthAuthorizeUrl, getAccessToken)
@@ -21,62 +24,103 @@ import qualified Shopify.Api.Admin.OAuth.Data.Req.OAuthAccessToken as OAuthAcces
 import Shopify.Api.Admin.Data.Scopes (Scopes(..), Scope(..))
 
 import Shopify.TestApp.Database
-import qualified Shopify.TestApp.Database.Oauth as O
+import Shopify.TestApp.Database.Oauth
 
 import Shopify.Servant.Client.Util (runBaseHttpClient, runApiHttpClient)
 import Shopify.TestApp.Types (Resources)
 
-import Shopify.Api.Products.Data.Product (Products)
+import Shopify.Data.Products.Product (Products)
 import qualified Shopify.Api.Products as GetProducts (getProducts)
-import qualified Shopify.Api.Products.Data.Req.GetProducts as GetProducts (emptyReq)
+
+-------------
+-- App Config
+
+app_scopes :: Scopes
+app_scopes = Scopes
+  [ ReadThemes
+  , WriteThemes
+  , ReadProducts
+  , WriteProducts
+  , ReadProductListings
+  , ReadCustomers
+  , WriteCustomers
+  , ReadOrders
+  , WriteOrders
+  , ReadDraftOrders
+  , WriteDraftOrders
+  , ReadScriptTags
+  , WriteScriptTags
+  , ReadCheckouts
+  , WriteCheckouts
+  , ReadPriceRules
+  , WritePriceRules
+  , UnauthenticatedWriteCheckouts
+  , UnauthenticatedReadCheckouts
+  ]
 
 ----------
 -- RestApi
 
 type RestApi
-  = Add
+  = Home
+  :<|> Login
   :<|> Install
   :<|> GetProducts
-  :<|> Home
 
 restApiServer :: ServerT RestApi (RIO Resources)
 restApiServer
-  = add
+  = home
+  :<|> login
   :<|> install
   :<|> getProducts
-  :<|> home
 
-type Add
-  = "add"
+type Login
+  = "login"
   :> QueryParam' [Required, Strict] "shop" Text
-  :> TemporaryRedirect 'GET Text
+  :> Get '[JSON] (Maybe Text)
 
-add :: Text -> RIO Resources (Headers '[Header "Location" Text] NoContent)
-add hostname = do
+login :: Text -> RIO Resources (Maybe Text)
+login hostname = do
   opts <- view shopifyOptionsL
   nonce <- UUID.toText <$> liftIO UUID.nextRandom
 
-  runBeamMySQLDebugSafe
-    $ runInsert
-    $ insert (testappDb^.oauth)
-    $ insertValues [ O.Oauth hostname Nothing (Just nonce) ]
+  mToken
+    <- fmap join
+    . runBeamMySQLDebug
+    $ runSelectReturningOne
+    $ select do
+        table_oauth <- all_ (testappDb^.oauth)
+        guard_ $ table_oauth^.oauthShopname ==. val_ hostname
+        pure $ table_oauth^.oauthAccessToken
 
-  let
-    install_redirect_url :: Text
-      = opts^._baseUrl <> "install"
+  if isJust mToken
+    then do
+      -- base_url <- view (shopifyOptionsL._baseUrl)
+      -- redirect $ base_url <> "home"
+      pure Nothing
 
-    redirect_url :: Text
-      = oAuthAuthorizeUrl
-        ("https://" <> hostname <> "/")
-        ( OAuthAuthorize.Req
-          (Just $ opts^._apiKey)
-          (Just $ Scopes [ReadProducts])
-          (Just $ install_redirect_url)
-          (Just $ nonce)
-          []
-        )
-  logDebug $ display redirect_url
-  redirect redirect_url
+    else do
+      runBeamMySQLDebugSafe
+        $ runInsert
+        $ insert (testappDb^.oauth)
+        $ insertValues [ Oauth hostname Nothing (Just nonce) ]
+
+      let
+        install_redirect_url :: Text
+          = opts^._baseUrl <> "install"
+
+        redirect_url :: Text
+          = oAuthAuthorizeUrl
+            ([fmt|https://$hostname/|])
+            ( OAuthAuthorize.Req
+              (Just $ opts^._apiKey)
+              (Just $ app_scopes)
+              (Just $ install_redirect_url)
+              (Just $ nonce)
+              []
+            )
+      logDebug $ display redirect_url
+      pure $ Just redirect_url
 
 type Install
   = "install"
@@ -98,8 +142,8 @@ install code _ _ nonce1 hostname = do
     $ select
     do
       table_oauth <- all_ (testappDb^.oauth)
-      guard_ $ table_oauth^.O.shopname ==. val_ hostname
-      pure $ table_oauth^.O.nonce
+      guard_ $ table_oauth^.oauthShopname ==. val_ hostname
+      pure $ table_oauth^.oauthNonce
 
   if
     | ((==) <$> pure nonce1 <*> mNonce2) == (Just True) -> pure ()
@@ -119,23 +163,22 @@ install code _ _ nonce1 hostname = do
     $ runUpdate
     $ update (testappDb^.oauth)
       (\table -> mconcat
-        [ table^.O.access_token <-. just_ (val_ res)
-        , table^.O.nonce <-. nothing_
+        [ table^.oauthAccessToken <-. just_ (val_ res)
+        , table^.oauthNonce <-. nothing_
         ]
       )
-      (\table -> table^.O.shopname ==. val_ hostname)
+      (\table -> table^.oauthShopname ==. val_ hostname)
 
-  base_url <- view (shopifyOptionsL._baseUrl)
-  -- TODO https://{hostname}/admin/apps/{appname}
-  redirect $ base_url <> "home"
+  appname <- view (shopifyOptionsL._appName)
+  redirect $ [fmt|https://$hostname/admin/apps/$appname|]
 
 type Home
   = "home"
   :> QueryParam' [Required, Strict] "shop" Text
-  :> Get '[HTML] (Html ())
+  :> Get '[HTML] (Headers '[Header "Set-Cookie" Text] (Html ()))
 
-home :: Text -> RIO Resources (Html ())
-home hostname = pure $ doctypehtml_ do
+home :: Text -> RIO Resources (Headers '[Header "Set-Cookie" Text] (Html ()))
+home hostname = pure $ addHeader [fmt|hostname=$hostname; SameSite=Strict; Secure; HttpOnly|] $ doctypehtml_ do
   head_ do
     meta_ [charset_ "utf-8"]
     meta_
@@ -154,7 +197,7 @@ home hostname = pure $ doctypehtml_ do
     title_ "TestApp"
   body_ do
     script_ [src_ "assets/app.js"] ("" :: Text)
-    script_ [] ("PS[\"Main\"][\"main\"](\"" <> hostname <> "\")()" :: Text)
+    script_ [] [fmt|PS["Main"]["main"]("$hostname")()|]
 
 type GetProducts
   = "products"
@@ -169,18 +212,14 @@ getProducts hostname = do
     $ runSelectReturningOne
     $ select do
       table_oauth <- all_ (testappDb^.oauth)
-      guard_ $ table_oauth^.O.shopname ==. val_ hostname
-      pure $ table_oauth^.O.access_token
-
-  logDebug $ displayShow mToken
+      guard_ $ table_oauth^.oauthShopname ==. val_ hostname
+      pure $ table_oauth^.oauthAccessToken
 
   case mToken of
     Nothing -> throwM err401
     Just token ->
       runApiHttpClient (Text.unpack hostname) token
-      $ GetProducts.getProducts GetProducts.emptyReq
-
-
+      $ GetProducts.getProducts def
 
 ------
 -- Api
@@ -188,9 +227,7 @@ getProducts hostname = do
 type Api
   = RestApi
   :<|> "assets" :> Raw
-  :<|> "public" :> Raw
 
 server :: ServerT Api (RIO Resources)
 server = restApiServer
   :<|> serveDirectoryFileServer "assets"
-  :<|> serveDirectoryFileServer "public"

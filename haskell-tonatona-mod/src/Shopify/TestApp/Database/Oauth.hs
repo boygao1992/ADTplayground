@@ -26,7 +26,7 @@ deriving instance Eq Shopname
 deriving instance Show Shopname
 
 Oauth
-  (LensFor shopname)
-  (LensFor access_token)
-  (LensFor nonce)
+  (LensFor oauthShopname)
+  (LensFor oauthAccessToken)
+  (LensFor oauthNonce)
   = tableLenses

@@ -7,10 +7,10 @@ import RIO
 import Servant
 
 import Servant.Client.Core (AuthenticatedRequest)
-import Shopify.Api.Products.Data.ProductId (ProductId)
-import Shopify.Api.Products.Data.Product (Products, SingleProduct)
-import Shopify.Api.Products.Data.PublishedStatus (PublishedStatus)
-import Shopify.Api.Products.Data.Req.GetProducts as GetProducts
+import Shopify.Data.Products.ProductId (ProductId)
+import Shopify.Data.Products.Product (Products, SingleProduct)
+import Shopify.Api.Products.Req.GetProducts as GetProducts
+import Shopify.Api.Products.Req.Data.PublishedStatus (PublishedStatus)
 import Shopify.Api.Admin.OAuth.Data.AccessToken (accessTokenL)
 
 import Shopify.Servant.DotJSON (DotJSON)
@@ -20,8 +20,12 @@ import Shopify.TestApp.Types (ApiHttpClientResources)
 type Api = "products" :> ProductApi
 
 type ProductApi
+  = GetProducts
+  :<|> GetSingleProduct
+
+type GetProducts
   = AuthProtect "shopify-access-token"
-  :>  DotJSON
+  :> DotJSON
   :> QueryParam "ids" Text -- TODO implement ToHTTPApiData for CustomerIds
   -- Return only products specified by a comma-separated list of product IDs.
   :> QueryParam "limit" Word8
@@ -66,18 +70,20 @@ type ProductApi
   -- GET /admin/api/2019-04/products.json
   -- Retrieves a list of products
 
--- TODO
--- GET /admin/api/2019-04/products/count.json
--- Retrieves a count of products
-
-  :<|> AuthProtect "shopify-access-token"
-  :> DotJSON
+type GetSingleProduct
+  = AuthProtect "shopify-access-token"
   :> Capture "product_id" ProductId
+  :> DotJSON
   :> QueryParam "fields" Text -- TODO parse
   -- A comma-separated list of fields to include in the response.
   :> Get '[JSON] SingleProduct
   -- GET /admin/api/2019-04/products/#{product_id}.json
   -- Retrieves a single product
+
+-- TODO
+-- GET /admin/api/2019-04/products/count.json
+-- Retrieves a count of products
+
 
 -- TODO
 -- POST /admin/api/2019-04/products.json
