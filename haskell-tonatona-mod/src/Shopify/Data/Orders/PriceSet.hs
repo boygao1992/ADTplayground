@@ -1,18 +1,17 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Shopify.Data.Products.Variants.PresentmentPrice where
+module Shopify.Data.Orders.PriceSet where
 
 import RIO
 import Data.Aeson.TH
 import Shopify.Data.Orders.Price (Price)
 
-data PresentmentPrice = PresentmentPrice
-  { _price :: !(Maybe Price)
-  , _compare_at_price :: !(Maybe Text)
-    -- "compare_at_price": "299.00"
+data PriceSet = PriceSet
+  { _shop_money :: !(Maybe Price)
+  , _presentment_money :: !(Maybe Price)
   } deriving (Eq, Show)
 $(deriveJSON
     defaultOptions
       { fieldLabelModifier = drop 1
       , omitNothingFields = True
       }
-    ''PresentmentPrice)
+    ''PriceSet)

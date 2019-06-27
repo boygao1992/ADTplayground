@@ -10,7 +10,7 @@ import Servant
 import Servant.Client.Core (AuthenticatedRequest)
 
 import Shopify.Api.Admin.OAuth.Data.AccessToken (accessTokenL)
-import Shopify.Api.Order (Orders)
+import Shopify.Data.Orders.Order (Orders)
 import Shopify.Data.Customers.Customer
 import Shopify.Data.Customers.CustomerId (CustomerId)
 import Shopify.Api.Customers.Req.GetCustomers as GetCustomers (Req(..))
