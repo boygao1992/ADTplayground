@@ -109,9 +109,9 @@ _getProducts :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> May
 -- getProductById
 
 getProductById :: ProductId -> Maybe Text -> RIO ApiHttpClientResources SingleProduct
-getProductById pid fields = do
+getProductById _pid _fields = do
   token <- view accessTokenL
-  _getProductById (mkShopifyAuthenticateReq token) pid fields
+  _getProductById (mkShopifyAuthenticateReq token) _pid _fields
 
 _getProductById :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> ProductId -> Maybe Text -> RIO ApiHttpClientResources SingleProduct
 

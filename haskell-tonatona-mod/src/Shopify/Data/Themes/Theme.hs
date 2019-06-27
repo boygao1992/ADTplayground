@@ -4,6 +4,7 @@ module Shopify.Data.Themes.Theme where
 import RIO
 import Data.Aeson.TH
 import Shopify.Data.Themes.ThemeId (ThemeId)
+import Shopify.Data.Themes.Role (Role)
 
 data Theme = Theme
   { _id :: !(Maybe ThemeId)
@@ -14,7 +15,7 @@ data Theme = Theme
     -- "created_at": "2019-06-07T10:37:05-04:00",
   , _updated_at :: !(Maybe Text)
     -- "updated_at": "2019-06-07T10:37:16-04:00",
-  , _role :: !(Maybe Text)
+  , _role :: !(Maybe Role)
     -- "role": "main",
   , _theme_store_id :: !(Maybe Word64)
     -- "theme_store_id": 796,

@@ -4,19 +4,20 @@ module Shopify.Api.Customers.Addresses where
 
 import RIO
 import Servant
+import Servant.Client.Core (AuthenticatedRequest)
 
+import Shopify.Api.Admin.OAuth.Data.AccessToken (accessTokenL)
 import Shopify.Api.Customers.Addresses.Req.GetAddresses as GetAddresses
 import Shopify.Api.Customers.Addresses.Req.Data.AddressOperation (AddressOperation)
 import Shopify.Data.Response (Errors)
 import Shopify.Data.Customers.CustomerId (CustomerId)
 import Shopify.Data.Customers.Addresses.AddressId (AddressId)
 import Shopify.Data.Customers.Addresses.Address (Addresses, SingleAddress)
-import Shopify.Servant.Client.Util (getApiClients)
+import Shopify.Servant.Client.Util (getApiClients, mkShopifyAuthenticateReq)
+import Shopify.Servant.DotJSON (DotJSON)
 import Shopify.TestApp.Types (ApiHttpClientResources)
 
-type Api = "customers" :> AddressApi
-
-type AddressApi
+type Api
   = GetAddresses
   :<|> GetAddressById
   :<|> CreateAddress
@@ -25,110 +26,215 @@ type AddressApi
   :<|> BulkAddressOp
   :<|> SetDefaultAddress
 
-( _getAddresses
-  :<|> getAddressById
-  :<|> createAddress
-  :<|> updateAddress
-  :<|> deleteAddress
-  :<|> bulkAddressOp
-  :<|> setDefaultAddress ) = getApiClients (Proxy @Api)
+_getAddresses
+  :<|> _getAddressById
+  :<|> _createAddress
+  :<|> _updateAddress
+  :<|> _deleteAddress
+  :<|> _bulkAddressOp
+  :<|> _setDefaultAddress
+  = getApiClients (Proxy @Api)
+
+----------------
+-- Type Synonyms
+
+-- /customers/#{customer_id}/addresses
+type AddressesCommonApi a
+  = AuthProtect "shopify-access-token"
+  :> "customers"
+  :> Capture "customer_id" CustomerId
+  :> "addresses"
+  :> a
+
+-- /customers/#{customer_id}/addresses/#{address_id}
+type SingleAddressCommonApi a
+  = AddressesCommonApi
+  ( Capture "address_id" AddressId
+  :> a
+  )
+
+-- /customers/#{customer_id}/addresses.json
+type AddressesApi a
+  = AddressesCommonApi ( DotJSON :> a )
+
+-- /customers/#{customer_id}/addresses/#{address_id}.json
+type SingleAddressApi a
+  = SingleAddressCommonApi ( DotJSON :> a )
 
 -------------
 -- GetAddress
 
 type GetAddresses
-  = Capture "customer_id" CustomerId
-    :> "addresses"
-    :> QueryParam "limit" Word64
-    :> QueryParam "page" Word64
-    :> Get '[JSON] Addresses
-    -- GET /admin/api/2019-04/customers/#{customer_id}/addresses.json
-    -- Retrieves a list of addresses for a customer
+  = AddressesApi
+  (  QueryParam "limit" Word64
+  :> QueryParam "page" Word64
+  :> Get '[JSON] Addresses
+  )
+  -- GET /admin/api/2019-04/customers/#{customer_id}/addresses.json
+  -- Retrieves a list of addresses for a customer
 
-_getAddresses :: CustomerId -> Maybe Word64 -> Maybe Word64 -> RIO ApiHttpClientResources Addresses
+_getAddresses
+  :: AuthenticatedRequest (AuthProtect "shopify-access-token")
+  -> CustomerId
+  -> Maybe Word64
+  -> Maybe Word64
+  -> RIO ApiHttpClientResources Addresses
 
 getAddresses :: CustomerId -> GetAddresses.Req -> RIO ApiHttpClientResources Addresses
-getAddresses customerId (GetAddresses.Req _limit _page) = _getAddresses
-  customerId _limit _page
+getAddresses customerId (GetAddresses.Req _limit _page) = do
+  token <- view accessTokenL
+  _getAddresses (mkShopifyAuthenticateReq token) customerId _limit _page
 
 -----------------
 -- GetAddressById
 
 type GetAddressById
-  = Capture "customer_id" CustomerId
-  :> "addresses"
-  :> Capture "address_id" AddressId
-  :> Get '[JSON] SingleAddress
+  = SingleAddressApi
+  ( Get '[JSON] SingleAddress
+  )
   -- GET /admin/api/2019-04/customers/#{customer_id}/addresses/#{address_id}.json
   -- Retrieves details for a single customer address
 
-getAddressById :: CustomerId -> AddressId -> RIO ApiHttpClientResources SingleAddress
+_getAddressById
+  :: AuthenticatedRequest (AuthProtect "shopify-access-token")
+  -> CustomerId
+  -> AddressId
+  -> RIO ApiHttpClientResources SingleAddress
+
+getAddressById
+  :: CustomerId
+  -> AddressId
+  -> RIO ApiHttpClientResources SingleAddress
+getAddressById customerId addressId = do
+  token <- view accessTokenL
+  _getAddressById (mkShopifyAuthenticateReq token) customerId addressId
 
 ----------------
 -- CreateAddress
 
 type CreateAddress
-  = Capture "customer_id" CustomerId
-    :> "addresses"
-    :> ReqBody '[JSON] SingleAddress
-    :> Post '[JSON] SingleAddress
-    -- POST /admin/api/2019-04/customers/#{customer_id}/addresses.json
-    -- Creates a new address for a customer
+  = AddressesApi
+  (  ReqBody '[JSON] SingleAddress
+  :> Post '[JSON] SingleAddress
+  )
+  -- POST /admin/api/2019-04/customers/#{customer_id}/addresses.json
+  -- Creates a new address for a customer
 
-createAddress :: CustomerId -> SingleAddress -> RIO ApiHttpClientResources SingleAddress
+_createAddress
+  :: AuthenticatedRequest (AuthProtect "shopify-access-token")
+  -> CustomerId
+  -> SingleAddress
+  -> RIO ApiHttpClientResources SingleAddress
+
+createAddress
+  :: CustomerId
+  -> SingleAddress
+  -> RIO ApiHttpClientResources SingleAddress
+createAddress customerId address = do
+  token <- view accessTokenL
+  _createAddress (mkShopifyAuthenticateReq token) customerId address
 
 ----------------
 -- UpdateAddress
 
 type UpdateAddress
-  = Capture "customer_id" CustomerId
-  :> "addresses"
-  :> ReqBody '[JSON] SingleAddress
+  = SingleAddressApi
+  ( ReqBody '[JSON] SingleAddress
   :> Put '[JSON] SingleAddress
+  )
   -- PUT /admin/api/2019-04/customers/#{customer_id}/addresses/#{address_id}.json
   -- Updates an existing customer address
 
-updateAddress :: CustomerId -> SingleAddress -> RIO ApiHttpClientResources SingleAddress
+_updateAddress
+  :: AuthenticatedRequest (AuthProtect "shopify-access-token")
+  -> CustomerId
+  -> AddressId
+  -> SingleAddress
+  -> RIO ApiHttpClientResources SingleAddress
+
+updateAddress
+  :: CustomerId
+  -> AddressId
+  -> SingleAddress
+  -> RIO ApiHttpClientResources SingleAddress
+updateAddress customerId addressId address = do
+  token <- view accessTokenL
+  _updateAddress (mkShopifyAuthenticateReq token) customerId addressId address
 
 ----------------
 -- DeleteAddress
 
 type DeleteAddress
-  = Capture "customer_id" CustomerId
-    :> "addresses"
-    :> Capture "address_id" AddressId
-    :> Delete '[JSON] Errors
+  = SingleAddressApi
+  ( Delete '[JSON] Errors
+  )
     -- DELETE /admin/api/2019-04/customers/#{customer_id}/addresses/#{address_id}.json
     -- Removes an address from a customer’s address list
 
-deleteAddress :: CustomerId -> AddressId -> RIO ApiHttpClientResources Errors
+_deleteAddress
+  :: AuthenticatedRequest (AuthProtect "shopify-access-token")
+  -> CustomerId
+  -> AddressId
+  -> RIO ApiHttpClientResources Errors
+
+deleteAddress
+  :: CustomerId
+  -> AddressId
+  -> RIO ApiHttpClientResources Errors
+deleteAddress customerId addressId = do
+  token <- view accessTokenL
+  _deleteAddress (mkShopifyAuthenticateReq token) customerId addressId
 
 ----------------
 -- BulkAddressOp
 
 type BulkAddressOp
-  = Capture "customer_id" CustomerId
-  :> "addresses"
-  :> "set"
+  = AddressesCommonApi
+  ( "set" :> DotJSON
   :> QueryParams "address_ids" AddressId
   :> QueryParam "operation" AddressOperation
   :> Put '[JSON] Errors
+  )
   -- PUT /admin/api/2019-04/customers/#{customer_id}/addresses/set.json?address_ids[]=1053317329&operation=destroy
   -- Performs bulk operations for multiple customer addresses
 
-bulkAddressOp :: CustomerId -> [AddressId] -> Maybe AddressOperation -> RIO ApiHttpClientResources Errors
+_bulkAddressOp
+  :: AuthenticatedRequest (AuthProtect "shopify-access-token")
+  -> CustomerId
+  -> [AddressId]
+  -> Maybe AddressOperation
+  -> RIO ApiHttpClientResources Errors
+
+bulkAddressOp
+  :: CustomerId
+  -> [AddressId]
+  -> Maybe AddressOperation
+  -> RIO ApiHttpClientResources Errors
+bulkAddressOp customerId addressIds mOp = do
+  token <- view accessTokenL
+  _bulkAddressOp (mkShopifyAuthenticateReq token) customerId addressIds mOp
 
 --------------------
 -- SetDefaultAddress
 
 type SetDefaultAddress
-  = Capture "customer_id" CustomerId
-  :> "addresses"
-  :> Capture "address_id" AddressId
-  :> "default"
+  = SingleAddressCommonApi
+  ( "default" :> DotJSON
   :> Put '[JSON] SingleAddress
+  )
   -- PUT /admin/api/2019-04/customers/#{customer_id}/addresses/#{address_id}/default.json
   -- Sets the default address for a customer
 
-setDefaultAddress :: CustomerId -> AddressId -> RIO ApiHttpClientResources SingleAddress
+_setDefaultAddress
+  :: AuthenticatedRequest (AuthProtect "shopify-access-token")
+  -> CustomerId
+  -> AddressId
+  -> RIO ApiHttpClientResources SingleAddress
 
+setDefaultAddress
+  :: CustomerId
+  -> AddressId
+  -> RIO ApiHttpClientResources SingleAddress
+setDefaultAddress customerId addressIds = do
+  token <- view accessTokenL
+  _setDefaultAddress (mkShopifyAuthenticateReq token) customerId addressIds
