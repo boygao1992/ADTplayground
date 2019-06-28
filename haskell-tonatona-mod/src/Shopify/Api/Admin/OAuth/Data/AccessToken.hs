@@ -6,13 +6,20 @@ import RIO
 import Data.Aeson (FromJSON, ToJSON)
 import Servant (FromHttpApiData, ToHttpApiData)
 import Database.Beam.MySQL (MySQL)
-import Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax, fromBackendRow, sqlValueSyntax)
+import Database.Beam.Postgres (Postgres)
+import Database.Beam.Migrate.Generics
+import Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax, sqlValueSyntax)
 
 class HasAccessToken env where
   accessTokenL :: Lens' env AccessToken
 
 newtype AccessToken = AccessToken { unAccessToken :: Text }
-  deriving newtype (Eq, Ord, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, IsString)
+  deriving newtype
+    ( Eq, Ord, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, IsString
+    , HasDefaultSqlDataType Postgres
+    , FromBackendRow Postgres
+    , FromBackendRow MySQL
+    )
   deriving (Show)
 instance HasAccessToken AccessToken where
   accessTokenL = id
@@ -20,5 +27,4 @@ instance HasAccessToken AccessToken where
 instance HasSqlValueSyntax be Text => HasSqlValueSyntax be AccessToken where
   sqlValueSyntax = sqlValueSyntax . unAccessToken
 
-instance FromBackendRow MySQL AccessToken where
-  fromBackendRow = AccessToken <$> fromBackendRow
+

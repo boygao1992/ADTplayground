@@ -5,12 +5,14 @@ import RIO
 import Tonatona.Options.Parser
 import Tonatona.Logger.Options
 import Tonatona.Beam.MySQL.Options
+import Tonatona.Beam.Postgres.Options
 import Tonatona.Servant.Options
 import Tonatona.Shopify.Options (HasShopifyOptions, ShopifyOptions, shopifyOptionsL)
 
 import Tonatona.WithResource
 import Tonatona.Logger.Resources
 import Tonatona.Beam.MySQL.Resources
+import Tonatona.Beam.Postgres.Resources
 import Tonatona.Servant.Resources
 import Tonatona.Shopify.Resources (HasShopifyResources, ShopifyResources, shopifyResourcesL)
 
@@ -22,15 +24,18 @@ import Shopify.Api.Admin.OAuth.Data.AccessToken (HasAccessToken, AccessToken, ac
 data Options = Options
   { optionsLogger :: !LoggerOptions
   , optionsBeamMySQL :: !BeamMySQLOptions
+  , optionsBeamPostgres :: !BeamPostgresOptions
   , optionsServant :: !ServantOptions
   , optionsShopify :: !ShopifyOptions
   }
 instance HasParser Options where
-  parser = Options <$> parser <*> parser <*> parser <*> parser
+  parser = Options <$> parser <*> parser <*> parser <*> parser <*> parser
 instance HasLoggerOptions Options where
   loggerOptionsL = lens optionsLogger \x y -> x { optionsLogger = y }
 instance HasBeamMySQLOptions Options where
   beamMySQLOptionsL = lens optionsBeamMySQL \x y -> x { optionsBeamMySQL = y }
+instance HasBeamPostgresOptions Options where
+  beamPostgresOptionsL = lens optionsBeamPostgres \x y -> x { optionsBeamPostgres = y }
 instance HasServantOptions Options where
   servantOptionsL = lens optionsServant \x y -> x { optionsServant = y }
 instance HasShopifyOptions Options where
@@ -39,15 +44,18 @@ instance HasShopifyOptions Options where
 data Resources = Resources
   { resourceLogFunc :: !LoggerLogFunc
   , resourceBeamMySQL :: !BeamMySQLResources
+  , resourceBeamPostgres :: !BeamPostgresResources
   , resourceServant :: !ServantResources
   , resourceShopify :: !ShopifyResources
   }
 instance With Options Resources where
-  withResource = Resources <$> withResource <*> withResource <*> withResource <*> withResource
+  withResource = Resources <$> withResource <*> withResource <*> withResource <*> withResource <*> withResource
 instance HasLogFunc Resources where
   logFuncL = lens resourceLogFunc (\x y -> x { resourceLogFunc = y }) . logFuncL
 instance HasBeamMySQLResources Resources where
   beamMySQLResourcesL = lens resourceBeamMySQL (\x y -> x { resourceBeamMySQL = y })
+instance HasBeamPostgresResources Resources where
+  beamPostgresResourcesL = lens resourceBeamPostgres (\x y -> x { resourceBeamPostgres = y })
 instance HasServantResources Resources where
   servantResourcesL = lens resourceServant \x y -> x { resourceServant = y }
 instance HasShopifyResources Resources where
@@ -70,6 +78,8 @@ instance HasLogFunc BaseHttpClientResources where
   logFuncL = _baseHttpClientAppResources . logFuncL
 instance HasBeamMySQLResources BaseHttpClientResources where
   beamMySQLResourcesL = _baseHttpClientAppResources . beamMySQLResourcesL
+instance HasBeamPostgresResources BaseHttpClientResources where
+  beamPostgresResourcesL = _baseHttpClientAppResources . beamPostgresResourcesL
 instance HasServantResources BaseHttpClientResources where
   servantResourcesL = _baseHttpClientAppResources . servantResourcesL
 instance HasShopifyResources BaseHttpClientResources where
@@ -95,6 +105,8 @@ instance HasLogFunc ApiHttpClientResources where
   logFuncL = _apiHttpClientAppResources . logFuncL
 instance HasBeamMySQLResources ApiHttpClientResources where
   beamMySQLResourcesL = _apiHttpClientAppResources . beamMySQLResourcesL
+instance HasBeamPostgresResources ApiHttpClientResources where
+  beamPostgresResourcesL = _apiHttpClientAppResources . beamPostgresResourcesL
 instance HasServantResources ApiHttpClientResources where
   servantResourcesL = _apiHttpClientAppResources . servantResourcesL
 instance HasShopifyResources ApiHttpClientResources where

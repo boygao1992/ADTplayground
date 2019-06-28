@@ -6,6 +6,8 @@ module Shopify.TestApp.Database where
 import RIO
 
 import Database.Beam.Schema
+import Database.Beam.Migrate
+import Database.Beam.Postgres
 
 import qualified Shopify.TestApp.Database.Oauth as O
 import qualified Shopify.TestApp.Database.Company as C
@@ -20,13 +22,17 @@ data TestAppDb f = TestAppDb
   } deriving (Generic, Database be)
 
 testappDb :: DatabaseSettings be TestAppDb
-testappDb = defaultDbSettings `withDbModification`
-  dbModification
-  { _testappCompanyUser = modifyTableFields tableModification
-    { CU._company_id = C.CompanyId "company_id"
-    , CU._user_id = U.UserId "user_id"
-    }
-  }
+testappDb = defaultDbSettings
+  -- `withDbModification`
+  -- dbModification
+  -- { _testappCompanyUser = modifyTableFields tableModification
+  --   { CU._company_id = C.CompanyId "company_id"
+  --   , CU._user_id = U.UserId "user_id"
+  --   }
+  -- }
+
+migratableDbSettings :: CheckedDatabaseSettings Postgres TestAppDb
+migratableDbSettings = defaultMigratableDbSettings
 
 TestAppDb
   (TableLens oauth)

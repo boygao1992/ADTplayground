@@ -43,7 +43,7 @@ instance HasParser User where
     strOption
     $ long "bpu"
     <> metavar "USER"
-    <> value (User "root")
+    <> value (User "")
     <> help "set Beam Postgres Username"
 
 newtype Password = Password { unPassword :: String }
@@ -55,7 +55,7 @@ instance HasParser Password where
     strOption
     $ long "bpp"
     <> metavar "PASSWORD"
-    <> value (Password "root")
+    <> value (Password "")
     <> help "set Beam Postgres Password"
 
 newtype Database = Database { unDatabase :: String }
