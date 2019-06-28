@@ -2,19 +2,16 @@
 module Shopify.Data.Orders.DiscountAllocation where
 
 import RIO
-import Data.Aeson.TH
+import Data.Aeson.TH.Util (deriveJSONDropTwo)
+import Lens.Micro.TH.Util (makeLensesDropOne)
 import Shopify.Data.Orders.PriceSet (PriceSet)
 
 data DiscountAllocation = DiscountAllocation
-  { _amount :: !(Maybe Text)
+  { __amount :: !(Maybe Text)
     -- "amount": "5.00",
-  , _discount_application_index :: !(Maybe Word64)
+  , __discount_application_index :: !(Maybe Word64)
     -- "discount_application_index": 2,
-  , _amount_set :: !(Maybe PriceSet)
+  , __amount_set :: !(Maybe PriceSet)
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''DiscountAllocation)
+$(makeLensesDropOne ''DiscountAllocation)
+$(deriveJSONDropTwo ''DiscountAllocation)

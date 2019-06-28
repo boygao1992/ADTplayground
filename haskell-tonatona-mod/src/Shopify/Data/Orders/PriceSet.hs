@@ -2,16 +2,13 @@
 module Shopify.Data.Orders.PriceSet where
 
 import RIO
-import Data.Aeson.TH
+import Data.Aeson.TH.Util (deriveJSONDropTwo)
+import Lens.Micro.TH.Util (makeLensesDropOne)
 import Shopify.Data.Orders.Price (Price)
 
 data PriceSet = PriceSet
-  { _shop_money :: !(Maybe Price)
-  , _presentment_money :: !(Maybe Price)
+  { __shop_money :: !(Maybe Price)
+  , __presentment_money :: !(Maybe Price)
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''PriceSet)
+$(makeLensesDropOne ''PriceSet)
+$(deriveJSONDropTwo ''PriceSet)

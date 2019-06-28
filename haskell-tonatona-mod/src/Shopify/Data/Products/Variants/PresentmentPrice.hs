@@ -2,17 +2,14 @@
 module Shopify.Data.Products.Variants.PresentmentPrice where
 
 import RIO
-import Data.Aeson.TH
+import Data.Aeson.TH.Util (deriveJSONDropTwo)
+import Lens.Micro.TH.Util (makeLensesDropOne)
 import Shopify.Data.Orders.Price (Price)
 
 data PresentmentPrice = PresentmentPrice
-  { _price :: !(Maybe Price)
-  , _compare_at_price :: !(Maybe Text)
+  { __price :: !(Maybe Price)
+  , __compare_at_price :: !(Maybe Text)
     -- "compare_at_price": "299.00"
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''PresentmentPrice)
+$(makeLensesDropOne ''PresentmentPrice)
+$(deriveJSONDropTwo ''PresentmentPrice)

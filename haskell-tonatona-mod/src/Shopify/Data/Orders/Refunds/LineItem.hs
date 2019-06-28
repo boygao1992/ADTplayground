@@ -2,33 +2,30 @@
 module Shopify.Data.Orders.Refunds.LineItem where
 
 import RIO
-import Data.Aeson.TH
+import Data.Aeson.TH.Util (deriveJSONDropTwo)
+import Lens.Micro.TH.Util (makeLensesDropOne)
 import qualified Shopify.Data.Orders.LineItem as Order (LineItem)
 import Shopify.Data.Orders.PriceSet (PriceSet)
 
 data LineItem = LineItem
-  { _id :: !(Maybe Word64)
+  { __id :: !(Maybe Word64)
     -- "id": 209341123,
-  , _line_item :: !(Maybe Order.LineItem)
+  , __line_item :: !(Maybe Order.LineItem)
     -- "line_item": {},
-  , _line_item_id :: !(Maybe Word64)
+  , __line_item_id :: !(Maybe Word64)
     -- "line_item_id": 128323456,
-  , _quantity :: !(Maybe Word64)
+  , __quantity :: !(Maybe Word64)
     -- "quantity": 2,
-  , _location_id :: !(Maybe Word64)
+  , __location_id :: !(Maybe Word64)
     -- "location_id": 40642626,
-  , _restock_type :: !(Maybe Text)
+  , __restock_type :: !(Maybe Text)
     -- "restock_type": "return",
-  , _subtotal :: !(Maybe Word64)
+  , __subtotal :: !(Maybe Word64)
     -- "subtotal": 10.99,
-  , _total_tax :: !(Maybe Word64)
+  , __total_tax :: !(Maybe Word64)
     -- "total_tax": 2.67,
-  , _subtotal_set :: !(Maybe PriceSet)
-  , _total_tax_set :: !(Maybe PriceSet)
+  , __subtotal_set :: !(Maybe PriceSet)
+  , __total_tax_set :: !(Maybe PriceSet)
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''LineItem)
+$(makeLensesDropOne ''LineItem)
+$(deriveJSONDropTwo ''LineItem)

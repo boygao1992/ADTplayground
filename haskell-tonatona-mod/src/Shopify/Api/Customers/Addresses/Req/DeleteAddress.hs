@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Shopify.Data.Response where
+module Shopify.Api.Customers.Addresses.Req.DeleteAddress where
 
 import RIO
 import Data.Aeson.TH
@@ -13,7 +13,7 @@ $(deriveJSON
       }
     ''Base)
 
-data Errors = Errors
+data Res = Res
   { _errors :: !(Maybe Base)
   }
 $(deriveJSON
@@ -21,4 +21,4 @@ $(deriveJSON
       { fieldLabelModifier = drop 1
       , omitNothingFields = True
       }
-    ''Errors)
+    ''Res)

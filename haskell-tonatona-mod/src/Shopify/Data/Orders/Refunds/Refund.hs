@@ -3,7 +3,8 @@
 module Shopify.Data.Orders.Refunds.Refund where
 
 import RIO
-import Data.Aeson.TH
+import Data.Aeson.TH.Util (deriveJSONDropTwo)
+import Lens.Micro.TH.Util (makeLensesDropOne)
 import Shopify.Data.Orders.OrderId (OrderId)
 import Shopify.Data.Orders.Refunds.LineItem as Refund (LineItem)
 import Shopify.Data.Orders.Transactions.Transaction (Transaction)
@@ -11,32 +12,28 @@ import Shopify.Data.Orders.Refunds.RefundId (RefundId)
 import Shopify.Data.Orders.Refunds.OrderAdjustment (OrderAdjustment)
 
 data Refund = Refund
-  { _id :: !(Maybe RefundId)
+  { __id :: !(Maybe RefundId)
     -- "id": 509562969,
-  , _order_id :: !(Maybe OrderId)
+  , __order_id :: !(Maybe OrderId)
     -- "order_id": 450789469,
-  , _created_at :: !(Maybe Text)
+  , __created_at :: !(Maybe Text)
     -- "created_at": "2019-04-09T10:02:43-04:00",
-  , _note :: !(Maybe Text)
+  , __note :: !(Maybe Text)
     -- "note": "it broke during shipping",
-  , _user_id :: !(Maybe Word64)
+  , __user_id :: !(Maybe Word64)
     -- "user_id": 799407056,
-  , _processed_at :: !(Maybe Text)
+  , __processed_at :: !(Maybe Text)
     -- "processed_at": "2019-04-09T10:02:43-04:00",
-  , _restock :: !(Maybe Bool)
+  , __restock :: !(Maybe Bool)
     -- "restock": true,
-  , _admin_graphql_api_id :: !(Maybe Text)
+  , __admin_graphql_api_id :: !(Maybe Text)
     -- "admin_graphql_api_id": "gid://shopify/Refund/509562969",
-  , _refund_line_items :: !(Maybe [Refund.LineItem])
-  , _transactions :: !(Maybe [Transaction])
-  , _order_adjustments :: !(Maybe [OrderAdjustment])
+  , __refund_line_items :: !(Maybe [Refund.LineItem])
+  , __transactions :: !(Maybe [Transaction])
+  , __order_adjustments :: !(Maybe [OrderAdjustment])
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''Refund)
+$(makeLensesDropOne ''Refund)
+$(deriveJSONDropTwo ''Refund)
 
 -- GET /admin/api/2019-04/orders/#{order_id}/refunds.json
 -- Retrieves a list of refunds for an order

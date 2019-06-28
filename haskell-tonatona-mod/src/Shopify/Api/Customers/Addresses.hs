@@ -9,7 +9,7 @@ import Servant.Client.Core (AuthenticatedRequest)
 import Shopify.Api.Admin.OAuth.Data.AccessToken (accessTokenL)
 import Shopify.Api.Customers.Addresses.Req.GetAddresses as GetAddresses
 import Shopify.Api.Customers.Addresses.Req.Data.AddressOperation (AddressOperation)
-import Shopify.Data.Response (Errors)
+import Shopify.Api.Customers.Addresses.Req.DeleteAddress as DeleteAddress (Res)
 import Shopify.Data.Customers.CustomerId (CustomerId)
 import Shopify.Data.Customers.Addresses.AddressId (AddressId)
 import Shopify.Data.Customers.Addresses.Address (Addresses, SingleAddress)
@@ -39,7 +39,7 @@ _getAddresses
 -- Type Synonyms
 
 -- /customers/#{customer_id}/addresses
-type AddressesCommonApi a
+type AddressesApi a
   = AuthProtect "shopify-access-token"
   :> "customers"
   :> Capture "customer_id" CustomerId
@@ -47,31 +47,24 @@ type AddressesCommonApi a
   :> a
 
 -- /customers/#{customer_id}/addresses/#{address_id}
-type SingleAddressCommonApi a
-  = AddressesCommonApi
+type SingleAddressApi a
+  = AddressesApi
   ( Capture "address_id" AddressId
   :> a
   )
-
--- /customers/#{customer_id}/addresses.json
-type AddressesApi a
-  = AddressesCommonApi ( DotJSON :> a )
-
--- /customers/#{customer_id}/addresses/#{address_id}.json
-type SingleAddressApi a
-  = SingleAddressCommonApi ( DotJSON :> a )
 
 -------------
 -- GetAddress
 
 type GetAddresses
   = AddressesApi
-  (  QueryParam "limit" Word64
+  ( DotJSON
+  :> QueryParam "limit" Word64
   :> QueryParam "page" Word64
   :> Get '[JSON] Addresses
   )
-  -- GET /admin/api/2019-04/customers/#{customer_id}/addresses.json
-  -- Retrieves a list of addresses for a customer
+-- GET /admin/api/2019-04/customers/#{customer_id}/addresses.json
+-- Retrieves a list of addresses for a customer
 
 _getAddresses
   :: AuthenticatedRequest (AuthProtect "shopify-access-token")
@@ -90,10 +83,11 @@ getAddresses customerId (GetAddresses.Req _limit _page) = do
 
 type GetAddressById
   = SingleAddressApi
-  ( Get '[JSON] SingleAddress
+  ( DotJSON
+  :> Get '[JSON] SingleAddress
   )
-  -- GET /admin/api/2019-04/customers/#{customer_id}/addresses/#{address_id}.json
-  -- Retrieves details for a single customer address
+-- GET /admin/api/2019-04/customers/#{customer_id}/addresses/#{address_id}.json
+-- Retrieves details for a single customer address
 
 _getAddressById
   :: AuthenticatedRequest (AuthProtect "shopify-access-token")
@@ -114,11 +108,12 @@ getAddressById customerId addressId = do
 
 type CreateAddress
   = AddressesApi
-  (  ReqBody '[JSON] SingleAddress
+  ( DotJSON
+  :> ReqBody '[JSON] SingleAddress
   :> Post '[JSON] SingleAddress
   )
-  -- POST /admin/api/2019-04/customers/#{customer_id}/addresses.json
-  -- Creates a new address for a customer
+-- POST /admin/api/2019-04/customers/#{customer_id}/addresses.json
+-- Creates a new address for a customer
 
 _createAddress
   :: AuthenticatedRequest (AuthProtect "shopify-access-token")
@@ -139,11 +134,12 @@ createAddress customerId address = do
 
 type UpdateAddress
   = SingleAddressApi
-  ( ReqBody '[JSON] SingleAddress
+  ( DotJSON
+  :> ReqBody '[JSON] SingleAddress
   :> Put '[JSON] SingleAddress
   )
-  -- PUT /admin/api/2019-04/customers/#{customer_id}/addresses/#{address_id}.json
-  -- Updates an existing customer address
+-- PUT /admin/api/2019-04/customers/#{customer_id}/addresses/#{address_id}.json
+-- Updates an existing customer address
 
 _updateAddress
   :: AuthenticatedRequest (AuthProtect "shopify-access-token")
@@ -166,21 +162,22 @@ updateAddress customerId addressId address = do
 
 type DeleteAddress
   = SingleAddressApi
-  ( Delete '[JSON] Errors
+  ( DotJSON
+  :> Delete '[JSON] DeleteAddress.Res
   )
-    -- DELETE /admin/api/2019-04/customers/#{customer_id}/addresses/#{address_id}.json
-    -- Removes an address from a customer’s address list
+-- DELETE /admin/api/2019-04/customers/#{customer_id}/addresses/#{address_id}.json
+-- Removes an address from a customer’s address list
 
 _deleteAddress
   :: AuthenticatedRequest (AuthProtect "shopify-access-token")
   -> CustomerId
   -> AddressId
-  -> RIO ApiHttpClientResources Errors
+  -> RIO ApiHttpClientResources DeleteAddress.Res
 
 deleteAddress
   :: CustomerId
   -> AddressId
-  -> RIO ApiHttpClientResources Errors
+  -> RIO ApiHttpClientResources DeleteAddress.Res
 deleteAddress customerId addressId = do
   token <- view accessTokenL
   _deleteAddress (mkShopifyAuthenticateReq token) customerId addressId
@@ -189,27 +186,27 @@ deleteAddress customerId addressId = do
 -- BulkAddressOp
 
 type BulkAddressOp
-  = AddressesCommonApi
+  = AddressesApi
   ( "set" :> DotJSON
   :> QueryParams "address_ids" AddressId
   :> QueryParam "operation" AddressOperation
-  :> Put '[JSON] Errors
+  :> Put '[JSON] NoContent
   )
-  -- PUT /admin/api/2019-04/customers/#{customer_id}/addresses/set.json?address_ids[]=1053317329&operation=destroy
-  -- Performs bulk operations for multiple customer addresses
+-- PUT /admin/api/2019-04/customers/#{customer_id}/addresses/set.json?address_ids[]=1053317329&operation=destroy
+-- Performs bulk operations for multiple customer addresses
 
 _bulkAddressOp
   :: AuthenticatedRequest (AuthProtect "shopify-access-token")
   -> CustomerId
   -> [AddressId]
   -> Maybe AddressOperation
-  -> RIO ApiHttpClientResources Errors
+  -> RIO ApiHttpClientResources NoContent
 
 bulkAddressOp
   :: CustomerId
   -> [AddressId]
   -> Maybe AddressOperation
-  -> RIO ApiHttpClientResources Errors
+  -> RIO ApiHttpClientResources NoContent
 bulkAddressOp customerId addressIds mOp = do
   token <- view accessTokenL
   _bulkAddressOp (mkShopifyAuthenticateReq token) customerId addressIds mOp
@@ -218,12 +215,12 @@ bulkAddressOp customerId addressIds mOp = do
 -- SetDefaultAddress
 
 type SetDefaultAddress
-  = SingleAddressCommonApi
+  = SingleAddressApi
   ( "default" :> DotJSON
   :> Put '[JSON] SingleAddress
   )
-  -- PUT /admin/api/2019-04/customers/#{customer_id}/addresses/#{address_id}/default.json
-  -- Sets the default address for a customer
+-- PUT /admin/api/2019-04/customers/#{customer_id}/addresses/#{address_id}/default.json
+-- Sets the default address for a customer
 
 _setDefaultAddress
   :: AuthenticatedRequest (AuthProtect "shopify-access-token")

@@ -2,23 +2,20 @@
 module Shopify.Data.Products.Option where
 
 import RIO
-import Data.Aeson.TH
+import Data.Aeson.TH.Util (deriveJSONDropTwo)
+import Lens.Micro.TH.Util (makeLensesDropOne)
 import Shopify.Data.Products.ProductId (ProductId)
 
 data Option = Option
-  { _id :: !(Maybe Word64)
+  { __id :: !(Maybe Word64)
     -- "id": 594680422,
-  , _product_id :: !(Maybe ProductId)
+  , __product_id :: !(Maybe ProductId)
     -- "product_id": 632910392,
-  , _name :: !(Maybe Text)
+  , __name :: !(Maybe Text)
     -- "name": "Color",
-  , _position :: !(Maybe Word32)
+  , __position :: !(Maybe Word32)
     -- "position": 1,
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''Option)
+$(makeLensesDropOne ''Option)
+$(deriveJSONDropTwo ''Option)
 

@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 module Shopify.Api.Customers where
@@ -8,18 +7,18 @@ import Servant
 import Servant.Client.Core (AuthenticatedRequest)
 
 import Shopify.Api.Admin.OAuth.Data.AccessToken (accessTokenL)
-import Shopify.Data.Orders.Order (Orders)
-import Shopify.Data.Customers.Customer
-import Shopify.Data.Customers.CustomerId (CustomerId)
+import Shopify.Api.Customers.Req.CreateAccountActivationUrl as CreateAccountActivationUrl (Res)
+import Shopify.Api.Customers.Req.CountCustomers as CountCustomers (Res)
 import Shopify.Api.Customers.Req.GetCustomers as GetCustomers (Req(..))
 import Shopify.Api.Customers.Req.SearchCustomers as SearchCustomers (Req(..))
-
+import Shopify.Api.Customers.Req.SendAccountInvite (SingleCustomerInvite)
+import Shopify.Api.Customers.Req.DeleteCustomer as DeleteCustomer (Res)
+import Shopify.Data.Customers.Customer
+import Shopify.Data.Customers.CustomerId (CustomerId)
+import Shopify.Data.Orders.Order (Orders)
 import Shopify.Servant.DotJSON (DotJSON)
 import Shopify.Servant.Client.Util (getApiClients, mkShopifyAuthenticateReq)
-
 import Shopify.TestApp.Types (ApiHttpClientResources)
-
--- type Api = "customers" :> CustomersApi
 
 type Api
   = GetCustomers
@@ -71,29 +70,26 @@ _getCustomers
 ----------------
 -- Type Synonyms
 
-type CustomersCommonApi a
+-- /customers
+type CustomersApi a
   = AuthProtect "shopify-access-token"
   :> "customers"
   :> a
 
-type SingleCustomerCommonApi a
-  = CustomersCommonApi
+-- /customers/#{customer_id}
+type SingleCustomerApi a
+  = CustomersApi
   ( Capture "customer_id" CustomerId
   :> a
   )
-
-type CustomersApi a
-  = CustomersCommonApi ( DotJSON :> a )
-
-type SingleCustomerApi a
-  = SingleCustomerCommonApi ( DotJSON :> a )
 
 ---------------
 -- getCustomers
 
 type GetCustomers
   = CustomersApi
-  ( QueryParam "ids" Text -- TODO implement ToHTTPApiData for CustomerIds
+  ( DotJSON
+  :> QueryParam "ids" Text -- TODO implement ToHTTPApiData for CustomerIds
   -- Restrict results to customers specified by a comma-separated list of IDs.
   :> QueryParam "since_id" CustomerId
   -- Restrict results to those after the specified ID.
@@ -131,7 +127,7 @@ _getCustomers :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> Ma
 -- searchCustomers
 
 type SearchCustomers
-  = CustomersCommonApi
+  = CustomersApi
   ( "search" :> DotJSON
   :> QueryParam "order" Text
   -- Set the field and direction by which to order results.
@@ -161,7 +157,8 @@ _searchCustomers :: AuthenticatedRequest (AuthProtect "shopify-access-token") ->
 
 type GetCustomerById
   = SingleCustomerApi
-  ( Get '[JSON] SingleCustomer
+  ( DotJSON
+  :> Get '[JSON] SingleCustomer
   )
   -- GET /admin/api/2019-04/customers/#{customer_id}.json
   -- Retrieves a single customer
@@ -178,7 +175,8 @@ _getCustomerById :: AuthenticatedRequest (AuthProtect "shopify-access-token") ->
 
 type CreateCustomer
   = CustomersApi
-  ( ReqBody '[JSON] SingleCustomer
+  ( DotJSON
+  :> ReqBody '[JSON] SingleCustomer
   :> Post '[JSON] SingleCustomer
   )
   -- POST /admin/api/2019-04/customers.json
@@ -196,7 +194,8 @@ _createCustomer :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> 
 
 type UpdateCustomer
   = SingleCustomerApi
-  ( ReqBody '[JSON] SingleCustomer
+  ( DotJSON
+  :> ReqBody '[JSON] SingleCustomer
   :> Put '[JSON] SingleCustomer
   )
   -- PUT /admin/api/2019-04/customers/#{customer_id}.json
@@ -214,41 +213,42 @@ _updateCustomer :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> 
 
 type DeleteCustomer
   = SingleCustomerApi
-  ( Delete '[JSON] DeleteCustomerResponse
+  ( DotJSON
+  :> Delete '[JSON] DeleteCustomer.Res
   )
   -- DELETE /admin/api/2019-04/customers/#{customer_id}.json
   -- Deletes a customer.
 
-deleteCustomer :: CustomerId -> RIO ApiHttpClientResources DeleteCustomerResponse
+deleteCustomer :: CustomerId -> RIO ApiHttpClientResources DeleteCustomer.Res
 deleteCustomer cid = do
   token <- view accessTokenL
   _deleteCustomer (mkShopifyAuthenticateReq token) cid
 
-_deleteCustomer :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> RIO ApiHttpClientResources DeleteCustomerResponse
+_deleteCustomer :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> RIO ApiHttpClientResources DeleteCustomer.Res
 
 -----------------------------
 -- createAccountActivationUrl
 
 type CreateAccountActivationUrl
-  = SingleCustomerCommonApi
+  = SingleCustomerApi
   ( "account_activation_url" :> DotJSON
-  :> Post '[JSON] AccountActivationUrl
+  :> Post '[JSON] CreateAccountActivationUrl.Res
   )
   -- POST /admin/api/2019-04/customers/#{customer_id}/account_activation_url.json
   -- Creates an account activation URL for a customer
 
-createAccountActivationUrl :: CustomerId -> RIO ApiHttpClientResources AccountActivationUrl
+createAccountActivationUrl :: CustomerId -> RIO ApiHttpClientResources CreateAccountActivationUrl.Res
 createAccountActivationUrl cid = do
   token <- view accessTokenL
   _createAccountActivationUrl (mkShopifyAuthenticateReq token) cid
 
-_createAccountActivationUrl :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> RIO ApiHttpClientResources AccountActivationUrl
+_createAccountActivationUrl :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> RIO ApiHttpClientResources CreateAccountActivationUrl.Res
 
 --------------------
 -- sendAccountInvite
 
 type SendAccountInvite
-  = SingleCustomerCommonApi
+  = SingleCustomerApi
   ( "send_invite" :> DotJSON
   :> ReqBody '[JSON] SingleCustomerInvite
   :> Post '[JSON] SingleCustomerInvite
@@ -267,25 +267,25 @@ _sendAccountInvite :: AuthenticatedRequest (AuthProtect "shopify-access-token") 
 -- countCustomers
 
 type CountCustomers
-  = SingleCustomerCommonApi
+  = SingleCustomerApi
   ( "count" :> DotJSON
-  :> Get '[JSON] GetCustomerCountResponse
+  :> Get '[JSON] CountCustomers.Res
   )
   -- GET /admin/api/2019-04/customers/count.json
   -- Retrieves a count of customers
 
-countCustomers :: CustomerId -> RIO ApiHttpClientResources GetCustomerCountResponse
+countCustomers :: CustomerId -> RIO ApiHttpClientResources CountCustomers.Res
 countCustomers cid = do
   token <- view accessTokenL
   _countCustomers (mkShopifyAuthenticateReq token) cid
 
-_countCustomers :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> RIO ApiHttpClientResources GetCustomerCountResponse
+_countCustomers :: AuthenticatedRequest (AuthProtect "shopify-access-token") -> CustomerId -> RIO ApiHttpClientResources CountCustomers.Res
 
 ------------------------
 -- getOrdersByCustomerId
 
 type GetOrdersByCustomerId
-  = SingleCustomerCommonApi
+  = SingleCustomerApi
   ( "orders" :> DotJSON
   :> Get '[JSON] Orders
   )

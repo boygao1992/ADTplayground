@@ -4,4 +4,4 @@
 tarballs/
 .stack-work/
 dist-newstyle/
-src/Test.hs
+src/Main.hs

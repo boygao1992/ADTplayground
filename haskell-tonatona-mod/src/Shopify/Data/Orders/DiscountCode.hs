@@ -2,19 +2,16 @@
 module Shopify.Data.Orders.DiscountCode where
 
 import RIO
-import Data.Aeson.TH
+import Data.Aeson.TH.Util (deriveJSONDropTwo)
+import Lens.Micro.TH.Util (makeLensesDropOne)
 
 data DiscountCode = DiscountCode
-  { _code :: !(Maybe Text)
+  { __code :: !(Maybe Text)
     -- "code": "TENOFF",
-  , _amount :: !(Maybe Text)
+  , __amount :: !(Maybe Text)
     -- "amount": "10.00",
-  , _type :: !(Maybe Text)
+  , __type :: !(Maybe Text)
     -- "type": "percentage"
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''DiscountCode)
+$(makeLensesDropOne ''DiscountCode)
+$(deriveJSONDropTwo ''DiscountCode)

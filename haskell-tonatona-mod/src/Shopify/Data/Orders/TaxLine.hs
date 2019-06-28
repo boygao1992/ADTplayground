@@ -2,21 +2,18 @@
 module Shopify.Data.Orders.TaxLine where
 
 import RIO
-import Data.Aeson.TH
+import Data.Aeson.TH.Util (deriveJSONDropTwo)
+import Lens.Micro.TH.Util (makeLensesDropOne)
 import Shopify.Data.Orders.PriceSet (PriceSet)
 
 data TaxLine = TaxLine
-  { _price :: !(Maybe Text)
+  { __price :: !(Maybe Text)
     -- "price": "11.94",
-  , _rate :: !(Maybe Double)
+  , __rate :: !(Maybe Double)
     -- "rate": 0.06,
-  , _title :: !(Maybe Text)
+  , __title :: !(Maybe Text)
     -- "title": "State Tax",
-  , _price_set :: !(Maybe PriceSet)
+  , __price_set :: !(Maybe PriceSet)
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''TaxLine)
+$(makeLensesDropOne ''TaxLine)
+$(deriveJSONDropTwo ''TaxLine)

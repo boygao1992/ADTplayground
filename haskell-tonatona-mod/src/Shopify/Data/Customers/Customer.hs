@@ -4,140 +4,73 @@
 module Shopify.Data.Customers.Customer where
 
 import RIO
-import Data.Aeson.TH
+import Data.Aeson.TH.Util (deriveJSONDropTwo)
+import Lens.Micro.TH.Util (makeLensesDropOne)
 
 import Shopify.Data.Customers.Addresses.Address as CustomerAddress
 import Shopify.Data.Customers.CustomerId (CustomerId)
 
-
 data Customer = Customer
-  { _id :: !(Maybe CustomerId)
+  { __id :: !(Maybe CustomerId)
     -- "id": 207119551,
-  , _email :: !(Maybe Text)
+  , __email :: !(Maybe Text)
     -- "email": "bob.norman@hostmail.com",
-  , _accepts_marketing :: !(Maybe Bool)
+  , __accepts_marketing :: !(Maybe Bool)
     -- "accepts_marketing": false,
-  , _created_at :: !(Maybe Text)
+  , __created_at :: !(Maybe Text)
     -- "created_at": "2019-04-18T15:41:45-04:00",
-  , _updated_at :: !(Maybe Text)
+  , __updated_at :: !(Maybe Text)
     -- "updated_at": "2019-04-18T15:41:45-04:00",
-  , _first_name :: !(Maybe Text)
+  , __first_name :: !(Maybe Text)
     -- "first_name": "Bob",
-  , _last_name :: !(Maybe Text)
+  , __last_name :: !(Maybe Text)
     -- "last_name": "Norman",
-  , _orders_count :: !(Maybe Word64)
+  , __orders_count :: !(Maybe Word64)
     -- "orders_count": 1,
-  , _state :: !(Maybe Text)
+  , __state :: !(Maybe Text)
     -- "state": "disabled",
-  , _total_spent :: !(Maybe Text)
+  , __total_spent :: !(Maybe Text)
     -- "total_spent": "199.65",
-  , _last_order_id :: !(Maybe Word64)
+  , __last_order_id :: !(Maybe Word64)
     -- "last_order_id": 450789469,
-  , _note :: !(Maybe Text)
+  , __note :: !(Maybe Text)
     -- "note": null,
-  , _verified_email :: !(Maybe Bool)
+  , __verified_email :: !(Maybe Bool)
     -- "verified_email": true,
-  , _multipass_identifier :: !(Maybe Text)
+  , __multipass_identifier :: !(Maybe Text)
     -- "multipass_identifier": null,
-  , _tax_exempt :: !(Maybe Bool)
+  , __tax_exempt :: !(Maybe Bool)
     -- "tax_exempt": false,
-  , _phone :: !(Maybe Text)
+  , __phone :: !(Maybe Text)
     -- "phone": null,
-  , _tags :: !(Maybe Text) -- NOTE a string of comma-separated values
+  , __tags :: !(Maybe Text) -- NOTE a string of comma-separated values
     -- "tags": "",
-  , _last_order_name :: !(Maybe Text)
+  , __last_order_name :: !(Maybe Text)
     -- "last_order_name": "#1001",
-  , _currency :: !(Maybe Text)
+  , __currency :: !(Maybe Text)
     -- "currency": "USD",
-  , _accepts_marketing_updated_at :: !(Maybe Text)
+  , __accepts_marketing_updated_at :: !(Maybe Text)
     -- "accepts_marketing_updated_at": "2005-06-12T11:57:11-04:00",
-  , _marketing_opt_in_level :: !(Maybe Text)
+  , __marketing_opt_in_level :: !(Maybe Text)
     -- "marketing_opt_in_level": null,
-  , _admin_graphql_api_id :: !(Maybe Text)
+  , __admin_graphql_api_id :: !(Maybe Text)
     -- "admin_graphql_api_id": "gid://shopify/Customer/207119551",
-  , _addresses :: !(Maybe [Address])
+  , __addresses :: !(Maybe [Address])
     -- "addresses": [{}]
-  , _default_address :: !(Maybe Address)
+  , __default_address :: !(Maybe Address)
     -- "default_address": {}
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''Customer)
+$(makeLensesDropOne ''Customer)
+$(deriveJSONDropTwo ''Customer)
 
 data SingleCustomer = SingleCustomer
-  { _customer :: !Customer
+  { __customer :: !Customer
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      }
-    ''SingleCustomer)
+$(deriveJSONDropTwo ''SingleCustomer)
 
 data Customers = Customers
-  { _customers :: ![Customer]
+  { __customers :: ![Customer]
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      }
-    ''Customers)
-
-data AccountActivationUrl = AccountActivationUrl
-  { _account_activation_url :: !(Maybe Text)
-  , _errors :: !(Maybe [Text])
-  } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''AccountActivationUrl)
-
-data CustomerInvite = CustomerInvite
-  { _to :: !(Maybe Text)
-  , _from :: !(Maybe Text)
-  , _subject :: !(Maybe Text)
-  , _custom_message :: !(Maybe Text)
-  , _bcc :: !(Maybe [Text])
-  } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''CustomerInvite)
-
-data SingleCustomerInvite = SingleCustomerInvite
-  { _customer_invite :: !CustomerInvite
-  } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''SingleCustomerInvite)
-
-data DeleteCustomerResponse = DeleteCustomerResponse
-  { __errors :: !(Maybe Text)
-  } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 2
-      , omitNothingFields = True
-      }
-    ''DeleteCustomerResponse)
-
-data GetCustomerCountResponse = GetCustomerCountResponse
-  { _count :: !(Maybe Word64)
-  } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''GetCustomerCountResponse)
+$(deriveJSONDropTwo ''Customers)
 
 

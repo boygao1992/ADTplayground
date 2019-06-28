@@ -4,7 +4,8 @@ module Shopify.Data.Orders.Fulfillments.Fulfillment where
 
 import RIO
 import Data.Aeson (Value)
-import Data.Aeson.TH
+import Data.Aeson.TH.Util (deriveJSONDropTwo)
+import Lens.Micro.TH.Util (makeLensesDropOne)
 import Shopify.Data.Orders.OrderId (OrderId)
 import Shopify.Data.Orders.Fulfillments.FulfillmentId (FulfillmentId)
 import Shopify.Data.Orders.Fulfillments.Status (Status)
@@ -14,54 +15,50 @@ import Shopify.Data.Orders.LineItem as Order (LineItem)
 
 
 data Fulfillment = Fulfillment
-  { _id :: !(Maybe FulfillmentId)
+  { __id :: !(Maybe FulfillmentId)
     -- "id": 255858046,
-  , _order_id :: !(Maybe OrderId)
+  , __order_id :: !(Maybe OrderId)
     -- "order_id": 450789469,
-  , _status :: !(Maybe Status)
+  , __status :: !(Maybe Status)
     -- "status": "failure",
-  , _created_at :: !(Maybe Text)
+  , __created_at :: !(Maybe Text)
     -- "created_at": "2019-05-03T11:02:30-04:00",
-  , _service :: !(Maybe Text)
+  , __service :: !(Maybe Text)
     -- "service": "manual",
-  , _updated_at :: !(Maybe Text)
+  , __updated_at :: !(Maybe Text)
     -- "updated_at": "2019-05-03T11:02:30-04:00",
-  , _tracking_company :: !(Maybe TrackingCompany)
+  , __tracking_company :: !(Maybe TrackingCompany)
     -- "tracking_company": null,
-  , _shipment_status :: !(Maybe ShipmentStatus)
+  , __shipment_status :: !(Maybe ShipmentStatus)
     -- "shipment_status": null,
-  , _location_id :: !(Maybe Word64)
+  , __location_id :: !(Maybe Word64)
     -- "location_id": 905684977,
-  , _tracking_number :: !(Maybe Text)
+  , __tracking_number :: !(Maybe Text)
     -- "tracking_number": "1Z2345",
-  , _tracking_numbers :: !(Maybe [Text])
+  , __tracking_numbers :: !(Maybe [Text])
     -- "tracking_numbers": [
     --   "1Z2345"
     -- ],
-  , _tracking_url :: !(Maybe Text)
+  , __tracking_url :: !(Maybe Text)
     -- "tracking_url": "http://wwwapps.ups.com/etracking/tracking.cgi?InquiryNumber1=1Z2345&TypeOfInquiryNumber=T&AcceptUPSLicenseAgreement=yes&submit=Track",
-  , _tracking_urls :: !(Maybe [Text])
+  , __tracking_urls :: !(Maybe [Text])
     -- "tracking_urls": [
     --   "http://wwwapps.ups.com/etracking/tracking.cgi?InquiryNumber1=1Z2345&TypeOfInquiryNumber=T&AcceptUPSLicenseAgreement=yes&submit=Track"
     -- ],
-  , _receipt :: !(Maybe Value)
+  , __receipt :: !(Maybe Value)
     -- "receipt": {
     --   "testcase": true,
     --   "authorization": "123456"
     -- },
-  , _name :: !(Maybe Text)
+  , __name :: !(Maybe Text)
     -- "name": "#1001.0",
-  , _admin_graphql_api_id :: !(Maybe Text)
+  , __admin_graphql_api_id :: !(Maybe Text)
     -- "admin_graphql_api_id": "gid://shopify/Fulfillment/255858046",
-  , _line_items :: !(Maybe [Order.LineItem])
+  , __line_items :: !(Maybe [Order.LineItem])
     -- "line_items": [
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''Fulfillment)
+$(makeLensesDropOne ''Fulfillment)
+$(deriveJSONDropTwo ''Fulfillment)
 
 
 -- GET /admin/api/2019-04/orders/#{order_id}/fulfillments.json

@@ -2,51 +2,42 @@
 module Shopify.Data.Themes.Theme where
 
 import RIO
-import Data.Aeson.TH
+import Data.Aeson.TH.Util (deriveJSONDropTwo)
+import Lens.Micro.TH.Util (makeLensesDropOne)
 import Shopify.Data.Themes.ThemeId (ThemeId)
 import Shopify.Data.Themes.Role (Role)
 
 data Theme = Theme
-  { _id :: !(Maybe ThemeId)
+  { __id :: !(Maybe ThemeId)
     -- "id": 73849602153,
-  , _name :: !(Maybe Text)
+  , __name :: !(Maybe Text)
     -- "name": "Debut",
-  , _created_at :: !(Maybe Text)
+  , __created_at :: !(Maybe Text)
     -- "created_at": "2019-06-07T10:37:05-04:00",
-  , _updated_at :: !(Maybe Text)
+  , __updated_at :: !(Maybe Text)
     -- "updated_at": "2019-06-07T10:37:16-04:00",
-  , _role :: !(Maybe Role)
+  , __role :: !(Maybe Role)
     -- "role": "main",
-  , _theme_store_id :: !(Maybe Word64)
+  , __theme_store_id :: !(Maybe Word64)
     -- "theme_store_id": 796,
-  , _previewable :: !(Maybe Bool)
+  , __previewable :: !(Maybe Bool)
     -- "previewable": true,
-  , _processing :: !(Maybe Bool)
+  , __processing :: !(Maybe Bool)
     -- "processing": false,
-  , _admin_graphql_api_id :: !(Maybe Text)
+  , __admin_graphql_api_id :: !(Maybe Text)
     -- "admin_graphql_api_id": "gid://shopify/Theme/73849602153"
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''Theme)
+$(makeLensesDropOne ''Theme)
+$(deriveJSONDropTwo ''Theme)
 
 data SingleTheme = SingleTheme
-  { _theme :: !Theme
+  { __theme :: !Theme
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      }
-    ''SingleTheme)
+$(makeLensesDropOne ''SingleTheme)
+$(deriveJSONDropTwo ''SingleTheme)
 
 data Themes = Themes
-  { _themes :: ![Theme]
+  { __themes :: ![Theme]
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      }
-    ''Themes)
+$(makeLensesDropOne ''Themes)
+$(deriveJSONDropTwo ''Themes)
