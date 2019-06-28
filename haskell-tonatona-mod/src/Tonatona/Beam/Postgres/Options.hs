@@ -78,5 +78,5 @@ instance HasParser Port where
     option auto
     $ long "bpP"
     <> metavar "PORT"
-    <> value (Port 3306)
+    <> value (Port 5432)
     <> help "set Beam Postgres Port"

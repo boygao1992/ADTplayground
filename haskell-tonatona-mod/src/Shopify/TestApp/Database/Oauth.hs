@@ -18,7 +18,7 @@ deriving instance Eq Oauth
 deriving instance Show Oauth
 
 instance Table OauthT where
-  data PrimaryKey OauthT f = Shopname(C f Text)
+  data PrimaryKey OauthT f = Shopname (C f Text)
     deriving (Generic, Beamable)
   primaryKey = Shopname . _shopname
 type Shopname = PrimaryKey OauthT Identity
