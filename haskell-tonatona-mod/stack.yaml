@@ -43,6 +43,7 @@ extra-deps:
 - beam-mysql-0.2.0.0
 - th-format-0.1.2.0
 - rio-0.1.9.2
+- html-parse-0.2.0.2
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

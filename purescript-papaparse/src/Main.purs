@@ -14,6 +14,9 @@ import Polaris.UI.Data.Route (Route(..), routeCodec)
 import Polaris.UI.Router (Query(..), component)
 import Routing.Duplex (parse)
 import Routing.Hash (getHash, matchesWith)
+import Web.HTML as HTML
+import Web.HTML.Window as Window
+import Web.HTML.Location as Location
 import Web.HTML.HTMLElement (HTMLElement)
 
 runUI :: HTMLElement -> Aff.Aff Unit
@@ -26,24 +29,20 @@ runUI body = do
 reRunUI :: HTMLElement -> Effect Unit
 reRunUI body = HA.runHalogenAff $ runUI body
 
--- main :: Effect Unit
--- main = HA.runHalogenAff do
---   body <- HA.awaitBody
---   runUI body
+getHostname :: Effect String
+getHostname = HTML.window >>= Window.location >>= Location.href -- TODO
 
 main :: Effect Unit
 main = do
+  hostname <- getHostname
   let
-    hostname = ""
     (env :: Env) = { hostname }
+    rootComponent = H.hoist (runAppM env) component
 
   initialHash <- getHash
-
   let
     (initialRoute :: Route)
       = fromMaybe Home <<< hush <<< parse routeCodec $ initialHash
-    rootComponent
-      = H.hoist (runAppM env) component
 
   HA.runHalogenAff do
     body <- HA.awaitBody

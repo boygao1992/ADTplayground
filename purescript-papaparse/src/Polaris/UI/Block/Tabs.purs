@@ -1,11 +1,10 @@
 module Polaris.UI.Block.Tabs where
 
-
-import DOM.HTML.Indexed
 import Prelude
 
+import DOM.HTML.Indexed (HTMLbutton, HTMLdiv, HTMLli, HTMLspan, HTMLul)
 import Data.Monoid (guard)
-import Halogen.HTML (HTML, IProp, ClassName(..))
+import Halogen.HTML (HTML)
 import Halogen.HTML as HH
 import Ocelot.Block.Builder (blockBuilder)
 

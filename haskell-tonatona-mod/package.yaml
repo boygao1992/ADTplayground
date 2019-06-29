@@ -56,7 +56,7 @@ dependencies:
 - microlens-th >= 0.4
 - template-haskell >= 2.14
 - time >= 1.9
-
+- html-parse
 
 
 ghc-options:
