@@ -175,6 +175,27 @@ unsafeModifyInputVariant f var rec = wrap $ unsafeSet (fst rep) val (unwrap rec)
         , result = f x.result
         }
 
+unsafeModifyFormFieldResult
+  :: ∀ form x y
+  . Newtype (form Variant InputFunction) (Variant x)
+  => Newtype (form Record FormField) { | y }
+  => (forall e o. FormFieldResult e o -> FormFieldResult e o)
+  -> form Variant InputFunction
+  -> form Record FormField
+  -> form Record FormField
+unsafeModifyFormFieldResult f var rec = wrap $ unsafeSet (fst rep) val (unwrap rec)
+  where
+    rep :: ∀ e i o. Tuple String (InputFunction e i o)
+    rep = case unsafeCoerce (unwrap var) of
+      VariantRep x -> Tuple x.type x.value
+
+    val :: ∀ e i o. FormField e i o
+    val = case unsafeGet (fst rep) (unwrap rec) of
+      FormField x -> FormField $ x
+        { touched = true
+        , result = f x.result
+        }
+
 unsafeRunValidationVariant
   :: ∀ form x y z m
    . Monad m

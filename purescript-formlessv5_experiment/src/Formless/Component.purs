@@ -10,15 +10,14 @@ import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, over, unwrap)
 import Data.Symbol (SProxy(..))
-import Data.Traversable (traverse_)
+import Data.Traversable (traverse_, for_)
 import Data.Tuple (Tuple(..))
 import Data.Variant (Variant, match, inj, expand)
 import Data.Variant.Internal (VariantRep(..))
-import Data.Traversable (for_)
-import Effect.Console (log)
 import Effect.Aff as Aff
-import Effect.Aff.Class (class MonadAff)
 import Effect.Aff.AVar as AVar
+import Effect.Aff.Class (class MonadAff)
+import Effect.Console (log)
 import Effect.Ref (Ref)
 import Effect.Ref as Ref
 import Formless.Action as FA
@@ -28,10 +27,9 @@ import Formless.Internal.Component as IC
 import Formless.Internal.Transform as IT
 import Formless.Transform.Record (UnwrapField, unwrapOutputFields)
 import Formless.Transform.Row (mkInputFields, class MakeInputFieldsFromRow)
-import Formless.Types.Component
-import Formless.Types.Component (Action, Component, HalogenM, Input, InternalState(..), Event(..), PublicAction, Query, QueryF(..), Spec, State, ValidStatus(..))
-import Formless.Types.Form
-import Formless.Validation
+import Formless.Types.Component (Action, Component, Debouncer, DebouncerField, Event(..), HalogenM, Input, InternalState(..), PublicAction, Query, QueryF(..), Spec, State, ValidStatus(..), _debouncerFieldM, _form)
+import Formless.Types.Form (FormField, FormProxy(..), FormValidationAction, InputField, InputFunction, OutputField, U)
+import Formless.Validation (Validation)
 import Halogen as H
 import Halogen.HTML as HH
 import Heterogeneous.Mapping as HM
@@ -370,6 +368,7 @@ handleAction handleAction' handleEvent action = flip match action
                   -- NOTE debug
                   H.liftEffect $ log "validation begins"
 
+                  H.modify_ \s -> s { form = IT.unsafeModifyFormFieldResult (const Validating) variant s.form }
                   -- eval $ H.action $ Validate action
                   handleAction handleAction' handleEvent (validateAction act)
 
