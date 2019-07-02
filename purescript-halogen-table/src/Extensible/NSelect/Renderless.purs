@@ -204,7 +204,7 @@ handleOnKeyDownInput kbEvent = do
       s <- getState
       let nextIndex = max 0 (s.highlightedIndex - 1)
       when (nextIndex /= s.highlightedIndex) $
-      handleHighlightedIndexChange nextIndex
+        handleHighlightedIndexChange nextIndex
     "ArrowDown" -> do
       H.liftEffect $ WE.preventDefault event
       s <- getState

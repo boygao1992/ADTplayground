@@ -11,10 +11,13 @@ import Halogen.HTML.Core (Prop, AttrName(AttrName))
 import Halogen.HTML.Properties (IProp)
 import Unsafe.Coerce (unsafeCoerce)
 
-data Color = RGB Int Int Int
+data Color
+  = RGB Int Int Int
+  | CurrentColor
 
 printColor :: Maybe Color -> String
 printColor (Just (RGB _r g b)) = "rgb(" <> (joinWith "," $ map show [_r, g, b]) <> ")"
+printColor (Just CurrentColor) = "currentColor"
 printColor Nothing = "None"
 
 data Transform

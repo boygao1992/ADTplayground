@@ -3,6 +3,8 @@ module Main (main) where
 import RIO
 import Shopify.TestApp.Types
 import Shopify.TestApp.Run (run)
+-- import Magento.Types
+-- import Magento.Run (run)
 
 import Tonatona.WithResource
 import Tonatona.Options.Parser

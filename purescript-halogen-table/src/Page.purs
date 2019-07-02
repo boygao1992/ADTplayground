@@ -9,6 +9,7 @@ import Halogen.HTML as HH
 import Effect.Aff.Class (class MonadAff)
 import Type.Data.Symbol (SProxy(..))
 import Adhoc.Cell as Cell
+import Polaris.UI.Page2 as TestTable
 
 type State = Unit
 type Action = Unit
@@ -17,8 +18,10 @@ type Input = Unit
 type Output = Void
 type ChildSlots =
   ( cell :: Cell.Slot Int
+  , testTable :: TestTable.Slot Unit
   )
 _cell = SProxy :: SProxy "cell"
+_testTable = SProxy :: SProxy "testTable"
 
 type ComponentM m a = H.HalogenM State Action ChildSlots Output m a
 type Component m = H.Component HH.HTML Query Input Output m
@@ -74,5 +77,6 @@ render _ =
         "purescript-svgo"
     }
     (const Nothing)
+  , HH.slot _testTable unit TestTable.component unit (const Nothing)
   ]
 

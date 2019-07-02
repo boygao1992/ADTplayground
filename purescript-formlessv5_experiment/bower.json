@@ -1,0 +1,25 @@
+{
+  "name": "purescript-formlessv5_experiment",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.1.1",
+    "purescript-console": "^4.2.0",
+    "purescript-effect": "^2.0.1",
+    "purescript-numbers": "^6.0.0",
+    "purescript-halogen": "^5.0.0-rc.5",
+    "purescript-variant": "^6.0.0",
+    "purescript-heterogeneous": "^0.4.0",
+    "purescript-generics-rep": "^6.1.0",
+    "purescript-profunctor-lenses": "^6.2.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^4.0.0",
+    "purescript-halogen-storybook": "master",
+    "purescript-halogen-select": "^5.0.0-rc.2"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "start": "parcel assets/index.html"
+  },
+  "name": "purescript-formlessv5_experiment",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT"
+}

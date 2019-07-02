@@ -60,36 +60,32 @@ _stack_alignmentBaseline = "Polaris-Stack--alignmentBaseline" :: String
 
 
 type StackOptions =
-  { spacing :: Spacing
+  { vertical :: Boolean
+  , spacing :: Spacing
   , distribution :: Distribution
   , alignment :: Alignment
-  , vertical :: Boolean
   , noWrap :: Boolean
   }
 
 defaultOptions :: StackOptions
 defaultOptions =
-  { spacing: SpacingNormal
+  { vertical: false
+  , spacing: SpacingNormal
   , distribution: DistributionNone
   , alignment: AlignmentStretch
-  , vertical: false
   , noWrap: false
   }
 
 stack
   :: forall p i
-  . { spacing :: Spacing
-    , distribution :: Distribution
-    , alignment :: Alignment
-    , vertical :: Boolean
-    , noWrap :: Boolean
-    }
+  . StackOptions
   -> Array (IProp HTMLdiv i)
   -> Array (HTML p i)
   -> HTML p i
 stack { spacing, distribution, alignment, vertical, noWrap }
   = blockBuilder HH.div $ ClassName <$>
-    [ case spacing of
+    [ _stack
+    , case spacing of
         SpacingNone -> _stack_spacingNone
         SpacingExtraTight -> _stack_spacingExtraTight
         SpacingTight -> _stack_spacingTight
@@ -118,12 +114,7 @@ stack { spacing, distribution, alignment, vertical, noWrap }
 
 stack_
   :: forall p i
-  . { spacing :: Spacing
-    , distribution :: Distribution
-    , alignment :: Alignment
-    , vertical :: Boolean
-    , noWrap :: Boolean
-    }
+  . StackOptions
   -> Array (HTML p i)
   -> HTML p i
 stack_ config = stack config []
