@@ -150,7 +150,7 @@ component mkInput spec = H.mkComponent
       { allTouched: false
       , initialInputs
       , validators: input.validators
-      , debounceRef: Nothing -- TODO deprecate
+      -- , debounceRef: Nothing -- TODO deprecate
       , debouncerFields: Map.empty
       , validationRef: Nothing
       }
@@ -195,9 +195,10 @@ handleAction
   -> HalogenM form st act slots msg m Unit
 handleAction handleAction' handleEvent action = flip match action
   { initialize: \mbAction -> do
-      dr <- H.liftEffect $ Ref.new Nothing
+      -- DONE dr <- H.liftEffect $ Ref.new Nothing
       vr <- H.liftEffect $ Ref.new Nothing
-      let setFields = _ { debounceRef = Just dr, validationRef = Just vr }
+      -- DONE let setFields = _ { debounceRef = Just dr, validationRef = Just vr }
+      let setFields = _ { validationRef = Just vr }
       H.modify_ \st -> st { internal = over InternalState setFields st.internal }
       traverse_ handleAction' mbAction
 
@@ -250,7 +251,7 @@ handleAction handleAction' handleEvent action = flip match action
       H.modify_ _ { form = form }
       handleAction handleAction' handleEvent sync
 
-  , modifyValidate: \(Tuple milliseconds variant) -> do
+  , modifyValidate: \(Tuple milliseconds variant) ->
       -- let
       --   modifyWith
       --     :: (forall e o. FormFieldResult e o -> FormFieldResult e o)
@@ -270,11 +271,11 @@ handleAction handleAction' handleEvent action = flip match action
 
       case milliseconds of
         Nothing -> do
-          -- TODO
+          -- DONE
           -- modifyWith identity *> validate *> handleAction handleAction' handleEvent sync
 
           -- NOTE debug
-          -- H.liftEffect $ log "ModifyValidate"
+          H.liftEffect $ log "ModifyValidate"
 
           let
             act :: FormValidationAction form
@@ -284,12 +285,15 @@ handleAction handleAction' handleEvent action = flip match action
           handleAction handleAction' handleEvent (validateAction act)
 
         Just ms -> do
-          -- TODO
+          -- DONE
           -- debounceForm
           --   ms
           --   (modifyWith identity)
           --   (modifyWith (const Validating) *> validate)
           --   (handleAction handleAction' handleEvent sync)
+
+          -- NOTE debug
+          H.liftEffect $ log "ModifyValidateAsync"
 
           _form %= (IT.unsafeModifyInputVariant identity variant)
 
@@ -305,9 +309,9 @@ handleAction handleAction' handleEvent action = flip match action
             Nothing -> do
               debouncer <- H.liftEffect $ Ref.new Nothing
               canceller <- H.liftEffect $ Ref.new Nothing
-              let debouncerFieldRow = { debouncer, canceller }
-              (_debouncerFieldM label) .= (Just debouncerFieldRow)
-              pure debouncerFieldRow
+              let debouncerField = { debouncer, canceller }
+              (_debouncerFieldM label) .= (Just debouncerField)
+              pure debouncerField
             Just df -> do
               pure df
 
@@ -339,7 +343,6 @@ handleAction handleAction' handleEvent action = flip match action
             -- NOTE debug
             H.liftEffect $ log "validation intercepted"
 
-            -- H.lift $ canceller (Aff.error "intercept validation")
             H.kill canceller
             H.liftEffect $ Ref.write Nothing cancellerRef
 
@@ -350,7 +353,7 @@ handleAction handleAction' handleEvent action = flip match action
 
               channel <- H.liftAff AVar.empty
               fiber <- scheduleDebounceSignal channel
-              H.liftEffect $ Ref.write (Just { channel, fiber }) debouncerRef
+              H.liftEffect $ Ref.write <@> debouncerRef $ Just { channel, fiber }
 
               void $ H.fork do
                 void <<< H.liftAff $ AVar.take channel
@@ -369,13 +372,12 @@ handleAction handleAction' handleEvent action = flip match action
                   H.liftEffect $ log "validation begins"
 
                   H.modify_ \s -> s { form = IT.unsafeModifyFormFieldResult (const Validating) variant s.form }
-                  -- eval $ H.action $ Validate action
                   handleAction handleAction' handleEvent (validateAction act)
 
                   -- NOTE debug
                   H.liftEffect $ log "validation ends"
 
-                H.liftEffect $ Ref.write (Just canceller) cancellerRef
+                H.liftEffect $ Ref.write <@> cancellerRef $ Just canceller
 
             Just { channel, fiber } -> do
               -- NOTE debug
@@ -384,7 +386,7 @@ handleAction handleAction' handleEvent action = flip match action
               -- NOTE Field_Update -> renew debouncer
               interceptDebounceSignal fiber
               newFiber <- scheduleDebounceSignal channel
-              H.liftEffect $ Ref.write (Just {channel, fiber: newFiber}) debouncerRef
+              H.liftEffect $ Ref.write <@> debouncerRef $ Just {channel, fiber: newFiber}
 
   , reset: \variant -> do
       H.modify_ \st -> st

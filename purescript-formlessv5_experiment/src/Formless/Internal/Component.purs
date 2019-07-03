@@ -8,8 +8,8 @@ import Data.Symbol (SProxy(..))
 import Effect.Aff.Class (class MonadAff)
 import Formless.Internal.Transform as Internal
 import Formless.Types.Component (HalogenM, InternalState(..), PublicState, State, ValidStatus(..))
-import Formless.Types.Form (FormField, OutputField)
-import Formless.Validation (Validation)
+import Formless.Types.Form (FormFields, FormOutputFields)
+import Formless.Validation (FormValidators)
 import Halogen as H
 import Prim.Row as Row
 import Prim.RowList as RL
@@ -18,23 +18,23 @@ import Record.Builder as Builder
 -- Remove internal fields and user-supplied fields to return the public state
 getPublicState
   :: forall form st m
-   . Row.Lacks "internal" st
+  . Row.Lacks "internal" st
   => State form st m
   -> PublicState form st
 getPublicState = Builder.build (Builder.delete (SProxy :: SProxy "internal"))
 
 preSubmit
   :: forall form st act ps msg m fs fxs os vs
-   . MonadAff m
+  . MonadAff m
   => RL.RowToList fs fxs
   => Internal.AllTouched fxs fs
   => Internal.SetFormFieldsTouched fxs fs fs
   => Internal.ValidateAll vs fxs fs fs m
   => Internal.FormFieldToMaybeOutput fxs fs os
   => Internal.ValidateAll vs fxs fs fs m
-  => Newtype (form Record FormField) { | fs }
-  => Newtype (form Record OutputField) { | os }
-  => Newtype (form Record (Validation form m)) { | vs }
+  => Newtype (FormFields form) { | fs }
+  => Newtype (FormOutputFields form) { | os }
+  => Newtype (FormValidators form m) { | vs }
   => HalogenM form st act ps msg m Unit
 preSubmit = do
   init <- H.modify \st -> st
@@ -52,17 +52,17 @@ preSubmit = do
 
 submit
   :: forall form st act ps msg m fs fxs os vs
-   . MonadAff m
+  . MonadAff m
   => RL.RowToList fs fxs
   => Internal.AllTouched fxs fs
   => Internal.SetFormFieldsTouched fxs fs fs
   => Internal.ValidateAll vs fxs fs fs m
   => Internal.FormFieldToMaybeOutput fxs fs os
   => Internal.ValidateAll vs fxs fs fs m
-  => Newtype (form Record FormField) { | fs }
-  => Newtype (form Record OutputField) { | os }
-  => Newtype (form Record (Validation form m)) { | vs }
-  => HalogenM form st act ps msg m (Maybe (form Record OutputField))
+  => Newtype (FormFields form) { | fs }
+  => Newtype (FormOutputFields form) { | os }
+  => Newtype (FormValidators form m) { | vs }
+  => HalogenM form st act ps msg m (Maybe (FormOutputFields form))
 submit = do
   -- For performance purposes, only attempt to submit if the form is valid
   validated <- H.get

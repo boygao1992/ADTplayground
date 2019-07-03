@@ -8,9 +8,9 @@ import Data.Symbol (class IsSymbol, SProxy(..))
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.Variant (Variant)
 import Data.Variant.Internal (VariantRep(..))
-import Formless.Types.Form (FormField(..), FormFieldRow, InputField(..), InputFunction, OutputField(..), U)
+import Formless.Types.Form (FormField(..), FormFieldRow, FormFields, FormInputFields, FormInputFunction, FormInputFunctions, FormOutputFields, FormValidationAction, InputField(..), InputFunction, OutputField(..))
 import Formless.Data.FormFieldResult (FormFieldResult(..), fromEither, toMaybe)
-import Formless.Validation (Validation, runValidation)
+import Formless.Validation (FormValidators, Validation, runValidation)
 import Prim.Row as Row
 import Prim.RowList as RL
 import Record as Record
@@ -40,20 +40,20 @@ instance row1Cons :: (Row.Cons s t r r', Row.Lacks s r) => Row1Cons s t r r'
 -- | A helper function that will count all errors in a record
 allTouched
   :: ∀ form fs fxs
-   . RL.RowToList fs fxs
+  . RL.RowToList fs fxs
   => AllTouched fxs fs
-  => Newtype (form Record FormField) { | fs }
-  => form Record FormField
+  => Newtype (FormFields form) { | fs }
+  => FormFields form
   -> Boolean
 allTouched = allTouchedImpl (RLProxy :: RLProxy fxs) <<< unwrap
 
 -- | A helper function that will count all errors in a record
 countErrors
   :: ∀ form fs fxs
-   . RL.RowToList fs fxs
+  . RL.RowToList fs fxs
   => CountErrors fxs fs
-  => Newtype (form Record FormField) { | fs }
-  => form Record FormField
+  => Newtype (FormFields form) { | fs }
+  => FormFields form
   -> Int
 countErrors = countErrorsImpl (RLProxy :: RLProxy fxs) <<< unwrap
 
@@ -61,11 +61,11 @@ countErrors = countErrorsImpl (RLProxy :: RLProxy fxs) <<< unwrap
 -- | just the input value
 setFormFieldsTouched
   :: ∀ fxs form fs
-   . RL.RowToList fs fxs
+  . RL.RowToList fs fxs
   => SetFormFieldsTouched fxs fs fs
-  => Newtype (form Record FormField) { | fs }
-  => form Record FormField
-  -> form Record FormField
+  => Newtype (FormFields form) { | fs }
+  => FormFields form
+  -> FormFields form
 setFormFieldsTouched r = wrap $ fromScratch builder
   where builder = setFormFieldsTouchedBuilder (RLProxy :: RLProxy fxs) (unwrap r)
 
@@ -73,12 +73,12 @@ setFormFieldsTouched r = wrap $ fromScratch builder
 -- | just the input value
 formFieldsToInputFields
   :: ∀ fxs form fs is
-   . RL.RowToList fs fxs
+  . RL.RowToList fs fxs
   => FormFieldsToInputFields fxs fs is
-  => Newtype (form Record InputField) { | is }
-  => Newtype (form Record FormField) { | fs }
-  => form Record FormField
-  -> form Record InputField
+  => Newtype (FormInputFields form) { | is }
+  => Newtype (FormFields form) { | fs }
+  => FormFields form
+  -> FormInputFields form
 formFieldsToInputFields r = wrap $ fromScratch builder
   where builder = formFieldsToInputFieldsBuilder (RLProxy :: RLProxy fxs) (unwrap r)
 
@@ -86,61 +86,61 @@ formFieldsToInputFields r = wrap $ fromScratch builder
 -- | a record of FormField(s).
 inputFieldsToFormFields
   :: ∀ ixs form is fs
-   . RL.RowToList is ixs
+  . RL.RowToList is ixs
   => InputFieldsToFormFields ixs is fs
-  => Newtype (form Record InputField) { | is }
-  => Newtype (form Record FormField) { | fs }
-  => form Record InputField
-  -> form Record FormField
+  => Newtype (FormInputFields form) { | is }
+  => Newtype (FormFields form) { | fs }
+  => FormInputFields form
+  -> FormFields form
 inputFieldsToFormFields r = wrap $ fromScratch builder
   where builder = inputFieldsToFormFieldsBuilder (RLProxy :: RLProxy ixs) (unwrap r)
 
 -- | An intermediate function that transforms a record of FormField into a record
 formFieldsToMaybeOutputFields
   :: ∀ fxs form fs os
-   . RL.RowToList fs fxs
-  => Newtype (form Record FormField) { | fs }
-  => Newtype (form Record OutputField) { | os }
+  . RL.RowToList fs fxs
+  => Newtype (FormFields form) { | fs }
+  => Newtype (FormOutputFields form) { | os }
   => FormFieldToMaybeOutput fxs fs os
-  => form Record FormField
-  -> Maybe (form Record OutputField)
+  => FormFields form
+  -> Maybe (FormOutputFields form)
 formFieldsToMaybeOutputFields r = map wrap $ fromScratch <$> builder
   where builder = formFieldsToMaybeOutputBuilder (RLProxy :: RLProxy fxs) (unwrap r)
 
 replaceFormFieldInputs
   :: ∀ fxs form fs is
-   . RL.RowToList fs fxs
+  . RL.RowToList fs fxs
   => ReplaceFormFieldInputs is fxs fs fs
-  => Newtype (form Record InputField) { | is }
-  => Newtype (form Record FormField) { | fs }
-  => form Record InputField
-  -> form Record FormField
-  -> form Record FormField
+  => Newtype (FormInputFields form) { | is }
+  => Newtype (FormFields form) { | fs }
+  => FormInputFields form
+  -> FormFields form
+  -> FormFields form
 replaceFormFieldInputs is fs = wrap $ fromScratch builder
   where builder = replaceFormFieldInputsBuilder (unwrap is) (RLProxy :: RLProxy fxs) (unwrap fs)
 
 modifyAll
   :: ∀ fxs form fs ifs
-   . RL.RowToList fs fxs
+  . RL.RowToList fs fxs
   => ModifyAll ifs fxs fs fs
-  => Newtype (form Record InputFunction) { | ifs }
-  => Newtype (form Record FormField) { | fs }
-  => form Record InputFunction
-  -> form Record FormField
-  -> form Record FormField
+  => Newtype (FormInputFunctions form) { | ifs }
+  => Newtype (FormFields form) { | fs }
+  => FormInputFunctions form
+  -> FormFields form
+  -> FormFields form
 modifyAll ifs fs = wrap $ fromScratch builder
   where builder = modifyAllBuilder (unwrap ifs) (RLProxy :: RLProxy fxs) (unwrap fs)
 
 validateAll
   :: ∀ vs fxs form fs m
-   . RL.RowToList fs fxs
+  . RL.RowToList fs fxs
   => Monad m
   => ValidateAll vs fxs fs fs m
-  => Newtype (form Record (Validation form m)) { | vs }
-  => Newtype (form Record FormField) { | fs }
-  => form Record (Validation form m)
-  -> form Record FormField
-  -> m (form Record FormField)
+  => Newtype (FormValidators form m) { | vs }
+  => Newtype (FormFields form) { | fs }
+  => FormValidators form m
+  -> FormFields form
+  -> m (FormFields form)
 validateAll vs fs = map wrap $ fromScratch <$> builder
   where
     builder = validateAllBuilder (unwrap vs) (RLProxy :: RLProxy fxs) (unwrap fs)
@@ -155,12 +155,12 @@ validateAll vs fs = map wrap $ fromScratch <$> builder
 -- | occur.
 unsafeModifyInputVariant
   :: ∀ form x y
-   . Newtype (form Variant InputFunction) (Variant x)
-  => Newtype (form Record FormField) { | y }
+  . Newtype (FormInputFunction form) (Variant x)
+  => Newtype (FormFields form) { | y }
   => (forall e o. FormFieldResult e o -> FormFieldResult e o)
-  -> form Variant InputFunction
-  -> form Record FormField
-  -> form Record FormField
+  -> FormInputFunction form
+  -> FormFields form
+  -> FormFields form
 unsafeModifyInputVariant f var rec = wrap $ unsafeSet (fst rep) val (unwrap rec)
   where
     rep :: ∀ e i o. Tuple String (InputFunction e i o)
@@ -177,12 +177,12 @@ unsafeModifyInputVariant f var rec = wrap $ unsafeSet (fst rep) val (unwrap rec)
 
 unsafeModifyFormFieldResult
   :: ∀ form x y
-  . Newtype (form Variant InputFunction) (Variant x)
-  => Newtype (form Record FormField) { | y }
+ . Newtype (FormInputFunction form) (Variant x)
+  => Newtype (FormFields form) { | y }
   => (forall e o. FormFieldResult e o -> FormFieldResult e o)
-  -> form Variant InputFunction
-  -> form Record FormField
-  -> form Record FormField
+  -> FormInputFunction form
+  -> FormFields form
+  -> FormFields form
 unsafeModifyFormFieldResult f var rec = wrap $ unsafeSet (fst rep) val (unwrap rec)
   where
     rep :: ∀ e i o. Tuple String (InputFunction e i o)
@@ -198,21 +198,21 @@ unsafeModifyFormFieldResult f var rec = wrap $ unsafeSet (fst rep) val (unwrap r
 
 unsafeRunValidationVariant
   :: ∀ form x y z m
-   . Monad m
-  => Newtype (form Variant U) (Variant x)
-  => Newtype (form Record FormField) { | y }
-  => Newtype (form Record (Validation form m)) { | z }
-  => form Variant U
-  -> form Record (Validation form m)
-  -> form Record FormField
-  -> m (form Record FormField)
+  . Monad m
+  => Newtype (FormValidationAction form) (Variant x)
+  => Newtype (FormFields form) { | y }
+  => Newtype (FormValidators form m) { | z }
+  => FormValidationAction form
+  -> FormValidators form m
+  -> FormFields form
+  -> m (FormFields form)
 unsafeRunValidationVariant var vs rec = rec2
   where
     label :: String
     label = case unsafeCoerce (unwrap var) of
       VariantRep x -> x.type
 
-    rec2 :: m (form Record FormField)
+    rec2 :: m (FormFields form)
     rec2 = case unsafeGet label (unwrap rec) of
       FormField x -> do
         res <- runValidation (unsafeGet label $ unwrap vs) rec x.input
@@ -387,7 +387,7 @@ instance applyToValidationCons
   :: ( IsSymbol name
      , Monad m
      , Row.Cons name (FormField e i o) t0 row
-     , Newtype (form Record FormField) { | row }
+     , Newtype (FormFields form) { | row }
      , Row.Cons name (Validation form m e i o) t1 vs
      , Row1Cons name (FormField e i o) from to
      , ValidateAll vs tail row from m

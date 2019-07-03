@@ -62,9 +62,7 @@ type Action form act = Variant
 type PublicAction form =
   ( modify :: FormInputFunction form
   , validate :: FormValidationAction form
-  -- TODO , modifyValidate :: FormInputFunction form
   , modifyValidate :: Tuple (Maybe Milliseconds) (FormInputFunction form)
-  -- TODO modifyValidateAsync :: Tuple Milliseconds (FormInputFunction form)
   , reset :: FormInputFunction form
   , setAll :: Tuple (FormInputFields form) Boolean
   , modifyAll :: Tuple (FormInputFunctions form) Boolean
@@ -170,7 +168,7 @@ type InternalStateRow form m =
   ( initialInputs :: FormInputFields form
   , validators :: FormValidators form m
   , allTouched :: Boolean
-  , debounceRef :: Maybe (Ref (Maybe Debouncer)) -- TODO deprecate
+  -- , debounceRef :: Maybe (Ref (Maybe Debouncer)) -- TODO deprecate
   , debouncerFields :: Map String DebouncerField -- TODO
   , validationRef :: Maybe (Ref (Maybe H.ForkId)) -- NOTE new
   )
