@@ -6,10 +6,10 @@ import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 import Data.Array ((!!))
 import Data.Array as Array
 import Data.Fixed as Fixed
+import Data.Formatter.Number (Formatter(..), format) as Number
 import Data.Int (fromString, toNumber) as Int
 import Data.Maybe (Maybe(..))
 import Data.Number (fromString) as Number
-import Data.Formatter.Number (Formatter(..), format) as Number
 import Data.String as String
 import Data.Traversable (for_)
 import Effect.Aff.Class (class MonadAff)

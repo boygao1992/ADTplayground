@@ -16,7 +16,7 @@ defaultRender :: forall m. MonadAff m => ComponentRender m
 defaultRender { editing, value, cache, width, isOpen, highlightedIndex, candidates, displayMessage } =
   if editing
   then
-    HH.div []
+    HH.div_
     [ HH.input $ setInputProps { cache, width } []
     , case displayMessage of
         Nothing -> HH.text ""

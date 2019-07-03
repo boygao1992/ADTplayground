@@ -21,7 +21,8 @@
     "purescript-numbers": "^6.0.0",
     "purescript-formatters": "^4.0.1",
     "purescript-simple-json": "^7.0.0",
-    "purescript-string-parsers": "^5.0.0"
+    "purescript-string-parsers": "^5.0.0",
+    "purescript-heterogeneous": "purescript-heterogenous#^0.4.1"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
