@@ -12,7 +12,7 @@ import Data.Generic.Rep.EnumReadSymbol (class EnumReadSymbol, enumReadSymbol)
 import Data.Generic.Rep.EnumToList (class GenericEnumToList, enumToList)
 import Data.Generic.Rep.Show (class GenericShow, genericShow)
 import Data.Lens.Index.Recordable (class RecordableWithRelation, class Relation, toRecordWithRelation)
-import Data.List ((:), List(Nil), reverse)
+import Data.List (List(Nil), (:))
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
@@ -102,9 +102,9 @@ rowInputAdapter
     r
     (List (String /\ CellType))
   => r
-  -> (List (String /\ CellType))
+  -> (Array (String /\ CellType))
 rowInputAdapter
-  = reverse <<< hfoldlWithIndex RowInputMapping (Nil :: List (String /\ CellType))
+  = Array.fromFoldable <<< hfoldlWithIndex RowInputMapping (Nil :: List (String /\ CellType))
 
 data RowInputMapping = RowInputMapping
 
@@ -160,6 +160,15 @@ instance rowInputMappingReducerEnum
 
 --------------------
 -- tableInputAdapter :: Array (Record r) -> List (List (String /\ CellType))
+tableInputAdapter
+  :: forall r
+  . HFoldlWithIndex RowInputMapping
+     (List (String /\ CellType))
+     r
+     (List (String /\ CellType))
+  => Array r
+  -> Array (Array (String /\ CellType))
+tableInputAdapter = map rowInputAdapter
 
 -------------------
 -- rowOutputAdapter :: Map String CellType -> Maybe (Record r)
@@ -191,14 +200,14 @@ derive instance genericTestEnum :: Generic TestEnum _
 instance showTestEnum :: Show TestEnum where show = genericShow
 
 sampleInput ::
-  { bias :: Number
-  , enum :: TestEnum
-  , id :: Int
+  { id :: Int
   , name :: String
+  , enum :: TestEnum
+  , bias :: Number
   }
 sampleInput = { id: 0, name: "wenbo", enum: B, bias: 14.0 }
 
-testInput :: List (String /\ CellType)
+testInput :: Array (String /\ CellType)
 testInput = rowInputAdapter sampleInput
 
 sampleOutput :: Map String CellType
