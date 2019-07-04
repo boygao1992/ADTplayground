@@ -16,7 +16,6 @@ import Data.List (List(Nil), (:))
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
-import Data.Newtype (class Newtype)
 import Data.Traversable (traverse)
 import Data.Tuple.Nested (type (/\), (/\))
 import Heterogeneous.Folding (class FoldingWithIndex, class HFoldlWithIndex, hfoldlWithIndex)
@@ -27,8 +26,8 @@ import Type.Proxy (Proxy(..))
 -------
 -- Data
 
-newtype EnumType enum = EnumType enum
-derive instance newtypeEnumType :: Newtype (EnumType enum) _
+-- newtype EnumType enum = EnumType enum
+-- derive instance newtypeEnumType :: Newtype (EnumType enum) _
 
 ---------------
 -- FromCellType :: CellType -> Maybe a

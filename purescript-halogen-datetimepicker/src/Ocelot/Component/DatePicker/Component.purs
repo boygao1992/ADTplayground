@@ -2,15 +2,16 @@ module Ocelot.Component.DatePicker where
 
 import Prelude
 
-import Data.Array as Array
 import Data.Array ((!!), mapWithIndex)
+import Data.Array as Array
 import Data.Date (Date, Month, Year, canonicalDate, month, year)
 import Data.DateTime.Instant (fromDate, toDateTime)
 import Data.Either (either)
 import Data.Formatter.DateTime (formatDateTime)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.String (trim)
-import Data.Tuple (Tuple(..), fst, snd)
+import Data.Tuple (fst, snd)
+import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Aff.Class (class MonadAff)
 import Effect.Now (nowDate)
 import Halogen as H
@@ -27,85 +28,132 @@ import Ocelot.Data.DateTime as ODT
 import Ocelot.HTML.Properties (css)
 import Select as S
 import Select.Setters as SS
+import Type.Data.Symbol (SProxy(..))
 import Web.Event.Event (preventDefault)
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
 import Web.UIEvent.KeyboardEvent as KE
-import Type.Data.Symbol (SProxy(..))
+
+type Slot = H.Slot Query Output
 
 type Component m = H.Component HH.HTML Query Input Output m
-type ComponentHTML m = H.ComponentHTML Unit ChildSlots m
-type ComponentRender m = Unit -> ComponentHTML m
-type ComponentM m a = H.HalogenM Unit Unit ChildSlots Output m a
+type ComponentHTML m = H.ComponentHTML Action ChildSlots m
+type ComponentRender m = State -> ComponentHTML m
+type ComponentM m a = H.HalogenM State Action ChildSlots Output m a
 
--- render :: forall m. ComponentRender m
--- render _ =
---   HH.slot _select unit (S.component selectSpec) selectInput
-
---     initialState :: Input -> State
---     initialState { targetDate, selection } =
---       let targetDate' = fromMaybe (Tuple (ODT.unsafeMkYear 2001) (ODT.unsafeMkMonth 1)) targetDate
---         in
---       { targetDate: targetDate'
---       , selection
---       , search: ""
---       , calendarItems: generateCalendarRows selection (fst targetDate') (snd targetDate')
---       }
-
-type EmbeddedComponent m = H.Component HH.HTML EmbeddedQuery EmbeddedInput Output m
-type EmbeddedComponentHTML m = H.ComponentHTML EmbeddedAction EmbeddedSlots m
-type EmbeddedComponentRender m = EmbeddedState -> EmbeddedComponentHTML m
-type EmbeddedComponentM m a = H.HalogenM EmbeddedState EmbeddedAction EmbeddedSlots Output m a
-
-type State =
-  ( targetDate :: Tuple Year Month
+type StateRow =
+  ( targetDate :: Year /\ Month
   , selection :: Maybe Date
-  , search :: String
   , calendarItems :: Array CalendarItem
   )
-type EmbeddedState = S.State State
+type State = Record StateRow
 
 type Input =
-  { targetDate :: Maybe (Tuple Year Month)
+  { targetDate :: Maybe (Year /\ Month)
   , selection :: Maybe Date
   }
-type EmbeddedInput = S.Input State
 
+-- NOTE overhead of component abstraction, need an action to route output messages from the embedded component
 data Action
+  = PassingOutput Output
+
+data EmbeddedAction
   = Initialize
   | Key KeyboardEvent
   | ToggleMonth Direction
+-- NOTE internal actions, moved to Util functions
+-- | Search String
+-- | SetSelection (Maybe Date)
+-- | Synchronize
+-- NOTE not in use
+-- | ToggleYear  Direction
+-- NOTE deprecated
+-- | TriggerFocus
 
-  -- NOTE internal actions, moved to Util functions
-  -- | Search String
-  -- | SetSelection (Maybe Date)
-  -- | Synchronize
-
-  -- NOTE not in use
-  -- | ToggleYear  Direction
-
-  -- NOTE deprecated
-  -- | TriggerFocus
-type EmbeddedAction = S.Action Action
-
-data Query a
+data Query a -- NOTE the wrapper and the embedded components share the same query algebra
   = GetSelection (Date -> a)
-type EmbeddedQuery = S.Query Query EmbeddedSlots
-
-getSelection :: EmbeddedQuery Date
-getSelection = S.Query $ H.request GetSelection
 
 data Output
   = SelectionChanged (Maybe Date)
   | VisibilityChanged S.Visibility
   | Searched String
 
--- TODO
 type ChildSlots =
-  ( select :: S.Query' Unit
+  ( select :: S.Slot Query EmbeddedSlots Output Unit
   )
 _select = SProxy :: SProxy "select"
 
+component :: forall m. MonadAff m => Component m
+component = H.mkComponent
+  { initialState
+  , render
+  , eval: H.mkEval H.defaultEval
+      { handleAction = handleAction
+      , handleQuery = handleQuery
+      }
+  }
+
+initialState :: Input -> State
+initialState { targetDate, selection } =
+  let targetDate'
+        = fromMaybe ((ODT.unsafeMkYear 2001) /\ (ODT.unsafeMkMonth 1)) targetDate
+  in
+    { targetDate: targetDate'
+    , selection
+    , calendarItems: generateCalendarRows selection (fst targetDate') (snd targetDate')
+    }
+
+render :: forall m. MonadAff m => ComponentRender m
+render st =
+  HH.slot _select unit (S.component embeddedSpec) (embeddedInput st) (Just <<< PassingOutput)
+
+embeddedSpec :: forall m. MonadAff m => EmbeddedSpec m
+embeddedSpec =
+  S.defaultSpec
+  { render = embeddedRender
+  , handleAction = embeddedHandleAction
+  , handleQuery = embeddedHandleQuery
+  , handleMessage = embeddedHandleMessage
+  , initialize = embeddedInitialize
+  }
+
+-- NOTE configure Select
+embeddedInput :: State -> CompositeInput
+embeddedInput { targetDate, selection, calendarItems } =
+  { inputType: S.Text
+  , search: Nothing
+  , debounceTime: Nothing
+  , getItemCount: Array.length <<< _.calendarItems
+
+  , targetDate
+  , selection
+  , calendarItems
+  }
+
+-- NOTE overhead of component abstraction, need an action to route output messages from the embedded component
+handleAction :: forall m. Action -> ComponentM m Unit
+handleAction = case _ of
+  PassingOutput output ->
+    H.raise output
+
+-- NOTE overhead of component abstraction, this doesn't do anything besides passing query directly to the embedded component
+handleQuery :: forall m a. Query a -> ComponentM m (Maybe a)
+handleQuery = case _ of
+  GetSelection reply -> do
+    response <- H.query _select unit (S.Query $ H.request GetSelection)
+    pure $ reply <$> response
+
+
+type CompositeState = S.State StateRow
+type CompositeAction = S.Action EmbeddedAction
+type CompositeQuery = S.Query Query EmbeddedSlots
+type CompositeInput = S.Input StateRow
 type EmbeddedSlots = () -- NOTE no extension, use S.Slot'
+
+type EmbeddedSpec m = S.Spec StateRow Query EmbeddedAction EmbeddedSlots Output m
+type EmbeddedComponent m = H.Component HH.HTML CompositeQuery CompositeInput Output m
+type EmbeddedComponentHTML m = H.ComponentHTML CompositeAction EmbeddedSlots m
+type EmbeddedComponentRender m = CompositeState -> EmbeddedComponentHTML m
+type EmbeddedComponentM m a = H.HalogenM CompositeState CompositeAction EmbeddedSlots Output m a
 
 -------
 -- Data
@@ -160,7 +208,7 @@ generateCalendarItem (Just d) bound i
 
 synchronize :: forall m. MonadAff m => EmbeddedComponentM m Unit
 synchronize = do
-  ({ targetDate: Tuple y m, selection }) <- H.get
+  ({ targetDate: y /\ m, selection }) <- H.get
   let calendarItems = generateCalendarRows selection y m
   H.modify_
     _ { calendarItems = calendarItems
@@ -174,21 +222,21 @@ synchronize = do
 setSelection :: forall m. MonadAff m => Maybe Date -> EmbeddedComponentM m Unit
 setSelection selection = do
   st <- H.get
-  let targetDate = maybe st.targetDate (\d -> Tuple (year d) (month d)) selection
+  let targetDate = maybe st.targetDate (\d -> (year d) /\ (month d)) selection
   H.modify_ _ { selection = selection, targetDate = targetDate }
   synchronize
 
 ------------------------
 -- Embedded handleAction
 
-handleAction :: forall m. MonadAff m => Action -> EmbeddedComponentM m Unit
-handleAction = case _ of
+embeddedHandleAction :: forall m. MonadAff m => EmbeddedAction -> EmbeddedComponentM m Unit
+embeddedHandleAction = case _ of
   Initialize -> do
     selection <- H.gets _.selection
     d <- H.liftEffect nowDate
     let
       d' = fromMaybe d selection
-      targetDate = Tuple (year d') (month d')
+      targetDate = (year d') /\ (month d')
     H.modify_
       _ { targetDate = targetDate
         , calendarItems =
@@ -203,7 +251,7 @@ handleAction = case _ of
         newDate = case dir of
             Next -> ODT.nextMonth (canonicalDate y m bottom)
             Prev -> ODT.prevMonth (canonicalDate y m bottom)
-    H.modify_ _ { targetDate = Tuple (year newDate) (month newDate) }
+    H.modify_ _ { targetDate = (year newDate) /\ (month newDate) }
     synchronize
 
   Key ev -> do
@@ -240,8 +288,8 @@ handleAction = case _ of
 -----------------------
 -- Embedded handleQuery
 
-handleQuery :: forall m a. MonadAff m => Query a -> EmbeddedComponentM m (Maybe a)
-handleQuery = case _ of
+embeddedHandleQuery :: forall m a. MonadAff m => Query a -> EmbeddedComponentM m (Maybe a)
+embeddedHandleQuery = case _ of
   GetSelection reply -> do
     selection  <- H.gets _.selection
     pure $ reply <$> selection
@@ -249,8 +297,8 @@ handleQuery = case _ of
 -------------------------
 -- Embedded handleMessage
 
-handleMessage :: forall m. MonadAff m => S.Message -> EmbeddedComponentM m Unit
-handleMessage = case _ of
+embeddedHandleMessage :: forall m. MonadAff m => S.Message -> EmbeddedComponentM m Unit
+embeddedHandleMessage = case _ of
   S.Selected idx -> do
     -- We'll want to select the item here, set its status, and raise
     -- a message about its selection.
@@ -275,8 +323,8 @@ handleMessage = case _ of
 ----------------------
 -- Embedded initialize
 
-initialize :: Maybe EmbeddedAction
-initialize = Just $ S.Action $ Initialize
+embeddedInitialize :: Maybe CompositeAction
+embeddedInitialize = Just $ S.Action $ Initialize
 
 ------------------
 -- Embedded render
@@ -451,4 +499,3 @@ renderItem index item =
           <<< formatDateTime "D"
           <<< toDateTime
           <<< fromDate
-
