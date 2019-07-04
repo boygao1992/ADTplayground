@@ -7,6 +7,7 @@ import Data.Array ((!!))
 import Data.Array as Array
 import Data.Fixed as Fixed
 import Data.Formatter.Number (Formatter(..), format) as Number
+import Data.Generic.Rep (class Generic)
 import Data.Int (fromString, toNumber) as Int
 import Data.Maybe (Maybe(..))
 import Data.Number (fromString) as Number
@@ -27,6 +28,7 @@ data CellType
   | CellTypeFixed Int Number
   | CellTypeString String
   | CellTypeEnum (Array String) String
+derive instance genericCellType :: Generic CellType _
 derive instance eqCellType :: Eq CellType
 derive instance ordCellType :: Ord CellType
 instance showCellType :: Show CellType where

@@ -13,7 +13,6 @@ import Record.Builder as Builder
 import Type.Data.RowList (RLProxy (..))
 import Type.Data.Symbol (SProxy (..))
 import Type.Data.Symbol as Symbol
-import Heterogeneous.Mapping (class Mapping, mapping)
 
 class Recordable m (r :: # Type)
   where
@@ -72,59 +71,65 @@ instance recordableListConsRequired ::
 ------------------------
 -- RecordableWithMapping
 
-class RecordableWithMapping f m (r :: # Type)
-  where
-    toRecordWithMapping :: f -> m -> Maybe (Record r)
+class Relation f a b where
+  relation :: f -> a -> b
 
-instance recordableWithMappingImpl ::
+class RecordableWithRelation f m (r :: # Type)
+  where
+    toRecordWithRelation :: f -> m -> Maybe (Record r)
+
+instance recordableWithRelationImpl ::
   ( RowList.RowToList r rl
-  , RecordableWithMappingList f m rl r
-  ) => RecordableWithMapping f m r
+  , RecordableWithRelationList f m rl r
+  ) => RecordableWithRelation f m r
   where
-    toRecordWithMapping f t =
+    toRecordWithRelation f t =
       Builder.build <@> {}
-      <$> toRecordWithMappingList (RLProxy :: RLProxy rl) f t
+      <$> toRecordWithRelationList (RLProxy :: RLProxy rl) f t
 
-class RecordableWithMappingList f m (rl :: RowList) (to :: # Type)| f rl -> to
+class RecordableWithRelationList f m (rl :: RowList) (to :: # Type)| f rl -> to
   where
-    toRecordWithMappingList :: RLProxy rl -> f -> m -> Maybe (Builder {} { | to })
+    toRecordWithRelationList :: RLProxy rl -> f -> m -> Maybe (Builder {} { | to })
 
-instance recordableWithMappingListNil ::
-  RecordableWithMappingList f m RowList.Nil ()
+instance recordableWithRelationListNil ::
+  RecordableWithRelationList f m RowList.Nil ()
   where
-    toRecordWithMappingList _ _ _ = Just identity
+    toRecordWithRelationList _ _ _ = Just identity
 
-instance recordableWithMappingListConsOptional ::
+instance recordableWithRelationListConsOptional ::
   ( Symbol.IsSymbol name
   , Index m String source
-  , Mapping f source target
+  , Relation f source (Maybe target)
   , Row.Cons name (Maybe target) restTo to
   , Row.Lacks name restTo
-  , RecordableWithMappingList f m restRl restTo
-  ) => RecordableWithMappingList f m (RowList.Cons name (Maybe target) restRl) to
+  , RecordableWithRelationList f m restRl restTo
+  ) => RecordableWithRelationList f m (RowList.Cons name (Maybe target) restRl) to
   where
-    toRecordWithMappingList _ f t =
+    toRecordWithRelationList _ f t =
       ( Builder.insert
           (SProxy :: SProxy name)
-          ( mapping f
-            <$> preview (ix (Symbol.reflectSymbol (SProxy :: SProxy name))) t)
+          ( relation f
+            =<< preview (ix (Symbol.reflectSymbol (SProxy :: SProxy name))) t)
         <<< _
       )
-      <$> toRecordWithMappingList (RLProxy :: RLProxy restRl) f t
+      <$> toRecordWithRelationList (RLProxy :: RLProxy restRl) f t
 else
-instance recordableWithMappingListConsRequired ::
+instance recordableWithRelationListConsRequired ::
   ( Symbol.IsSymbol name
   , Index m String source
-  , Mapping f source target
+  , Relation f source (Maybe target)
   , Row.Cons name target restTo to
   , Row.Lacks name restTo
-  , RecordableWithMappingList f m restRl restTo
-  ) => RecordableWithMappingList f m (RowList.Cons name target restRl) to
+  , RecordableWithRelationList f m restRl restTo
+  ) => RecordableWithRelationList f m (RowList.Cons name target restRl) to
   where
-    toRecordWithMappingList _ f t =
-      case preview (ix (Symbol.reflectSymbol (SProxy :: SProxy name))) t of
+    toRecordWithRelationList _ f t =
+      case relation f
+           =<< preview (ix (Symbol.reflectSymbol (SProxy :: SProxy name))) t
+      of
         Nothing ->
           const Nothing
         Just val ->
-          Just <<< (Builder.insert (SProxy :: SProxy name) (mapping f val) <<< _)
-      =<< toRecordWithMappingList (RLProxy :: RLProxy restRl) f t
+          Just <<< (Builder.insert (SProxy :: SProxy name) val <<< _)
+      =<< toRecordWithRelationList (RLProxy :: RLProxy restRl) f t
+
