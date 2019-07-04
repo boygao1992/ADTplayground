@@ -1,4 +1,4 @@
-module Ocelot.Component.DatePicker where
+module Ocelot.Components.DatePicker.Component where
 
 import Prelude
 
@@ -23,7 +23,7 @@ import Ocelot.Block.Format as Format
 import Ocelot.Block.Icon as Icon
 import Ocelot.Block.Input as Input
 import Ocelot.Block.Layout as Layout
-import Ocelot.Component.DatePicker.Utils as Utils
+import Ocelot.Components.DatePicker.Utils as Utils
 import Ocelot.Data.DateTime as ODT
 import Ocelot.HTML.Properties (css)
 import Select as S
@@ -52,14 +52,16 @@ type Input =
   , selection :: Maybe Date
   }
 
--- NOTE overhead of component abstraction, need an action to route output messages from the embedded component
+-- NOTE overhead of component abstraction, need an action to re-raise output messages from the embedded component
 data Action
   = PassingOutput Output
+-- TODO | Receive Input
 
 data EmbeddedAction
   = Initialize
   | Key KeyboardEvent
   | ToggleMonth Direction
+-- TODO | Receive CompositeInput
 -- NOTE internal actions, moved to Util functions
 -- | Search String
 -- | SetSelection (Maybe Date)
@@ -69,7 +71,7 @@ data EmbeddedAction
 -- NOTE deprecated
 -- | TriggerFocus
 
-data Query a -- NOTE the wrapper and the embedded components share the same query algebra
+data Query a -- NOTE the container and the embedded components share the same query algebra
   = GetSelection (Date -> a)
 
 data Output
@@ -78,9 +80,47 @@ data Output
   | Searched String
 
 type ChildSlots =
-  ( select :: S.Slot Query EmbeddedSlots Output Unit
+  ( select :: S.Slot Query EmbeddedChildSlots Output Unit
   )
 _select = SProxy :: SProxy "select"
+
+
+type CompositeState = S.State StateRow
+type CompositeAction = S.Action EmbeddedAction
+type CompositeQuery = S.Query Query EmbeddedChildSlots
+type CompositeInput = S.Input StateRow
+type EmbeddedChildSlots = () -- NOTE no extension
+
+type Spec m = S.Spec StateRow Query EmbeddedAction EmbeddedChildSlots Output m
+type CompositeComponent m = H.Component HH.HTML CompositeQuery CompositeInput Output m
+type CompositeComponentHTML m = H.ComponentHTML CompositeAction EmbeddedChildSlots m
+type CompositeComponentRender m = CompositeState -> CompositeComponentHTML m
+type CompositeComponentM m a = H.HalogenM CompositeState CompositeAction EmbeddedChildSlots Output m a
+
+-------
+-- Data
+
+data CalendarItem
+  = CalendarItem SelectableStatus SelectedStatus BoundaryStatus Date
+
+data SelectableStatus
+  = NotSelectable
+  | Selectable
+
+data SelectedStatus
+  = NotSelected
+  | Selected
+
+data BoundaryStatus
+  = OutOfBounds
+  | InBounds
+
+data Direction
+  = Prev
+  | Next
+
+------------
+-- Container
 
 component :: forall m. MonadAff m => Component m
 component = H.mkComponent
@@ -106,7 +146,7 @@ render :: forall m. MonadAff m => ComponentRender m
 render st =
   HH.slot _select unit (S.component embeddedSpec) (embeddedInput st) (Just <<< PassingOutput)
 
-embeddedSpec :: forall m. MonadAff m => EmbeddedSpec m
+embeddedSpec :: forall m. MonadAff m => Spec m
 embeddedSpec =
   S.defaultSpec
   { render = embeddedRender
@@ -129,56 +169,21 @@ embeddedInput { targetDate, selection, calendarItems } =
   , calendarItems
   }
 
--- NOTE overhead of component abstraction, need an action to route output messages from the embedded component
+-- NOTE re-raise output messages from the embedded component
 handleAction :: forall m. Action -> ComponentM m Unit
 handleAction = case _ of
   PassingOutput output ->
     H.raise output
 
--- NOTE overhead of component abstraction, this doesn't do anything besides passing query directly to the embedded component
+-- NOTE passing query to the embedded component
 handleQuery :: forall m a. Query a -> ComponentM m (Maybe a)
 handleQuery = case _ of
   GetSelection reply -> do
     response <- H.query _select unit (S.Query $ H.request GetSelection)
     pure $ reply <$> response
 
-
-type CompositeState = S.State StateRow
-type CompositeAction = S.Action EmbeddedAction
-type CompositeQuery = S.Query Query EmbeddedSlots
-type CompositeInput = S.Input StateRow
-type EmbeddedSlots = () -- NOTE no extension, use S.Slot'
-
-type EmbeddedSpec m = S.Spec StateRow Query EmbeddedAction EmbeddedSlots Output m
-type EmbeddedComponent m = H.Component HH.HTML CompositeQuery CompositeInput Output m
-type EmbeddedComponentHTML m = H.ComponentHTML CompositeAction EmbeddedSlots m
-type EmbeddedComponentRender m = CompositeState -> EmbeddedComponentHTML m
-type EmbeddedComponentM m a = H.HalogenM CompositeState CompositeAction EmbeddedSlots Output m a
-
--------
--- Data
-
-data CalendarItem
-  = CalendarItem SelectableStatus SelectedStatus BoundaryStatus Date
-
-data SelectableStatus
-  = NotSelectable
-  | Selectable
-
-data SelectedStatus
-  = NotSelected
-  | Selected
-
-data BoundaryStatus
-  = OutOfBounds
-  | InBounds
-
-data Direction
-  = Prev
-  | Next
-
-----------------
--- Embedded Util
+------------------
+-- Embedded > Util
 
 -- Generate a standard set of dates from a year and month.
 generateCalendarRows
@@ -206,7 +211,7 @@ generateCalendarItem (Just d) bound i
   | d == i = CalendarItem Selectable Selected bound i
   | otherwise = CalendarItem Selectable NotSelected bound i
 
-synchronize :: forall m. MonadAff m => EmbeddedComponentM m Unit
+synchronize :: forall m. MonadAff m => CompositeComponentM m Unit
 synchronize = do
   ({ targetDate: y /\ m, selection }) <- H.get
   let calendarItems = generateCalendarRows selection y m
@@ -219,17 +224,17 @@ synchronize = do
         Just date -> _ { search = ODT.formatDate date }
   H.modify_ (update <<< _ { calendarItems = calendarItems })
 
-setSelection :: forall m. MonadAff m => Maybe Date -> EmbeddedComponentM m Unit
+setSelection :: forall m. MonadAff m => Maybe Date -> CompositeComponentM m Unit
 setSelection selection = do
   st <- H.get
   let targetDate = maybe st.targetDate (\d -> (year d) /\ (month d)) selection
   H.modify_ _ { selection = selection, targetDate = targetDate }
   synchronize
 
-------------------------
--- Embedded handleAction
+--------------------------
+-- Embedded > handleAction
 
-embeddedHandleAction :: forall m. MonadAff m => EmbeddedAction -> EmbeddedComponentM m Unit
+embeddedHandleAction :: forall m. MonadAff m => EmbeddedAction -> CompositeComponentM m Unit
 embeddedHandleAction = case _ of
   Initialize -> do
     selection <- H.gets _.selection
@@ -285,19 +290,26 @@ embeddedHandleAction = case _ of
   --   H.modify_ _ { targetDate = Tuple (year newDate) (month newDate) }
   --   synchronize
 
------------------------
--- Embedded handleQuery
+  -- Receive { targetDate, selection } -> do
+  --   st <- H.get
+  --   H.modify_
+  --     _ { targetDate = targetDate
+  --       , selection = selection
+  --       }
 
-embeddedHandleQuery :: forall m a. MonadAff m => Query a -> EmbeddedComponentM m (Maybe a)
+-------------------------
+-- Embedded > handleQuery
+
+embeddedHandleQuery :: forall m a. MonadAff m => Query a -> CompositeComponentM m (Maybe a)
 embeddedHandleQuery = case _ of
   GetSelection reply -> do
     selection  <- H.gets _.selection
     pure $ reply <$> selection
 
--------------------------
--- Embedded handleMessage
+---------------------------
+-- Embedded > handleMessage
 
-embeddedHandleMessage :: forall m. MonadAff m => S.Message -> EmbeddedComponentM m Unit
+embeddedHandleMessage :: forall m. MonadAff m => S.Message -> CompositeComponentM m Unit
 embeddedHandleMessage = case _ of
   S.Selected idx -> do
     -- We'll want to select the item here, set its status, and raise
@@ -308,7 +320,8 @@ embeddedHandleMessage = case _ of
       Just (CalendarItem _ _ _ date) -> do
         H.modify_
           _ { selection = Just date
-            , visibility = S.Off }
+            , visibility = S.Off
+            }
         H.raise $ SelectionChanged $ Just date
         synchronize
 
@@ -320,23 +333,23 @@ embeddedHandleMessage = case _ of
   S.VisibilityChanged visibility -> do
     H.raise $ VisibilityChanged visibility
 
-----------------------
--- Embedded initialize
+------------------------
+-- Embedded > initialize
 
 embeddedInitialize :: Maybe CompositeAction
 embeddedInitialize = Just $ S.Action $ Initialize
 
-------------------
--- Embedded render
+--------------------
+-- Embedded > render
 
-embeddedRender :: forall m. EmbeddedComponentRender m
+embeddedRender :: forall m. CompositeComponentRender m
 embeddedRender st =
   HH.div_
   [ renderSearch st.search
-  , renderSelect (fst st.targetDate) (snd st.targetDate) st
+  , renderSelect (fst st.targetDate) (snd st.targetDate) st.visibility st.calendarItems
   ]
 
-renderSearch :: forall m. String -> EmbeddedComponentHTML m
+renderSearch :: forall m. String -> CompositeComponentHTML m
 renderSearch search =
   Input.input
   $ SS.setInputProps
@@ -344,22 +357,22 @@ renderSearch search =
     , HP.value search
     ]
 
-renderSelect :: forall m. Year -> Month -> EmbeddedComponentRender m
-renderSelect y m cst =
-  HH.div []
-  $ if cst.visibility == S.On
-    then [ renderCalendar y m cst]
+renderSelect :: forall m. Year -> Month -> S.Visibility -> Array CalendarItem -> CompositeComponentHTML m
+renderSelect y m visibility calendarItems =
+  HH.div_
+  $ if visibility == S.On
+    then [ renderCalendar y m calendarItems ]
     else []
 
-renderCalendar :: forall m. Year -> Month -> EmbeddedComponentRender m
-renderCalendar y m cst =
+renderCalendar :: forall m. Year -> Month -> Array CalendarItem -> CompositeComponentHTML m
+renderCalendar y m calendarItems =
   Layout.popover
     ( SS.setContainerProps
       [ HP.classes dropdownClasses ]
     )
     [ calendarNav y m
     , calendarHeader
-    , HH.div_ $ renderRows $ Utils.rowsFromArray cst.calendarItems
+    , HH.div_ $ renderRows $ Utils.rowsFromArray calendarItems
     ]
   where
     dropdownClasses :: Array HH.ClassName
@@ -374,7 +387,7 @@ renderCalendar y m cst =
 
 -- Given a string ("Month YYYY"), creates the calendar navigation.
 -- Could be much better in rendering
-calendarNav :: forall m. Year -> Month -> EmbeddedComponentHTML m
+calendarNav :: forall m. Year -> Month -> CompositeComponentHTML m
 calendarNav y m =
   Format.contentHeading
     [ css "flex" ]
@@ -409,7 +422,7 @@ calendarNav y m =
         [ css "flex-1" ]
         [ HH.text monthYear ]
 
-calendarHeader :: forall m. EmbeddedComponentHTML m
+calendarHeader :: forall m. CompositeComponentHTML m
 calendarHeader =
   HH.div
     [ css "flex text-grey-70" ]
@@ -423,7 +436,7 @@ calendarHeader =
     headers = [ "S", "M", "T", "W", "T", "F", "S" ]
 
 -- Here we'll render out our dates as rows in the calendar.
-renderRows :: forall m. Array (Array CalendarItem) -> Array (EmbeddedComponentHTML m)
+renderRows :: forall m. Array (Array CalendarItem) -> Array (CompositeComponentHTML m)
 renderRows =
   mapWithIndex (\row subArr -> renderRow (row * 7) subArr)
   where
@@ -434,7 +447,7 @@ renderRows =
           (\column item -> renderItem (column + offset) item) items
         )
 
-renderItem :: forall m. Int -> CalendarItem -> EmbeddedComponentHTML m
+renderItem :: forall m. Int -> CalendarItem -> CompositeComponentHTML m
 renderItem index item =
   HH.div
   -- Here's the place to use info from the item to render it in different
