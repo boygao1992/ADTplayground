@@ -52,6 +52,12 @@ type Input =
   , selection :: Maybe Date
   }
 
+defaultInput :: Input
+defaultInput =
+  { targetDate: Nothing
+  , selection: Nothing
+  }
+
 -- NOTE overhead of component abstraction, need an action to re-raise output messages from the embedded component
 data Action
   = PassingOutput Output
@@ -64,7 +70,6 @@ data EmbeddedAction
 -- TODO | Receive CompositeInput
 -- NOTE internal actions, moved to Util functions
 -- | Search String
--- | SetSelection (Maybe Date)
 -- | Synchronize
 -- NOTE not in use
 -- | ToggleYear  Direction
@@ -73,6 +78,7 @@ data EmbeddedAction
 
 data Query a -- NOTE the container and the embedded components share the same query algebra
   = GetSelection (Date -> a)
+  | SetSelection (Maybe Date) a
 
 data Output
   = SelectionChanged (Maybe Date)
@@ -181,6 +187,8 @@ handleQuery = case _ of
   GetSelection reply -> do
     response <- H.query _select unit (S.Query $ H.request GetSelection)
     pure $ reply <$> response
+  SetSelection selection a -> Just a <$ do
+    H.query _select unit (S.Query $ H.tell $ SetSelection selection)
 
 ------------------
 -- Embedded > Util
@@ -305,6 +313,8 @@ embeddedHandleQuery = case _ of
   GetSelection reply -> do
     selection  <- H.gets _.selection
     pure $ reply <$> selection
+  SetSelection selection a -> Just a <$ do
+    setSelection selection
 
 ---------------------------
 -- Embedded > handleMessage

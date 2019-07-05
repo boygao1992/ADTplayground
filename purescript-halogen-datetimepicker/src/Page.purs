@@ -11,6 +11,7 @@ import Type.Data.Symbol (SProxy(..))
 
 import Ocelot.Components.DatePicker.Component as DatePicker
 import Ocelot.Components.TimePicker.Component as TimePicker
+import Ocelot.Components.DateTimePicker.Component as DateTimePicker
 
 type Component m = H.Component HH.HTML Query Input Output m
 type ComponentHTML m = H.ComponentHTML Action ChildSlots m
@@ -25,10 +26,12 @@ type Query = Const Void
 type ChildSlots =
   ( datepicker :: DatePicker.Slot Unit
   , timepicker :: TimePicker.Slot Unit
+  , datetimepicker :: DateTimePicker.Slot Unit
   )
 
 _datepicker = SProxy :: SProxy "datepicker"
 _timepicker = SProxy :: SProxy "timepicker"
+_datetimepicker = SProxy :: SProxy "datetimepicker"
 
 component :: forall m. MonadAff m => Component m
 component = H.mkComponent
@@ -41,13 +44,13 @@ render :: forall m. MonadAff m => ComponentRender m
 render _ =
   HH.div_
   [ HH.slot _datepicker unit DatePicker.component
-      { targetDate: Nothing
-      , selection: Nothing
-      }
+      DatePicker.defaultInput
       (const Nothing)
   , HH.slot _timepicker unit TimePicker.component
-      { selection: Nothing
-      }
+      TimePicker.defaultInput
+      (const Nothing)
+  , HH.slot _datetimepicker unit DateTimePicker.component
+      DateTimePicker.defaultInput
       (const Nothing)
   ]
 

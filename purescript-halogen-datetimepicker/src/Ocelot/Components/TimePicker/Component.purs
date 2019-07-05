@@ -45,6 +45,11 @@ type Input =
   { selection :: Maybe Time
   }
 
+defaultInput :: Input
+defaultInput =
+  { selection: Nothing
+  }
+
 data Action
   = PassingOutput Output
 
@@ -54,12 +59,12 @@ data EmbeddedAction
 -- TODO | Receive CompositeInput
 -- NOTE internal actions, moved to Util functions
 -- | Synchronize
--- | SetSelection (Maybe Time)
 -- NOTE deprecated
 -- | TriggerFocus
 
 data Query a
   = GetSelection (Time -> a)
+  | SetSelection (Maybe Time) a
 
 data Output
   = SelectionChanged (Maybe Time)
@@ -161,6 +166,8 @@ handleQuery = case _ of
   GetSelection reply -> do
     response <- H.query _select unit (S.Query $ H.request GetSelection)
     pure $ reply <$> response
+  SetSelection selection a -> Just a <$ do
+    H.query _select unit (S.Query $ H.tell $ SetSelection selection)
 
 ------------------
 -- Embedded > Util
@@ -236,6 +243,9 @@ embeddedHandleQuery = case _ of
   GetSelection reply -> do
     selection  <- H.gets _.selection
     pure $ reply <$> selection
+
+  SetSelection selection a -> Just a <$ do
+    setSelection selection
 
 ---------------------------
 -- Embedded > handleMessage
