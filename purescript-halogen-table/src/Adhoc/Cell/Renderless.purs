@@ -71,17 +71,19 @@ fromString cellType input = case cellType of
     fromString' x _ = Fixed.fromString x
 
 type State =
+    -- Control
   { editing :: Boolean
   , cache :: String
-  , width :: Number
-
-  , isOpen :: Boolean
-  , highlightedIndex :: Int
-
-  , candidates :: Array String
-
-  , displayMessage :: Maybe String
   , value :: CellType
+
+    -- Styling
+  , width :: Number
+  , isOpen :: Boolean -- visibility
+  , highlightedIndex :: Int
+  , displayMessage :: Maybe String
+
+    -- Enum only
+  , candidates :: Array String
   }
 
 type StateStore m = Store State (ComponentHTML m)
@@ -90,15 +92,14 @@ defaultInitialState :: State
 defaultInitialState =
   { editing: false
   , cache: ""
-  , width: 0.0
+  , value: CellTypeString ""
 
+  , width: 0.0
   , isOpen: false
   , highlightedIndex: 0
+  , displayMessage: Nothing
 
   , candidates: []
-
-  , displayMessage: Nothing
-  , value: CellTypeString ""
   }
 
 data Action m
@@ -116,8 +117,6 @@ data Query a
 
 type Input m =
   { render :: ComponentRender m
-  -- External State
-  -- , available :: Array String
   -- Config
   , value :: CellType
   }
@@ -143,7 +142,6 @@ component = H.mkComponent
   { initialState: \({ render, value }) ->
      store render defaultInitialState
       { value = value
-      -- , available = available
       }
   , render: extract
   , eval: H.mkEval H.defaultEval

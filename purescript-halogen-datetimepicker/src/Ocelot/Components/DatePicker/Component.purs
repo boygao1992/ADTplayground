@@ -150,10 +150,10 @@ initialState { targetDate, selection } =
 
 render :: forall m. MonadAff m => ComponentRender m
 render st =
-  HH.slot _select unit (S.component embeddedSpec) (embeddedInput st) (Just <<< PassingOutput)
+  HH.slot _select unit (S.component spec) (embeddedInput st) (Just <<< PassingOutput)
 
-embeddedSpec :: forall m. MonadAff m => Spec m
-embeddedSpec =
+spec :: forall m. MonadAff m => Spec m
+spec =
   S.defaultSpec
   { render = embeddedRender
   , handleAction = embeddedHandleAction

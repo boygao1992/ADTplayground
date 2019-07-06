@@ -134,10 +134,10 @@ initialState { selection } =
 
 render :: forall m. MonadAff m => ComponentRender m
 render st =
-  HH.slot _select unit (S.component embeddedSpec) (embeddedInput st) (Just <<< PassingOutput)
+  HH.slot _select unit (S.component spec) (embeddedInput st) (Just <<< PassingOutput)
 
-embeddedSpec :: forall m. MonadAff m => Spec m
-embeddedSpec =
+spec :: forall m. MonadAff m => Spec m
+spec =
   S.defaultSpec
   { render = embeddedRender
   , handleAction = embeddedHandleAction
@@ -191,7 +191,7 @@ generateTimeUnit (Just t) i
 
 synchronize :: forall m. CompositeComponentM m Unit
 synchronize = do
-  ({ selection }) <- H.get
+  selection  <- H.gets _.selection
   H.modify_ _ { timeUnits = generateTimes selection }
   case selection of
     Nothing -> pure unit
