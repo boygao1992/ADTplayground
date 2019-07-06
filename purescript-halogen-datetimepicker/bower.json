@@ -17,7 +17,8 @@
     "purescript-rationals": "^5.0.0",
     "purescript-datetime": "^4.1.1",
     "purescript-formatters": "^4.0.1",
-    "purescript-fuzzy": "^0.2.1"
+    "purescript-fuzzy": "^0.2.1",
+    "purescript-remotedata": "^4.2.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
