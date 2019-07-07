@@ -15,7 +15,7 @@ import Foreign.Object (Object)
 import Halogen as H
 import Halogen.HTML as HH
 import Network.RemoteData (RemoteData(..))
-import Renderless.State (Store, extract, store)
+import Renderless.State (Store, extract, modifyStore_, store)
 import Select as S
 import Type.Data.Symbol (SProxy(..))
 
@@ -84,7 +84,7 @@ type Input f item m =
 
 data Action f item (m :: Type -> Type)
   = PassingOutput (Output f item)
-  -- | ReceiveRender (Input f item m)
+  | ReceiveRender (Input f item m)
 
 data EmbeddedAction (f :: Type -> Type) item (m :: Type -> Type)
   = Initialize
@@ -243,13 +243,18 @@ embeddedInput { items, selected, insertable, keepOpen, itemToObject, ops, async,
 
 -- NOTE re-raise output messages from the embedded component
 -- NOTE update Dropdown render function if it relies on external state
-handleAction :: forall f item m. MonadAff m => Action f item m -> ComponentM f item m Unit
+handleAction
+  :: forall f item m
+  . Plus f
+  => Eq item
+  => MonadAff m
+  => Action f item m
+  -> ComponentM f item m Unit
 handleAction = case _ of
   PassingOutput output ->
     H.raise output
--- TODO
---   ReceiveRender { renderDropdown } -> do
---     modifyStore_ (renderAdapter renderDropdown) identity
+  ReceiveRender { render } -> do
+    modifyStore_ (renderAdapter render) identity
 
 -- NOTE passing query to the embedded component
 handleQuery :: forall f item m a. Query f item a -> ComponentM f item m (Maybe a)
