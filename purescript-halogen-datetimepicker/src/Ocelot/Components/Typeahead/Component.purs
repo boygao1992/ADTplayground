@@ -2,9 +2,9 @@ module Ocelot.Components.Typeahead.Component where
 
 import Prelude
 
-import Renderless.State
 import Control.Alternative (class Plus, empty)
 import Data.Array ((!!), difference, filter, length, sort, (:))
+import Data.Array as Array
 import Data.Fuzzy (Fuzzy(..))
 import Data.Fuzzy as Fuzz
 import Data.Maybe (Maybe(..), maybe)
@@ -14,12 +14,38 @@ import Effect.Aff.Class (class MonadAff)
 import Foreign.Object (Object)
 import Halogen as H
 import Halogen.HTML as HH
-import Halogen.HTML.Events as HE
 import Network.RemoteData (RemoteData(..))
-import Renderless.State (getState, modifyState, modifyState_, modifyStore_)
+import Renderless.State (Store, extract, store)
 import Select as S
 import Type.Data.Symbol (SProxy(..))
 
+----------
+-- Components
+
+single
+  :: forall item m
+  . Eq item
+  => MonadAff m
+  => Component Maybe item m
+single = component
+  { runSelect: const <<< Just
+  , runRemove: const (const Nothing)
+  , runFilter: \items -> maybe items (\i -> filter (_ /= i) items)
+  }
+
+multi
+  :: forall item m
+  . Eq item
+  => MonadAff m
+  => Component Array item m
+multi = component
+  { runSelect: (:)
+  , runRemove: filter <<< (/=)
+  , runFilter: difference
+  }
+
+--------
+-- Types
 
 type Slot f item id = H.Slot (Query f item) (Output f item) id
 
@@ -30,14 +56,14 @@ type ComponentM f item m a = H.HalogenM (StateStore f item m) (Action f item m) 
 
 type StateRow f item m =
   ( items :: RemoteData String (Array item) -- NOTE pst.items, Parent(Typeahead)
-  , selected :: f item
   , insertable :: Insertable item
   , keepOpen :: Boolean
   , itemToObject :: item -> Object String
-  , ops :: Operations f item
-  , debounceTime :: Maybe Milliseconds
   , async :: Maybe (String -> m (RemoteData String (Array item)))
 
+  , ops :: Operations f item
+  , config :: { debounceTime :: Maybe Milliseconds }
+  , selected :: f item
   , fuzzyItems :: Array (Fuzzy item) -- NOTE cst.items, Child(Select)
   )
 
@@ -50,18 +76,19 @@ type Input f item m =
   , insertable :: Insertable item
   , keepOpen :: Boolean
   , itemToObject :: item -> Object String
-  , debounceTime :: Maybe Milliseconds
   , async :: Maybe (String -> m (RemoteData String (Array item)))
 
-  , renderDropdown :: CompositeComponentRender f item m
+  , debounceTime :: Maybe Milliseconds
+  , render :: CompositeComponentRender f item m
   }
 
-data Action f item m
+data Action f item (m :: Type -> Type)
   = PassingOutput (Output f item)
-  | ReceiveRender (Input f item m)
+  -- | ReceiveRender (Input f item m)
 
 data EmbeddedAction (f :: Type -> Type) item (m :: Type -> Type)
-  = Remove item
+  = Initialize
+  | Remove item
   | RemoveAll
   -- | Receive CompositeInput
 -- NOTE internal actions, moved to Util functions
@@ -91,7 +118,6 @@ type ChildSlots f item =
   ( select :: S.Slot (Query f item) EmbeddedChildSlots (Output f item) Unit
   )
 _select = SProxy :: SProxy "select"
-
 
 type CompositeState f item m = S.State (StateRow f item m)
 type CompositeAction f item m = S.Action (EmbeddedAction f item m)
@@ -125,77 +151,120 @@ data Insertable item
   = NotInsertable
   | Insertable (String -> item)
 
-
 ------------
 -- Container
 
--- component
---   :: forall item m
---   . MonadAff m
---   => Component item m
--- component = H.mkComponent
---   { initialState: \({ renderDropdown, selectedItem, items }) ->
---       store (renderAdapter renderDropdown) { selectedItem, items }
---   , render: extract
---   , eval: H.mkEval H.defaultEval
---       { handleAction = handleAction
---       , handleQuery = handleQuery
---       }
---   }
+component
+  :: forall f item m
+  . Plus f
+  => Eq item
+  => MonadAff m
+  => Operations f item
+  -> Component f item m
+component ops = H.mkComponent
+  { initialState: initialState ops
+  , render: extract
+  , eval: H.mkEval H.defaultEval
+      { handleAction = handleAction
+      , handleQuery = handleQuery
+      }
+  }
 
--- renderAdapter
---   :: forall item m
---   . MonadAff m
---   => CompositeComponentRender item m
---   -> ComponentRender item m
--- renderAdapter renderDropdown state =
---   HH.slot _select unit (S.component $ spec renderDropdown)
---     (embeddedInput state)
---     (Just <<< PassingOutput)
+initialState
+  :: forall f item m
+  . Plus f
+  => Eq item
+  => MonadAff m
+  => Operations f item
+  -> Input f item m
+  -> StateStore f item m
+initialState ops
+  { items, insertable, keepOpen, itemToObject, async, debounceTime, render }
+  = store (renderAdapter render)
+      { items
+      , insertable
+      , keepOpen
+      , itemToObject
+      , async
 
--- spec
---   :: forall item m
---   . MonadAff m
---   => CompositeComponentRender item m
---   -> Spec item m
--- spec embeddedRender =
---   S.defaultSpec
---   { render = embeddedRender
---   -- , handleAction = embeddedHandleAction
---   , handleQuery = embeddedHandleQuery
---   , handleMessage = embeddedHandleMessage
---   }
+      , ops
+      , config: {debounceTime}
+      , selected: empty :: f item
+      , fuzzyItems: []
+      }
+
+renderAdapter
+  :: forall f item m
+  . Plus f
+  => Eq item
+  => MonadAff m
+  => CompositeComponentRender f item m
+  -> ComponentRender f item m
+renderAdapter render state =
+  HH.slot _select unit (S.component $ spec render)
+    (embeddedInput state)
+    (Just <<< PassingOutput)
+
+spec
+  :: forall f item m
+  . Plus f
+  => Eq item
+  => MonadAff m
+  => CompositeComponentRender f item m
+  -> Spec f item m
+spec embeddedRender =
+  S.defaultSpec
+  { render = embeddedRender
+  , handleAction = embeddedHandleAction
+  , handleQuery = embeddedHandleQuery
+  , handleMessage = embeddedHandleMessage
+  , initialize = embeddedInitialize
+  }
 
 -- NOTE configure Select
--- embeddedInput :: forall item. State item -> CompositeInput item
--- embeddedInput { selectedItem, items } =
---   { inputType: S.Toggle
---   , search: Nothing
---   , debounceTime: Nothing
---   , getItemCount: Array.length <<< _.items
+embeddedInput :: forall f item m. State f item m -> CompositeInput f item m
+embeddedInput { items, selected, insertable, keepOpen, itemToObject, ops, async, fuzzyItems, config: { debounceTime } } =
+  { inputType: S.Text
+  , search: Nothing
+  , debounceTime
+  , getItemCount: Array.length <<< _.fuzzyItems
 
---   , selectedItem
---   , items
---   }
+  , items
+  , selected
+  , insertable
+  , keepOpen
+  , itemToObject
+  , ops
+  , async
+  , fuzzyItems
+
+  , config: { debounceTime } -- NOTE overhead
+  }
 
 -- NOTE re-raise output messages from the embedded component
 -- NOTE update Dropdown render function if it relies on external state
--- handleAction :: forall item m. MonadAff m => Action item m -> ComponentM item m Unit
--- handleAction = case _ of
---   PassingOutput output ->
---     H.raise output
-
+handleAction :: forall f item m. MonadAff m => Action f item m -> ComponentM f item m Unit
+handleAction = case _ of
+  PassingOutput output ->
+    H.raise output
+-- TODO
 --   ReceiveRender { renderDropdown } -> do
 --     modifyStore_ (renderAdapter renderDropdown) identity
 
 -- NOTE passing query to the embedded component
--- handleQuery :: forall item m a. Query item a -> ComponentM item m (Maybe a)
--- handleQuery = case _ of
---   SetItems items a -> Just a <$ do
---     H.query _select unit (S.Query $ H.tell $ SetItems items)
-
---   SetSelection item a -> Just a <$ do
---     H.query _select unit (S.Query $ H.tell $ SetSelection item)
+handleQuery :: forall f item m a. Query f item a -> ComponentM f item m (Maybe a)
+handleQuery = case _ of
+  GetSelected reply -> do
+    response <- H.query _select unit (S.Query $ H.request GetSelected)
+    pure $ reply <$> response
+  ReplaceSelected selected a -> Just a <$ do
+    H.query _select unit (S.Query $ H.tell $ ReplaceSelected selected)
+  ReplaceSelectedBy f a -> Just a <$ do
+    H.query _select unit (S.Query $ H.tell $ ReplaceSelectedBy f)
+  ReplaceItems items a -> Just a <$ do
+    H.query _select unit (S.Query $ H.tell $ ReplaceItems items)
+  Reset a -> Just a <$ do
+    H.query _select unit (S.Query $ H.tell $ Reset)
 
 ------------------
 -- Embedded > Util
@@ -285,6 +354,8 @@ embeddedHandleAction
   => EmbeddedAction f item m
   -> CompositeComponentM f item m Unit
 embeddedHandleAction = case _ of
+  Initialize -> do
+    synchronize
   Remove item -> do
     st <- H.modify \st -> st { selected = st.ops.runRemove item st.selected }
     H.raise $ SelectionChanged RemovalQuery st.selected
@@ -375,6 +446,12 @@ embeddedHandleMessage = case _ of
 
   _ -> pure unit
 
+------------------------
+-- Embedded > initialize
+
+embeddedInitialize :: forall f item m. Maybe (CompositeAction f item m)
+embeddedInitialize = Just $ S.Action $ Initialize
 
 --------------------
 -- Embedded > render
+

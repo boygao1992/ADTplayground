@@ -33,7 +33,7 @@ type Input item m =
   { selectedItem :: Maybe item
   , items :: Array item
 
-  , renderDropdown :: CompositeComponentRender item m
+  , render :: CompositeComponentRender item m
   }
 
 data Action item m
@@ -79,8 +79,7 @@ component
   . MonadAff m
   => Component item m
 component = H.mkComponent
-  { initialState: \({ renderDropdown, selectedItem, items }) ->
-      store (renderAdapter renderDropdown) { selectedItem, items }
+  { initialState
   , render: extract
   , eval: H.mkEval H.defaultEval
       { handleAction = handleAction
@@ -88,13 +87,17 @@ component = H.mkComponent
       }
   }
 
+initialState :: forall item m. MonadAff m => Input item m -> StateStore item m
+initialState { render, selectedItem, items } =
+  store (renderAdapter render) { selectedItem, items }
+
 renderAdapter
   :: forall item m
   . MonadAff m
   => CompositeComponentRender item m
   -> ComponentRender item m
-renderAdapter renderDropdown state =
-  HH.slot _select unit (S.component $ spec renderDropdown)
+renderAdapter render state =
+  HH.slot _select unit (S.component $ spec render)
     (embeddedInput state)
     (Just <<< PassingOutput)
 
@@ -130,8 +133,8 @@ handleAction = case _ of
   PassingOutput output ->
     H.raise output
 
-  ReceiveRender { renderDropdown } -> do
-    modifyStore_ (renderAdapter renderDropdown) identity
+  ReceiveRender { render } -> do
+    modifyStore_ (renderAdapter render) identity
 
 -- NOTE passing query to the embedded component
 handleQuery :: forall item m a. Query item a -> ComponentM item m (Maybe a)
