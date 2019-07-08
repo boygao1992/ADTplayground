@@ -1,6 +1,7 @@
 module Adhoc.Cell.Renderless where
 
 import Prelude
+import Effect.Console (logShow)
 
 import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 import Data.Array ((!!))
@@ -20,10 +21,12 @@ import Renderless.State (Store, extract, getState, getsState, modifyState_, modi
 import Web.DOM.Element as WDE
 import Web.Event.Event as WE
 import Web.HTML.HTMLElement as WHE
+import Web.UIEvent.MouseEvent as ME
 import Web.UIEvent.KeyboardEvent as KE
 
 data CellType
-  = CellTypeInt Int
+  = CellTypeBoolean Boolean
+  | CellTypeInt Int
   | CellTypeNumber Number
   | CellTypeFixed Int Number
   | CellTypeString String
@@ -32,14 +35,20 @@ derive instance genericCellType :: Generic CellType _
 derive instance eqCellType :: Eq CellType
 derive instance ordCellType :: Ord CellType
 instance showCellType :: Show CellType where
+  show (CellTypeBoolean bool) = show bool
   show (CellTypeInt int) = show int
   show (CellTypeNumber num) = show num
   show (CellTypeFixed p num) = show num
   show (CellTypeString str) = str
   show (CellTypeEnum _ str) = str
 
+isCellTypeBoolean :: CellType -> Boolean
+isCellTypeBoolean (CellTypeBoolean _) = true
+isCellTypeBoolean _ = false
+
 displayCellType :: CellType -> String
 displayCellType = case _ of
+  CellTypeBoolean bool -> show bool
   CellTypeInt int -> Number.format (numberFormatter 0) <<< Int.toNumber $ int
   CellTypeNumber num -> Number.format (numberFormatter 3) num
   CellTypeFixed p num -> Number.format (numberFormatter p) num
@@ -58,6 +67,10 @@ displayCellType = case _ of
 
 fromString :: CellType -> String -> Maybe CellType
 fromString cellType input = case cellType of
+  CellTypeBoolean _ -> case input of
+    "true" -> Just $ CellTypeBoolean true
+    "false" -> Just $ CellTypeBoolean false
+    _ -> Nothing
   CellTypeInt _ -> CellTypeInt <$> Int.fromString input
   CellTypeNumber _ -> CellTypeNumber <$> Number.fromString input
   CellTypeFixed p _ -> CellTypeFixed p <$> join (Fixed.reifyPrecision p (map Fixed.toNumber <<< fromString' input))
@@ -107,8 +120,8 @@ data Action m
   | OnValueInput String
   | OnKeyDown KE.KeyboardEvent
   | OnBlurInput -- TODO replace by ??
-  -- | OnMouseDownToggle
-  | OnClickItem Int
+  | OnToggle
+  | OnClickItem Int ME.MouseEvent
   | OnMouseEnterItem Int
   | Receive (Input m)
 
@@ -153,10 +166,34 @@ component = H.mkComponent
 
 handleAction :: forall m. MonadAff m => Action m -> ComponentM m Unit
 handleAction = case _ of
+  OnToggle -> do
+    value <- getsState _.value
+    case value of
+      CellTypeBoolean b -> do
+        modifyState_ _ { value = CellTypeBoolean $ not b }
+      _ -> pure unit
+
+
   Edit -> do
-    modifyState_ \st -> st { editing = true, cache = show st.value }
-    updateInputWidth
-    focusInput
+    value <- getsState _.value
+    case value of
+      CellTypeEnum available _ -> do
+        let candidates = Array.filter (String.contains (String.Pattern "")) available
+        when (Array.length candidates > 0) do
+          modifyState_ \st -> st
+            { candidates = candidates
+            , editing = true
+            , cache = ""
+            }
+          handleMenuVisibilityChange true
+          focusInput
+      _ -> do
+        modifyState_
+          _ { editing = true
+            , cache = show value
+            }
+        updateInputWidth
+        focusInput
 
   OnValueInput str -> do
     modifyState_ \st -> st
@@ -207,6 +244,7 @@ handleAction = case _ of
               Nothing ->
                 modifyState_
                   _ { displayMessage = Just $ "not an valid " <> case s.value of
+                        CellTypeBoolean _ -> "boolean"
                         CellTypeInt _ -> "integer"
                         CellTypeNumber _ -> "number"
                         CellTypeFixed _ _ -> "number"
@@ -251,10 +289,13 @@ handleAction = case _ of
   --   isOpen <- getsState _.isOpen
   --   handleMenuVisibilityChange $ not isOpen
 
-  OnClickItem index -> do
+  OnClickItem index ev -> do
+    H.liftEffect $ WE.preventDefault $ ME.toEvent ev
+
     getsState _.value >>= case _ of
-      CellTypeEnum available _ -> do
-        for_ (available !! index) \selection -> do
+      CellTypeEnum _ _ -> do
+        candidates <- getsState _.candidates
+        for_ (candidates !! index) \selection -> do
           modifyState_ _ { cache = selection }
           handleMenuVisibilityChange false
           updateInputWidth

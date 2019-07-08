@@ -75,18 +75,21 @@ setDisplayProps
 setDisplayProps props = props <>
   [ HE.onClick $ Just <<< const Edit ]
 
--- type ToggleProps p =
---   ( onMouseDown :: ME.MouseEvent
---   | p
---   )
+type ToggleProps p =
+  ( onChange :: WE.Event
+  , checked :: Boolean
+  | p
+  )
 
--- setToggleProps
---   :: forall p m
---   . Array (HH.IProp (ToggleProps p) (Action m))
---   -> Array (HH.IProp (ToggleProps p) (Action m))
--- setToggleProps props = props <>
---   [ HE.onMouseDown $ Just <<< const OnMouseDownToggle
---   ]
+setToggleProps
+  :: forall p m
+  . Boolean
+  -> Array (HH.IProp (ToggleProps p) (Action m))
+  -> Array (HH.IProp (ToggleProps p) (Action m))
+setToggleProps b props = props <>
+  [ HE.onChange $ Just <<< const OnToggle
+  , HP.checked b
+  ]
 
 type MenuProps p =
   ( style :: String
@@ -105,7 +108,7 @@ setMenuProps props = props <>
   ]
 
 type ItemProps p =
-  ( onClick :: ME.MouseEvent
+  ( onMouseDown :: ME.MouseEvent
   , onMouseEnter :: ME.MouseEvent
   | p
   )
@@ -116,7 +119,7 @@ setItemProps
   -> Array (HH.IProp (ItemProps p) (Action m))
   -> Array (HH.IProp (ItemProps p) (Action m))
 setItemProps { index, isSelected } props = props <>
-  [ HE.onClick $ Just <<< const (OnClickItem index)
+  [ HE.onMouseDown $ Just <<< OnClickItem index
   , HE.onMouseEnter $ Just <<< const (OnMouseEnterItem index)
   ]
   <> if (isSelected)

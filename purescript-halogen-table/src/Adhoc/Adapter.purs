@@ -34,6 +34,10 @@ import Type.Proxy (Proxy(..))
 
 data FromCellType = FromCellType
 
+instance fromCellTypeBoolean :: Relation FromCellType CellType (Maybe Boolean) where
+  relation _ (CellTypeBoolean bool) = Just bool
+  relation _ _ = Nothing
+else
 instance fromCellTypeInt :: Relation FromCellType CellType (Maybe Int) where
   relation _ (CellTypeInt int) = Just int
   relation _ _ = Nothing
@@ -63,6 +67,9 @@ instance fromCellTypeEnum
 
 data ToCellType = ToCellType
 
+instance toCellTypeBoolean :: Mapping ToCellType Boolean CellType where
+  mapping ToCellType bool = CellTypeBoolean bool
+else
 instance toCellTypeInt :: Mapping ToCellType Int CellType where
   mapping ToCellType int = CellTypeInt int
 else
@@ -107,52 +114,12 @@ rowInputAdapter
 
 data RowInputMapping = RowInputMapping
 
-instance rowInputMappingReducerInt
+instance rowInputMappingReducer
   :: ( IsSymbol label
-    , Mapping ToCellType Int CellType
+    , Mapping ToCellType typ CellType
     )
   => FoldingWithIndex RowInputMapping
-    (SProxy label) (List (String /\ CellType)) Int (List (String /\ CellType))
-  where
-    foldingWithIndex RowInputMapping label list a =
-      ((reflectSymbol label) /\ (mapping ToCellType a)) : list
-else
-instance rowInputMappingReducerNumber
-  :: ( IsSymbol label
-    , Mapping ToCellType Number CellType
-    )
-  => FoldingWithIndex RowInputMapping
-    (SProxy label) (List (String /\ CellType)) Number (List (String /\ CellType))
-  where
-    foldingWithIndex RowInputMapping label list a =
-      ((reflectSymbol label) /\ (mapping ToCellType a)) : list
-else
-instance rowInputMappingReducerFixed
-  :: ( IsSymbol label
-    , Mapping ToCellType (Fixed precision) CellType
-    )
-  => FoldingWithIndex RowInputMapping
-    (SProxy label) (List (String /\ CellType)) (Fixed precision) (List (String /\ CellType))
-  where
-    foldingWithIndex RowInputMapping label list a =
-      ((reflectSymbol label) /\ (mapping ToCellType a)) : list
-else
-instance rowInputMappingReducerString
-  :: ( IsSymbol label
-    , Mapping ToCellType String CellType
-    )
-  => FoldingWithIndex RowInputMapping
-    (SProxy label) (List (String /\ CellType)) String (List (String /\ CellType))
-  where
-    foldingWithIndex RowInputMapping label list a =
-      ((reflectSymbol label) /\ (mapping ToCellType a)) : list
-else
-instance rowInputMappingReducerEnum
-  :: ( IsSymbol label
-    , Mapping ToCellType enum CellType
-    )
-  => FoldingWithIndex RowInputMapping
-    (SProxy label) (List (String /\ CellType)) enum (List (String /\ CellType))
+  (SProxy label) (List (String /\ CellType)) typ (List (String /\ CellType))
   where
     foldingWithIndex RowInputMapping label list a =
       ((reflectSymbol label) /\ (mapping ToCellType a)) : list

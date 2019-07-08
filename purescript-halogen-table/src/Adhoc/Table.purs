@@ -15,6 +15,7 @@ import Type.Data.Symbol (SProxy(..))
 
 import Adhoc.Row as Row
 import Adhoc.Cell as Cell
+import Ocelot.Block.Table as Table
 
 type State = Array (Array (String /\ Cell.CellType))
 
@@ -45,9 +46,21 @@ type ComponentRender m = State -> ComponentHTML m
 
 type Slot = H.Slot Query Output
 
+component :: forall m. MonadAff m => Component m
+component = H.mkComponent
+  { initialState
+  , render
+  , eval: H.mkEval H.defaultEval
+      { handleQuery = handleQuery
+      }
+  }
+
+initialState :: Input -> State
+initialState = identity
+
 render :: forall m. MonadAff m => ComponentRender m
 render st =
-  HH.div_ $
+  Table.table_ $
     Array.mapWithIndex renderRow st
 
   where

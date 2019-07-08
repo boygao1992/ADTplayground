@@ -2,14 +2,47 @@ module Page where
 
 import Prelude
 
+import Adhoc.Adapter as Adapter
+import Adhoc.Cell as Cell
+import Adhoc.Table as Table
 import Data.Const (Const)
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
+import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
-import Effect.Aff.Class (class MonadAff)
 import Type.Data.Symbol (SProxy(..))
-import Adhoc.Cell as Cell
-import Polaris.UI.Page2 as TestTable
+
+data Position
+  = Boss
+  | Contractor
+derive instance genericPosition :: Generic Position _
+instance showPosition :: Show Position where show = genericShow
+
+data Country
+  = None
+  | Germancy
+  | Greece
+  | Finland
+  | Poland
+  | Sweden
+derive instance genericCountry :: Generic Country _
+instance showCountry :: Show Country where show = genericShow
+
+type People =
+  { name :: String
+  , position :: Position
+  , country :: Country
+  , salary :: Number
+  , active :: Boolean
+  }
+
+sampleData :: Array People
+sampleData =
+  [ { name: "Arthur Brown", position: Contractor, country: None, salary: 8877.0, active: false }
+  , { name: "Ike Hill", position: Boss, country: Sweden, salary: 34835.0, active: true }
+  ]
 
 type State = Unit
 type Action = Unit
@@ -18,10 +51,10 @@ type Input = Unit
 type Output = Void
 type ChildSlots =
   ( cell :: Cell.Slot Int
-  , testTable :: TestTable.Slot Unit
+  , table :: Table.Slot Unit
   )
 _cell = SProxy :: SProxy "cell"
-_testTable = SProxy :: SProxy "testTable"
+_table = SProxy :: SProxy "table"
 
 type ComponentM m a = H.HalogenM State Action ChildSlots Output m a
 type Component m = H.Component HH.HTML Query Input Output m
@@ -45,22 +78,22 @@ render _ =
     , value: Cell.CellTypeInt 123
     }
     (const Nothing)
-  , HH.slot _cell 0 Cell.component
+  , HH.slot _cell 1 Cell.component
     { render: Cell.defaultRender
     , value: Cell.CellTypeNumber 1234.56789
     }
     (const Nothing)
-  , HH.slot _cell 0 Cell.component
+  , HH.slot _cell 2 Cell.component
     { render: Cell.defaultRender
     , value: Cell.CellTypeFixed 3 12345.678
     }
     (const Nothing)
-  , HH.slot _cell 0 Cell.component
+  , HH.slot _cell 3 Cell.component
     { render: Cell.defaultRender
     , value: Cell.CellTypeString "hello world"
     }
     (const Nothing)
-  , HH.slot _cell 0 Cell.component
+  , HH.slot _cell 4 Cell.component
     { render: Cell.defaultRender
     , value: Cell.CellTypeEnum
         [ "purescript-css-validate"
@@ -77,6 +110,13 @@ render _ =
         "purescript-svgo"
     }
     (const Nothing)
-  , HH.slot _testTable unit TestTable.component unit (const Nothing)
+  , HH.slot _cell 5 Cell.component
+      { render: Cell.defaultRender
+      , value: Cell.CellTypeBoolean false
+      }
+      (const Nothing)
+  , HH.slot _table unit Table.component
+      (Adapter.rowInputAdapter <$> sampleData)
+      (const Nothing)
   ]
 

@@ -12,6 +12,7 @@ import Halogen as H
 import Halogen.HTML as HH
 -- import Renderless.State (Store, extract, getState, getsState, modifyState_, modifyStore_, store)
 import Type.Data.Symbol (SProxy(..))
+import Ocelot.Block.Table as Table
 
 import Adhoc.Cell as Cell
 
@@ -56,7 +57,7 @@ component = H.mkComponent
 
 render :: forall m. MonadAff m => ComponentRender m
 render st =
-  HH.div_ $
+  Table.row_ $
     uncurry renderCell <$> st
 
   where

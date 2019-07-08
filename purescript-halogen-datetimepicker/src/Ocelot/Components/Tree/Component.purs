@@ -48,7 +48,7 @@ data Query item a
   | SetSelections (Array (ItemPath item)) a
 
 type Input item =
-  { renderItem :: item -> HH.PlainHTML }
+  { renderItem :: RenderItem item }
 
 data Output item
   = ItemAdded item (ItemPath item)
