@@ -4,7 +4,7 @@ import Prelude
 
 import Control.Alternative (class Plus, empty)
 import DOM.HTML.Indexed (HTMLinput)
-import Data.Array ((!!), difference, filter, length, sort, (:), foldr, null)
+import Data.Array ((!!), (:))
 import Data.Array as Array
 import Data.Fuzzy (Fuzzy(..), match)
 import Data.Fuzzy as Fuzz
@@ -45,7 +45,7 @@ single
 single = component
   { runSelect: const <<< Just
   , runRemove: const (const Nothing)
-  , runFilter: \items -> maybe items (\i -> filter (_ /= i) items)
+  , runFilter: \items -> maybe items (\i -> Array.filter (_ /= i) items)
   }
 
 multi
@@ -55,8 +55,8 @@ multi
   => Component Array item m
 multi = component
   { runSelect: (:)
-  , runRemove: filter <<< (/=)
-  , runFilter: difference
+  , runRemove: Array.filter <<< (/=)
+  , runFilter: Array.difference
   }
 
 ---------------------
@@ -392,7 +392,7 @@ getNewItems
   => CompositeState f item m
   -> RemoteData String (Array (Fuzzy item))
 getNewItems st =
-  sort
+  Array.sort
   <<< applyF
   <<< applyI
   <<< fuzzyItems
@@ -408,7 +408,7 @@ getNewItems st =
     applyI = applyInsertable matcher st.insertable st.search
 
     applyF :: Array (Fuzzy item) -> Array (Fuzzy item)
-    applyF = filter (\(Fuzzy { ratio }) -> ratio > (2 % 3))
+    applyF = Array.filter (\(Fuzzy { ratio }) -> ratio > (2 % 3))
 
 applyInsertable
   :: forall item
@@ -420,7 +420,7 @@ applyInsertable
 applyInsertable _ _ "" items = items
 applyInsertable match insertable text items = case insertable of
   NotInsertable -> items
-  Insertable mkItem | length (filter isExactMatch items) > 0 -> items
+  Insertable mkItem | Array.length (Array.filter isExactMatch items) > 0 -> items
                     | otherwise -> (match $ mkItem text) : items
   where
     isExactMatch (Fuzzy { distance }) = distance == Fuzz.Distance 0 0 0 0 0 0
@@ -649,7 +649,7 @@ renderMulti
 renderMulti iprops renderItem renderContainer st =
   HH.div
     [ css "relative" ]
-    [ if (not disabled && not null st.selected)
+    [ if (not disabled && not Array.null st.selected)
         then
           HH.a
             [ css "absolute -mt-7 pin-r underline text-grey-70 cursor-pointer"
@@ -820,7 +820,7 @@ disabledClasses = HH.ClassName <$>
   ]
 
 isDisabled :: ∀ i. Array (HP.IProp HTMLinput i) -> Boolean
-isDisabled = foldr f false
+isDisabled = Array.foldr f false
   where
     f (HP.IProp (Property "disabled" disabled)) | coercePropValue disabled == true = (||) true
     f _ = (||) false
