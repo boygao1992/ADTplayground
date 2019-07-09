@@ -2,7 +2,7 @@
   "scripts":{
     "start": "parcel assets/index.html"
   },
-  "name": "purescript-halogen-datepicker",
+  "name": "purescript-ocelot-v5",
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",

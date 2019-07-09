@@ -1,5 +1,5 @@
 {
-  "name": "purescript-halogen-datetimepicker",
+  "name": "purescript-ocelot-v5",
   "ignore": [
     "**/.*",
     "node_modules",
