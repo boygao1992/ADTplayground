@@ -1,0 +1,16 @@
+module Magento.Migration.Grid.SQL
+( module Exports
+) where
+
+import Magento.Migration.Grid.SQL.BatchGetSalesFlatCreditMemoGrid (batchGetSalesFlatCreditMemoGrid) as Exports
+import Magento.Migration.Grid.SQL.BatchGetSalesFlatInvoiceGrid (batchGetSalesFlatInvoiceGrid) as Exports
+import Magento.Migration.Grid.SQL.BatchGetSalesFlatOrderGrid (batchGetSalesFlatOrderGrid) as Exports
+import Magento.Migration.Grid.SQL.BatchGetSalesFlatShipmentGrid (batchGetSalesFlatShipmentGrid) as Exports
+import Magento.Migration.Grid.SQL.BatchInsertSalesFlatCreditMemoGrid (batchInsertSalesFlatCreditMemoGrid) as Exports
+import Magento.Migration.Grid.SQL.BatchInsertSalesFlatInvoiceGrid (batchInsertSalesFlatInvoiceGrid) as Exports
+import Magento.Migration.Grid.SQL.BatchInsertSalesFlatOrderGrid (batchInsertSalesFlatOrderGrid) as Exports
+import Magento.Migration.Grid.SQL.BatchInsertSalesFlatShipmentGrid (batchInsertSalesFlatShipmentGrid) as Exports
+import Magento.Migration.Grid.SQL.GetSalesFlatCreditMemoGridEntityIdsToInsert (getSalesFlatCreditMemoGridEntityIdsToInsert) as Exports
+import Magento.Migration.Grid.SQL.GetSalesFlatInvoiceGridEntityIdsToInsert (getSalesFlatInvoiceGridEntityIdsToInsert) as Exports
+import Magento.Migration.Grid.SQL.GetSalesFlatOrderGridEntityIdsToInsert (getSalesFlatOrderGridEntityIdsToInsert) as Exports
+import Magento.Migration.Grid.SQL.GetSalesFlatShipmentGridEntityIdsToInsert (getSalesFlatShipmentGridEntityIdsToInsert) as Exports

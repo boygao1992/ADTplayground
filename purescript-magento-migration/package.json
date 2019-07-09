@@ -1,0 +1,12 @@
+{
+  "name": "purescript-magento-migration",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "fast-xml-parser": "^3.12.16",
+    "mysql": "^2.17.1",
+    "uuid": "^3.3.2",
+    "uuid-validate": "^0.0.3"
+  }
+}

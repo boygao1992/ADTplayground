@@ -1,0 +1,33 @@
+{
+  "name": "purescript-magento-migration",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.1.0",
+    "purescript-console": "^4.2.0",
+    "purescript-effect": "^2.0.1",
+    "purescript-record-format": "^1.0.0",
+    "purescript-run": "^3.0.0",
+    "purescript-simple-json": "^5.0.0",
+    "purescript-js-date": "^6.0.0",
+    "purescript-functions": "^4.0.0",
+    "purescript-node-path": "^3.0.0",
+    "purescript-node-buffer": "^5.0.0",
+    "purescript-sequences": "^2.1.0",
+    "purescript-safely": "^4.0.0",
+    "purescript-generics-rep": "^6.1.1",
+    "purescript-profunctor-lenses": "^6.2.0",
+    "purescript-generics-rep-optics": "^1.1.0",
+    "purescript-now": "^4.0.0",
+    "purescript-formatters": "^4.0.1",
+    "purescript-concurrent-queues": "^1.1.0",
+    "purescript-uuid": "^5.2.2"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^4.0.0"
+  }
+}

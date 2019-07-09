@@ -1,0 +1,13 @@
+/bower_components/
+/node_modules/
+/.pulp-cache/
+/output/
+/generated-docs/
+/.psc-package/
+/.psc*
+/.purs*
+/.psa*
+
+/src/Magento/Migration/Config.purs
+/src/Magento/Migration/Product/
+/src/Magento/Migration/Order/
