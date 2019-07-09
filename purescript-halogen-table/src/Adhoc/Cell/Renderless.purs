@@ -1,7 +1,6 @@
 module Adhoc.Cell.Renderless where
 
 import Prelude
-import Effect.Console (logShow)
 
 import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 import Data.Array ((!!))

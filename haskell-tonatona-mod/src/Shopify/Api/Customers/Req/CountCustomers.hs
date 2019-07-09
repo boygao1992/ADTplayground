@@ -2,15 +2,12 @@
 module Shopify.Api.Customers.Req.CountCustomers where
 
 import RIO
-import Data.Aeson.TH
+import Lens.Micro.TH.Util
+import Data.Aeson.TH.Util
 
 data Res = Res
-  { _count :: !(Maybe Word64)
+  { __count :: !(Maybe Word64)
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''Res)
+$(makeLensesDropOne ''Res)
+$(deriveJSONDropTwo ''Res)
 

@@ -2,16 +2,18 @@
 module Shopify.Api.Customers.Req.SearchCustomers where
 
 import RIO
-import Lens.Micro.TH
+import Lens.Micro.TH.Util
+import Data.Aeson.TH.Util
 import Data.Default
 
 data Req = Req
-  { _order :: Maybe Text
-  , _query :: Maybe Text
-  , _limit :: Maybe Word8
-  , _fields :: Maybe Text
+  { __order :: Maybe Text
+  , __query :: Maybe Text
+  , __limit :: Maybe Word8
+  , __fields :: Maybe Text
   }
-$(makeLenses ''Req)
+$(makeLensesDropOne ''Req)
+$(deriveJSONDropTwo ''Req)
 
 instance Default Req where
   def = Req Nothing Nothing Nothing Nothing

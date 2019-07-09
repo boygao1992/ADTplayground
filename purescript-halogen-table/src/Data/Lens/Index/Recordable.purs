@@ -4,6 +4,7 @@ import Prelude
 
 import Data.Lens (preview)
 import Data.Lens.Index (class Index, ix)
+import Data.String.Read (class Read, read)
 import Data.Maybe (Maybe(..))
 import Prim.Row as Row
 import Prim.RowList (kind RowList)
@@ -14,59 +15,66 @@ import Type.Data.RowList (RLProxy (..))
 import Type.Data.Symbol (SProxy (..))
 import Type.Data.Symbol as Symbol
 
-class Recordable m (r :: # Type)
-  where
-    toRecord :: m -> Maybe (Record r)
+-----------------------
+-- RecordableFromString
+-- NOTE can be implemented by RecordableWithMapping with Constraint Kind
 
-instance recordableImpl ::
+-- NOTE Object String, Map String String, Array (String /\ String), etc.
+class RecordableFromString m (r :: # Type)
+  where
+    toRecordFromString :: m -> Maybe (Record r)
+
+instance recordableFromStringImpl ::
   ( RowList.RowToList r rl
-  , RecordableList m rl r
-  ) => Recordable m r
+  , RecordableFromStringList m rl r
+  ) => RecordableFromString m r
   where
-    toRecord t =
+    toRecordFromString t =
       Builder.build <@> {}
-      <$> toRecordList (RLProxy :: RLProxy rl) t
+      <$> toRecordFromStringList (RLProxy :: RLProxy rl) t
 
-class RecordableList m (rl :: RowList) (to :: # Type)| rl -> to
+class RecordableFromStringList m (rl :: RowList) (to :: # Type)| rl -> to
   where
-    toRecordList :: RLProxy rl -> m -> Maybe (Builder {} { | to })
+    toRecordFromStringList :: RLProxy rl -> m -> Maybe (Builder {} { | to })
 
-instance recordableListNil ::
-  RecordableList m RowList.Nil ()
+instance recordableFromStringListNil ::
+  RecordableFromStringList m RowList.Nil ()
   where
-    toRecordList _ _ = Just identity
+    toRecordFromStringList _ _ = Just identity
 
-instance recordableListConsOptional ::
+instance recordableFromStringListConsOptional ::
   ( Symbol.IsSymbol name
-  , Index m String typ
+  , Index m String String
+  , Read typ
   , Row.Cons name (Maybe typ) restTo to
   , Row.Lacks name restTo
-  , RecordableList m restRl restTo
-  ) => RecordableList m (RowList.Cons name (Maybe typ) restRl) to
+  , RecordableFromStringList m restRl restTo
+  ) => RecordableFromStringList m (RowList.Cons name (Maybe typ) restRl) to
   where
-    toRecordList _ t =
+    toRecordFromStringList _ t =
       ( Builder.insert
           (SProxy :: SProxy name)
-          (preview (ix (Symbol.reflectSymbol (SProxy :: SProxy name))) t)
+          (read =<< preview (ix (Symbol.reflectSymbol (SProxy :: SProxy name))) t)
         <<< _
       )
-      <$> toRecordList (RLProxy :: RLProxy restRl) t
+      <$> toRecordFromStringList (RLProxy :: RLProxy restRl) t
 else
-instance recordableListConsRequired ::
+instance recordableFromStringListConsRequired ::
   ( Symbol.IsSymbol name
-  , Index m String typ
+  , Index m String String
+  , Read typ
   , Row.Cons name typ restTo to
   , Row.Lacks name restTo
-  , RecordableList m restRl restTo
-  ) => RecordableList m (RowList.Cons name typ restRl) to
+  , RecordableFromStringList m restRl restTo
+  ) => RecordableFromStringList m (RowList.Cons name typ restRl) to
   where
-    toRecordList _ t =
-      case preview (ix (Symbol.reflectSymbol (SProxy :: SProxy name))) t of
+    toRecordFromStringList _ t =
+      case read =<< preview (ix (Symbol.reflectSymbol (SProxy :: SProxy name))) t of
         Nothing ->
           const Nothing
         Just val ->
           Just <<< (Builder.insert (SProxy :: SProxy name) val <<< _)
-      =<< toRecordList (RLProxy :: RLProxy restRl) t
+      =<< toRecordFromStringList (RLProxy :: RLProxy restRl) t
 
 ------------------------
 -- RecordableWithMapping

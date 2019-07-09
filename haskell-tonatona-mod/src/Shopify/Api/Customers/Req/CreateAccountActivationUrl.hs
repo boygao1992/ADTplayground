@@ -2,16 +2,13 @@
 module Shopify.Api.Customers.Req.CreateAccountActivationUrl where
 
 import RIO
-import Data.Aeson.TH
+import Lens.Micro.TH.Util
+import Data.Aeson.TH.Util
 
 data Res = Res
-  { _account_activation_url :: !(Maybe Text)
-  , _errors :: !(Maybe [Text])
+  { __account_activation_url :: !(Maybe Text)
+  , __errors :: !(Maybe [Text])
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''Res)
+$(makeLensesDropOne ''Res)
+$(deriveJSONDropTwo ''Res)
 

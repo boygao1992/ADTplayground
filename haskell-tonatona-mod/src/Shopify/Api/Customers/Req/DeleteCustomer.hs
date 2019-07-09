@@ -2,14 +2,11 @@
 module Shopify.Api.Customers.Req.DeleteCustomer where
 
 import RIO
-import Data.Aeson.TH
+import Lens.Micro.TH.Util
+import Data.Aeson.TH.Util
 
 data Res = Res
-  { _errors :: !(Maybe Text)
+  { __errors :: !(Maybe Text)
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''Res)
+$(makeLensesDropOne ''Res)
+$(deriveJSONDropTwo ''Res)

@@ -2,23 +2,17 @@
 module Shopify.Api.Customers.Addresses.Req.DeleteAddress where
 
 import RIO
-import Data.Aeson.TH
+import Lens.Micro.TH.Util
+import Data.Aeson.TH.Util
 
 data Base = Base
-  { _base :: ![Text]
+  { __base :: ![Text]
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      }
-    ''Base)
+$(makeLensesDropOne ''Base)
+$(deriveJSONDropTwo ''Base)
 
 data Res = Res
-  { _errors :: !(Maybe Base)
+  { __errors :: !(Maybe Base)
   }
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''Res)
+$(makeLensesDropOne ''Res)
+$(deriveJSONDropTwo ''Res)

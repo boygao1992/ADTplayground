@@ -34,6 +34,7 @@ import Type.Proxy (Proxy(..))
 
 data FromCellType = FromCellType
 
+-- NOTE simulate Typeable cast by chained instances
 instance fromCellTypeBoolean :: Relation FromCellType CellType (Maybe Boolean) where
   relation _ (CellTypeBoolean bool) = Just bool
   relation _ _ = Nothing

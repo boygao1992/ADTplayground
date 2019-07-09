@@ -3,21 +3,23 @@ module Shopify.Api.Customers.Req.GetCustomers where
 
 import RIO
 import Data.Default
-import Lens.Micro.TH
+import Lens.Micro.TH.Util
+import Data.Aeson.TH.Util
 
 import Shopify.Data.Customers.CustomerId (CustomerId)
 
 data Req = Req
-  { _ids :: Maybe Text
-  , _since_id :: Maybe CustomerId
-  , _created_at_min :: Maybe Text
-  , _created_at_max :: Maybe Text
-  , _updated_at_min :: Maybe Text
-  , _updated_at_max :: Maybe Text
-  , _limit :: Maybe Word8
-  , _fields :: Maybe Text
+  { __ids :: Maybe Text
+  , __since_id :: Maybe CustomerId
+  , __created_at_min :: Maybe Text
+  , __created_at_max :: Maybe Text
+  , __updated_at_min :: Maybe Text
+  , __updated_at_max :: Maybe Text
+  , __limit :: Maybe Word8
+  , __fields :: Maybe Text
   }
-$(makeLenses ''Req)
+$(makeLensesDropOne ''Req)
+$(deriveJSONDropTwo ''Req)
 
 instance Default Req where
   def = Req Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing

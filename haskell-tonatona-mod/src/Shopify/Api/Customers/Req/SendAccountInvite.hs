@@ -2,29 +2,22 @@
 module Shopify.Api.Customers.Req.SendAccountInvite where
 
 import RIO
-import Data.Aeson.TH
+import Lens.Micro.TH.Util
+import Data.Aeson.TH.Util
 
 data CustomerInvite = CustomerInvite
-  { _to :: !(Maybe Text)
-  , _from :: !(Maybe Text)
-  , _subject :: !(Maybe Text)
-  , _custom_message :: !(Maybe Text)
-  , _bcc :: !(Maybe [Text])
+  { __to :: !(Maybe Text)
+  , __from :: !(Maybe Text)
+  , __subject :: !(Maybe Text)
+  , __custom_message :: !(Maybe Text)
+  , __bcc :: !(Maybe [Text])
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''CustomerInvite)
+$(makeLensesDropOne ''CustomerInvite)
+$(deriveJSONDropTwo ''CustomerInvite)
 
 data SingleCustomerInvite = SingleCustomerInvite
-  { _customer_invite :: !CustomerInvite
+  { __customer_invite :: !CustomerInvite
   } deriving (Eq, Show)
-$(deriveJSON
-    defaultOptions
-      { fieldLabelModifier = drop 1
-      , omitNothingFields = True
-      }
-    ''SingleCustomerInvite)
+$(makeLensesDropOne ''SingleCustomerInvite)
+$(deriveJSONDropTwo ''SingleCustomerInvite)
 

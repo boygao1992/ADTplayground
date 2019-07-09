@@ -1,0 +1,32 @@
+{
+  "name": "purescript-polaris-ui",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.1.1",
+    "purescript-console": "^4.2.0",
+    "purescript-effect": "^2.0.1",
+    "purescript-halogen": "https://github.com/slamdata/purescript-halogen.git#5.0.0-rc.5",
+    "purescript-halogen-select": "https://github.com/citizennet/purescript-halogen-select.git#v5.0.0-rc.2",
+    "purescript-simple-json": "^5.1.0",
+    "purescript-read": "^1.0.1",
+    "purescript-fuzzy": "^0.2.1",
+    "purescript-remotedata": "^4.2.0",
+    "purescript-concurrent-queues": "^1.1.0",
+    "purescript-argonaut": "^6.0.0",
+    "purescript-affjax": "^9.0.0",
+    "purescript-css": "^4.0.0",
+    "purescript-string-parsers": "^5.0.0",
+    "purescript-slug": "^1.0.0",
+    "purescript-routing-duplex": "^0.3.0",
+    "purescript-routing": "^9.0.0",
+    "purescript-typelevel-prelude": "^5.0.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^4.0.0"
+  }
+}

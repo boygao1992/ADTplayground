@@ -2,31 +2,31 @@
 module Shopify.Api.Products.Req.GetProducts where
 
 import RIO
-import Lens.Micro.TH
+import Lens.Micro.TH.Util
 import Data.Default
 import Shopify.Data.Products.ProductId (ProductId(..))
 import Shopify.Api.Products.Req.Data.PublishedStatus (PublishedStatus)
 
 data Req = Req
-  { _ids :: !(Maybe Text)
-  , _limit :: !(Maybe Word8)
-  , _since_id :: !(Maybe ProductId)
-  , _title :: !(Maybe Text)
-  , _vendor :: !(Maybe Text)
-  , _handle :: !(Maybe Text)
-  , _product_type :: !(Maybe Text)
-  , _collection_id :: !(Maybe Text)
-  , _created_at_min :: !(Maybe Text)
-  , _created_at_max :: !(Maybe Text)
-  , _updated_at_min :: !(Maybe Text)
-  , _updated_at_max :: !(Maybe Text)
-  , _published_at_min :: !(Maybe Text)
-  , _published_at_max :: !(Maybe Text)
-  , _published_status :: !(Maybe PublishedStatus)
-  , _fields :: !(Maybe Text)
-  , _presentment_currencies :: !(Maybe Text)
+  { __ids :: !(Maybe Text)
+  , __limit :: !(Maybe Word8)
+  , __since_id :: !(Maybe ProductId)
+  , __title :: !(Maybe Text)
+  , __vendor :: !(Maybe Text)
+  , __handle :: !(Maybe Text)
+  , __product_type :: !(Maybe Text)
+  , __collection_id :: !(Maybe Text)
+  , __created_at_min :: !(Maybe Text)
+  , __created_at_max :: !(Maybe Text)
+  , __updated_at_min :: !(Maybe Text)
+  , __updated_at_max :: !(Maybe Text)
+  , __published_at_min :: !(Maybe Text)
+  , __published_at_max :: !(Maybe Text)
+  , __published_status :: !(Maybe PublishedStatus)
+  , __fields :: !(Maybe Text)
+  , __presentment_currencies :: !(Maybe Text)
   } deriving (Eq, Show)
-$(makeLenses ''Req)
+$(makeLensesDropOne ''Req)
 
 instance Default Req where
   def = Req Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
