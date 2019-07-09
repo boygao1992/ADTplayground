@@ -28,8 +28,8 @@ import Formless.Internal.Transform as IT
 import Formless.Transform.Record (UnwrapField, unwrapOutputFields)
 import Formless.Transform.Row (mkInputFields, class MakeInputFieldsFromRow)
 import Formless.Types.Component (Action, Component, Debouncer, DebouncerField, Event(..), HalogenM, Input, InternalState(..), PublicAction, Query, QueryF(..), Spec, State, ValidStatus(..), _debouncerFieldM, _form)
-import Formless.Types.Form (FormField, FormProxy(..), FormValidationAction, InputField, InputFunction, OutputField, U)
-import Formless.Validation (Validation)
+import Formless.Types.Form (FormFields, FormInputField, FormInputFields, FormInputFunction, FormInputFunctions, FormOutputFields, FormProxy(..), FormValidationAction)
+import Formless.Validation (FormValidators)
 import Halogen as H
 import Halogen.HTML as HH
 import Heterogeneous.Mapping as HM
@@ -79,7 +79,7 @@ defaultSpec =
 -- | ```
 raiseResult
   :: forall form st act slots wrappedOutput output m
-  . Newtype (form Record OutputField) { | wrappedOutput }
+  . Newtype (FormOutputFields form) { | wrappedOutput }
   => HM.HMap UnwrapField { | wrappedOutput } { | output }
   => Event form st
   -> HalogenM form st act slots { | output } m Unit
@@ -105,14 +105,14 @@ component
   => IT.ValidateAll vs fxs fs fs m
   => IT.FormFieldToMaybeOutput fxs fs os
   => MakeInputFieldsFromRow ixs is is
-  => Newtype (form Record InputField) { | is }
-  => Newtype (form Record InputFunction) { | ifs }
-  => Newtype (form Record FormField) { | fs }
-  => Newtype (form Record OutputField) { | os }
-  => Newtype (form Record (Validation form m)) { | vs }
-  => Newtype (form Variant InputField) (Variant ivs)
-  => Newtype (form Variant InputFunction) (Variant ivfs)
-  => Newtype (form Variant U) (Variant us)
+  => Newtype (FormInputFields form) { | is }
+  => Newtype (FormInputFunctions form) { | ifs }
+  => Newtype (FormFields form) { | fs }
+  => Newtype (FormOutputFields form) { | os }
+  => Newtype (FormValidators form m) { | vs }
+  => Newtype (FormInputField form) (Variant ivs)
+  => Newtype (FormInputFunction form) (Variant ivfs)
+  => Newtype (FormValidationAction form) (Variant us)
   => Row.Lacks "validators" st
   => Row.Lacks "initialInputs" st
   => Row.Lacks "validity" st
@@ -180,14 +180,14 @@ handleAction
   => IT.ModifyAll ifs fxs fs fs
   => IT.ValidateAll vs fxs fs fs m
   => IT.FormFieldToMaybeOutput fxs fs os
-  => Newtype (form Record InputField) { | is }
-  => Newtype (form Record InputFunction) { | ifs }
-  => Newtype (form Record FormField) { | fs }
-  => Newtype (form Record OutputField) { | os }
-  => Newtype (form Record (Validation form m)) { | vs }
-  => Newtype (form Variant InputField) (Variant ivs)
-  => Newtype (form Variant InputFunction) (Variant ivfs)
-  => Newtype (form Variant U) (Variant us)
+  => Newtype (FormInputFields form) { | is }
+  => Newtype (FormInputFunctions form) { | ifs }
+  => Newtype (FormFields form) { | fs }
+  => Newtype (FormOutputFields form) { | os }
+  => Newtype (FormValidators form m) { | vs }
+  => Newtype (FormInputField form) (Variant ivs)
+  => Newtype (FormInputFunction form) (Variant ivfs)
+  => Newtype (FormValidationAction form) (Variant us)
   => Row.Lacks "internal" st
   => (act -> HalogenM form st act slots msg m Unit)
   -> (Event form st -> HalogenM form st act slots msg m Unit)
@@ -255,7 +255,7 @@ handleAction handleAction' handleEvent action = flip match action
       -- let
       --   modifyWith
       --     :: (forall e o. FormFieldResult e o -> FormFieldResult e o)
-      --     -> HalogenM form st act slots msg m (form Record FormField)
+      --     -> HalogenM form st act slots msg m (FormFields form)
       --   modifyWith f = do
       --     st <- H.modify \s -> s
       --       { form = IT.unsafeModifyInputVariant f variant s.form }
@@ -473,14 +473,14 @@ handleQuery
   => IT.ModifyAll ifs fxs fs fs
   => IT.ValidateAll vs fxs fs fs m
   => IT.FormFieldToMaybeOutput fxs fs os
-  => Newtype (form Record InputField) { | is }
-  => Newtype (form Record InputFunction) { | ifs }
-  => Newtype (form Record FormField) { | fs }
-  => Newtype (form Record OutputField) { | os }
-  => Newtype (form Record (Validation form m)) { | vs }
-  => Newtype (form Variant InputField) (Variant ivs)
-  => Newtype (form Variant InputFunction) (Variant ivfs)
-  => Newtype (form Variant U) (Variant us)
+  => Newtype (FormInputFields form) { | is }
+  => Newtype (FormInputFunctions form) { | ifs }
+  => Newtype (FormFields form) { | fs }
+  => Newtype (FormOutputFields form) { | os }
+  => Newtype (FormValidators form m) { | vs }
+  => Newtype (FormInputField form) (Variant ivs)
+  => Newtype (FormInputFunction form) (Variant ivfs)
+  => Newtype (FormValidationAction form) (Variant us)
   => Row.Lacks "internal" st
   => (forall b. query b -> HalogenM form st act slots msg m (Maybe b))
   -> (Event form st -> HalogenM form st act slots msg m Unit)
