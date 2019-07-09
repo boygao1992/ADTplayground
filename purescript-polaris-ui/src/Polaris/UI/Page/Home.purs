@@ -15,7 +15,6 @@ import Polaris.UI.Block.List as List
 import Polaris.UI.Block.ButtonGroup as ButtonGroup
 import Polaris.UI.Block.Icon as Icon
 import Polaris.UI.Block.Icon.Svg as IconSvg
-import Polaris.UI.Block.Icon.Color as IconColor
 
 type State = Unit
 

@@ -2,11 +2,11 @@ module Polaris.UI.AppM where
 
 import Prelude
 
-import Control.Monad.Reader.Trans (class MonadAsk, ReaderT(..), runReaderT, asks)
+import Control.Monad.Reader.Trans (class MonadAsk, ReaderT, asks, runReaderT)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect, liftEffect)
-import Polaris.UI.Capability.Navigate (class Navigate, navigate)
+import Polaris.UI.Capability.Navigate (class Navigate)
 import Polaris.UI.Data.Route as Route
 import Routing.Duplex (print)
 import Routing.Hash (setHash)

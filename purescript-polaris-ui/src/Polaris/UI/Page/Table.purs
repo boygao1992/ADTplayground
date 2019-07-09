@@ -1,4 +1,4 @@
-module Polaris.UI.Page2 where
+module Polaris.UI.Page.Table where
 
 import Prelude
 

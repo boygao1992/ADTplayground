@@ -2,13 +2,15 @@ module Polaris.UI.Page.Svg where
 
 import Prelude
 
-import Data.Maybe (Maybe(..))
 import Data.Const (Const)
+import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
+import Polaris.UI.Block.Card as Card
 import Polaris.UI.Block.Icon (iconSvg)
 import Polaris.UI.Block.Icon.Color as Color
 import Polaris.UI.Block.Icon.Svg (_CircleAlertMajorTwotone, _CircleDisabledMajorTwotone, _CircleInformationMajorTwotone, _CircleTickMajorTwotone, _FlagMajorTwotone, alertMinor, arrowDownMinor, arrowLeftMinor, arrowRightMinor, arrowUpDownMinor, arrowUpMinor, calendarMinor, cancelSmallMinor, caretDownMinor, caretUpMinor, chevronDownMinor, chevronLeftMinor, chevronRightMinor, chevronUpMinor, circleCancelMinor, circleChevronDownMinor, circleChevronLeftMinor, circleChevronRightMinor, circleChevronUpMinor, circleDisableMinor, circleInformationMajorTwotone, circlePlusMinor, circlePlusOutlineMinor, conversationMinor, deleteMinor, disputeMinor, duplicateMinor, embedMinor, exportMinor, externalMinor, homeMajorMonotone, horizontalDotsMinor, importMinor, logOutMinor, minusMinor, mobileCancelMajorMonotone, mobileHamburgerMajorMonotone, noteMinor, notificationMajorMonotone, onlineStoreMajorTwotone, ordersMajorTwotone, plusMinor, printMinor, productsMajorTwotone, profileMinor, questionMarkMajorTwotone, refreshMinor, riskMinor, saveMinor, searchMinor, tickSmallMinor, viewMinor)
+import Polaris.UI.Block.Stack as Stack
 
 type State = Unit
 
@@ -42,62 +44,67 @@ component = H.mkComponent
 
 render :: forall m. ComponentRender m
 render _ =
-  HH.div_ $ (\x -> iconSvg { backdrop: false, color: Just Color.Purple} [] [x]) <$>
-  [ _CircleTickMajorTwotone
-  , _FlagMajorTwotone
-  , _CircleAlertMajorTwotone
-  , _CircleDisabledMajorTwotone
-  , _CircleInformationMajorTwotone
-  , plusMinor
-  , alertMinor
-  , arrowDownMinor
-  , arrowLeftMinor
-  , arrowRightMinor
-  , arrowUpMinor
-  , arrowUpDownMinor
-  , calendarMinor
-  , mobileCancelMajorMonotone
-  , cancelSmallMinor
-  , caretDownMinor
-  , caretUpMinor
-  , tickSmallMinor
-  , chevronDownMinor
-  , chevronLeftMinor
-  , chevronRightMinor
-  , chevronUpMinor
-  , circleCancelMinor
-  , circleChevronDownMinor
-  , circleChevronLeftMinor
-  , circleChevronRightMinor
-  , circleChevronUpMinor
-  , circleInformationMajorTwotone
-  , circlePlusMinor
-  , circlePlusOutlineMinor
-  , conversationMinor
-  , deleteMinor
-  , circleDisableMinor
-  , disputeMinor
-  , duplicateMinor
-  , embedMinor
-  , exportMinor
-  , externalMinor
-  , questionMarkMajorTwotone
-  , homeMajorMonotone
-  , horizontalDotsMinor
-  , importMinor
-  , logOutMinor
-  , mobileHamburgerMajorMonotone
-  , noteMinor
-  , notificationMajorMonotone
-  , onlineStoreMajorTwotone
-  , ordersMajorTwotone
-  , printMinor
-  , productsMajorTwotone
-  , profileMinor
-  , refreshMinor
-  , riskMinor
-  , saveMinor
-  , searchMinor
-  , minusMinor
-  , viewMinor
+  Card.card_
+  [ Card.section_
+    [ Stack.stack_ Stack.defaultOptions { vertical = false }
+      $ (\x -> iconSvg { backdrop: false, color: Just Color.Purple} [] [x]) <$>
+      [ _CircleTickMajorTwotone
+      , _FlagMajorTwotone
+      , _CircleAlertMajorTwotone
+      , _CircleDisabledMajorTwotone
+      , _CircleInformationMajorTwotone
+      , plusMinor
+      , alertMinor
+      , arrowDownMinor
+      , arrowLeftMinor
+      , arrowRightMinor
+      , arrowUpMinor
+      , arrowUpDownMinor
+      , calendarMinor
+      , mobileCancelMajorMonotone
+      , cancelSmallMinor
+      , caretDownMinor
+      , caretUpMinor
+      , tickSmallMinor
+      , chevronDownMinor
+      , chevronLeftMinor
+      , chevronRightMinor
+      , chevronUpMinor
+      , circleCancelMinor
+      , circleChevronDownMinor
+      , circleChevronLeftMinor
+      , circleChevronRightMinor
+      , circleChevronUpMinor
+      , circleInformationMajorTwotone
+      , circlePlusMinor
+      , circlePlusOutlineMinor
+      , conversationMinor
+      , deleteMinor
+      , circleDisableMinor
+      , disputeMinor
+      , duplicateMinor
+      , embedMinor
+      , exportMinor
+      , externalMinor
+      , questionMarkMajorTwotone
+      , homeMajorMonotone
+      , horizontalDotsMinor
+      , importMinor
+      , logOutMinor
+      , mobileHamburgerMajorMonotone
+      , noteMinor
+      , notificationMajorMonotone
+      , onlineStoreMajorTwotone
+      , ordersMajorTwotone
+      , printMinor
+      , productsMajorTwotone
+      , profileMinor
+      , refreshMinor
+      , riskMinor
+      , saveMinor
+      , searchMinor
+      , minusMinor
+      , viewMinor
+      ]
+    ]
   ]
