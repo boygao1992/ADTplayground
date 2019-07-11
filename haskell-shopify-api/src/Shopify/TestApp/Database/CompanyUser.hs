@@ -5,6 +5,7 @@ module Shopify.TestApp.Database.CompanyUser where
 
 import RIO
 import Data.Time.LocalTime
+import Database.Beam.Backend.SQL.Types (SqlSerial)
 import Database.Beam.Schema
 
 import qualified Shopify.TestApp.Database.Company as Company
@@ -12,7 +13,7 @@ import qualified Shopify.TestApp.Database.User as User
 import Shopify.TestApp.Data.Role (Role)
 
 data CompanyUserT f = CompanyUser
-  { _id :: C f Word64
+  { _id :: C f (SqlSerial Int)
   , _company_id :: PrimaryKey Company.CompanyT f
   , _user_id :: PrimaryKey User.UserT f
   , _role :: C f Role
@@ -24,7 +25,7 @@ deriving instance Eq CompanyUser
 deriving instance Show CompanyUser
 
 instance Table CompanyUserT where
-  data PrimaryKey CompanyUserT f = CompanyUserId (C f Word64)
+  data PrimaryKey CompanyUserT f = CompanyUserId (C f (SqlSerial Int))
     deriving (Generic, Beamable)
   primaryKey = CompanyUserId . _id
 type CompanyUserId = PrimaryKey CompanyUserT Identity

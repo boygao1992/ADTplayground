@@ -7,9 +7,10 @@ import RIO
 import Data.Time.LocalTime
 
 import Database.Beam.Schema
+import Database.Beam.Backend.SQL.Types (SqlSerial)
 
 data UserT f = User
-  { _id :: C f Word64
+  { _id :: C f (SqlSerial Int)
   , _first_name :: C f (Maybe Text)
   , _last_name :: C f (Maybe Text)
   , _created_at :: C f LocalTime
@@ -20,7 +21,7 @@ deriving instance Eq User
 deriving instance Show User
 
 instance Table UserT where
-  data PrimaryKey UserT f = UserId (C f Word64)
+  data PrimaryKey UserT f = UserId (C f (SqlSerial Int))
     deriving (Generic, Beamable)
   primaryKey = UserId . _id
 type UserId = PrimaryKey UserT Identity

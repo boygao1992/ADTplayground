@@ -6,10 +6,11 @@ module Shopify.TestApp.Database.Company where
 import RIO
 import Data.Time.LocalTime
 
+import Database.Beam.Backend.SQL.Types (SqlSerial)
 import Database.Beam.Schema
 
 data CompanyT f = Company
-  { _id :: C f Word64
+  { _id :: C f (SqlSerial Int)
   , _name :: C f Text
   , _created_at :: C f LocalTime
   , _updated_at :: C f LocalTime
@@ -19,7 +20,7 @@ deriving instance Eq Company
 deriving instance Show Company
 
 instance Table CompanyT where
-  data PrimaryKey CompanyT f = CompanyId (C f Word64)
+  data PrimaryKey CompanyT f = CompanyId (C f (SqlSerial Int))
     deriving (Generic, Beamable)
   primaryKey = CompanyId . _id
 type CompanyId = PrimaryKey CompanyT Identity

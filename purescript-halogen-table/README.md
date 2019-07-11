@@ -1,6 +1,6 @@
 # Halogen Generic Table
 
-Directly from `Array (Record row)` to an edible Table in Halogen using `purescript-heterogenous`.
+Directly from `Array (Record row)` to an editable Table in Halogen using `purescript-heterogenous`.
 
 Supported Types
 - `Boolean`
