@@ -1,21 +1,24 @@
 let
-  pinnedPkgs = import ./pkgs-from-json.nix { json = ./nixos-19-03.json; };
   config = {
     packageOverrides = pkgs: rec {
       haskellPackages = pkgs.haskellPackages.override {
         overrides = haskellPackagesNew: haskellPackagesOld: rec {
           haskell-nix-stack-intero =
-            haskellPackagesNew.callPackage ./default.nix { };
+            haskellPackagesNew.callCabal2nix "haskell-nix-stack-intero" ./haskell-nix-stack-intero.cabal { };
 
           intero =
-            haskellPackagesNew.callPackage ./intero-0-1-34.nix { };
+            pkgs.haskell.lib.dontCheck(
+            pkgs.haskell.lib.doJailbreak(
+              haskellPackagesNew.callPackage ./nix/intero-0-1-34.nix { }
+            ));
         };
       };
     };
   };
 
-  haskellPackages = (import pinnedPkgs { inherit config; }).haskellPackages;
+  customHaskellPkgs = import ./nix/nixpkgs.nix { inherit config; };
 
 in
-  { haskell-nix-stack-intero = haskellPackages.haskell-nix-stack-intero;
+  { haskell-nix-stack-intero = customHaskellPkgs.haskellPackages.haskell-nix-stack-intero;
+    haskellPackages = customHaskellPkgs.haskellPackages;
   }
