@@ -1,0 +1,7 @@
+*.cabal
+*~
+*.swp
+tarballs/
+.stack-work/
+dist-newstyle/
+
