@@ -12,37 +12,37 @@ import Record.Builder (Builder)
 import Record.Builder as Builder
 import Type.Prelude (class IsSymbol, class RowToList, RLProxy(..), RProxy(..), SProxy(..))
 
-class GenericLensRecord (i :: # Type) (o :: # Type) | i -> o where
-  genericLensRecord :: RProxy i -> Record o
+class GenericLensRecord p s (i :: # Type) (o :: # Type) | i -> o where
+  genericLensRecord :: RProxy i -> Optic' p s (Record i) -> Record o
 
 instance genericLensRecordImpl
   :: ( RowToList i iRl
-    , GenericLensRL i iRl o
+    , GenericLensRL p s i iRl o
     )
-  => GenericLensRecord i o
+  => GenericLensRecord p s i o
   where
-    genericLensRecord _
+    genericLensRecord _ _i
       = Builder.build <@> {}
-      $ genericLensRL (RProxy :: RProxy i) (RLProxy :: RLProxy iRl)
+      $ genericLensRL (RProxy :: RProxy i) (RLProxy :: RLProxy iRl) _i
 
-class GenericLensRL i (iRl :: RowList) (to :: # Type) | iRl -> to where
-  genericLensRL :: RProxy i -> RLProxy iRl -> Builder {} (Record to)
+class GenericLensRL p s i (iRl :: RowList) (to :: # Type) | p s i iRl -> to where
+  genericLensRL :: RProxy i -> RLProxy iRl -> Optic' p s (Record i) -> Builder {} (Record to)
 
-instance genericLensRLNil :: GenericLensRL i (RowList.Nil) () where
-  genericLensRL _ _ = identity
+instance genericLensRLNil :: GenericLensRL p s i (RowList.Nil) () where
+  genericLensRL _ _ _ = identity
 
 instance genericLensRLCons
   :: ( IsSymbol label
     , Row.Cons label typ r i
     , Strong p
-    , Row.Cons label (Optic' p (Record i) typ) restTo to
+    , Row.Cons label (Optic' p s typ) restTo to
     , Row.Lacks label restTo
-    , GenericLensRL i restRl restTo
+    , GenericLensRL p s i restRl restTo
     )
-  => GenericLensRL i (RowList.Cons label typ restRl) to
+  => GenericLensRL p s i (RowList.Cons label typ restRl) to
   where
-    genericLensRL _ _
+    genericLensRL _ _ _i
       = Builder.insert
           (SProxy :: SProxy label)
-          (prop (SProxy :: SProxy label))
-      <<< genericLensRL (RProxy :: RProxy i) (RLProxy :: RLProxy restRl)
+          (_i <<< prop (SProxy :: SProxy label))
+      <<< genericLensRL (RProxy :: RProxy i) (RLProxy :: RLProxy restRl) _i

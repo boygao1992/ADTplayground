@@ -11,7 +11,8 @@
     "purescript-console": "^4.2.0",
     "purescript-effect": "^2.0.1",
     "purescript-profunctor-lenses": "^6.2.0",
-    "purescript-generics-rep": "^6.1.1"
+    "purescript-generics-rep": "^6.1.1",
+    "purescript-typelevel-arithmetic": "https://github.com/boygao1992/purescript-typelevel-arithmetic.git"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
