@@ -6,6 +6,7 @@ import Prelude
 import Type.Prelude
 import Type.Proxy
 
+import Control.Apply (lift2)
 import Data.Map (Map)
 import Data.Maybe
 import Data.Set (Set)
@@ -24,6 +25,7 @@ import Prim.Symbol as Symbol
 import Prim.TypeError (class Fail, Beside, Text)
 import Record.Builder (Builder)
 import Record.Builder as Builder
+import Record as Record
 import Unsafe.Coerce (unsafeCoerce)
 
 {-
@@ -89,19 +91,67 @@ _ThreeB = _Generic' <<< _SumInr <<< _SumInr <<< _SumInr <<< _SumInl <<< _Constru
 _ThreeC :: Traversal' TestSum C
 _ThreeC = _Generic' <<< _SumInr <<< _SumInr <<< _SumInr <<< _SumInl <<< _Constructor <<< _ProductSecond <<< _ProductSecond <<< _Argument
 
-_Three :: Traversal' TestSum { _1 :: A, _2 :: B, _3 :: C }
-_Three = wander \coalg s ->
-  ({_1: _, _2: _, _3: _} <$> s ^? _ThreeA <*> s ^? _ThreeB <*> s ^? _ThreeC )
-  # maybe
-      (pure s)
-      (coalg >>> map \({_1, _2, _3}) ->
-        s
-        # _ThreeA .~ _1
-        # _ThreeB .~ _2
-        # _ThreeC .~ _3
-      )
+_ThreeLenses
+  :: forall p
+  . Wander p
+  => { _1 :: Optic' p TestSum A
+    , _2 :: Optic' p TestSum B
+    , _3 :: Optic' p TestSum C
+    }
+_ThreeLenses =
+  { _1: _ThreeA
+  , _2: _ThreeB
+  , _3: _ThreeC
+  }
 
+_Three :: forall p. Wander p => Optic' p TestSum { _1 :: A, _2 :: B, _3 :: C }
+_Three = wander _ThreeWander
 
+_ThreeWander
+  :: forall f
+  . Applicative f
+  => ({ _1 :: A, _2 :: B, _3 :: C } -> f { _1 :: A, _2 :: B, _3 :: C })
+  -> TestSum
+  -> f TestSum
+_ThreeWander coalg s =
+  fromMaybe (pure s)
+  $ map (map $ _ThreeSet s)
+  $ map coalg
+  $ _ThreeGet s
+
+_ThreeSet
+  :: TestSum
+  -> { _1 :: A
+    , _2 :: B
+    , _3 :: C
+    }
+  -> TestSum
+_ThreeSet s a
+  = s
+    # _ThreeA .~ (Record.get (SProxy :: SProxy "_1") a)
+    # _ThreeB .~ (Record.get (SProxy :: SProxy "_2") a)
+    # _ThreeC .~ (Record.get (SProxy :: SProxy "_3") a)
+
+_ThreeGet
+  :: TestSum
+  -> Maybe
+     { _1 :: A
+     , _2 :: B
+     , _3 :: C
+     }
+_ThreeGet s
+  = map (Builder.build <@> {})
+  $ lift2 (<<<)
+    ( Builder.insert (SProxy :: SProxy "_3")
+      <$> s ^? (Record.get (SProxy :: SProxy "_3") _ThreeLenses)
+    )
+  $ lift2 (<<<)
+    ( Builder.insert (SProxy :: SProxy "_2")
+      <$> s ^? (Record.get (SProxy :: SProxy "_2") _ThreeLenses)
+    )
+  $ ( Builder.insert (SProxy :: SProxy "_1")
+      <$> s ^? (Record.get (SProxy :: SProxy "_1") _ThreeLenses)
+    )
 
 class Generic a rep <= ShowGeneric a rep | a -> rep where
   showGenericRep :: Proxy a -> Proxy rep
