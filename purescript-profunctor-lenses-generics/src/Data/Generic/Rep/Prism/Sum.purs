@@ -1,32 +1,34 @@
 module Data.Generics.Rep.Prism.Sum where
 
-import Data.Lens
-import Num.Nat
 import Prelude
-import Type.Prelude
-import Type.Proxy
 
 import Control.Apply (lift2)
-import Data.Map (Map)
-import Data.Maybe
-import Data.Set (Set)
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), NoConstructors, Product(..), Sum(..), from, to)
+import Data.Generic.Rep.Show (genericShow)
+import Data.Lens (class Wander, Iso, Iso', Lens, Optic', Prism, Prism', Traversal', _1, _2, _Left, _Right, iso, wander, (.~), (^?))
 import Data.Lens.Index (class Index, ix)
 import Data.Lens.Record (prop)
+import Data.Map (Map)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Profunctor (class Profunctor)
 import Data.Profunctor.Choice (class Choice)
 import Data.Profunctor.Strong (class Strong)
+import Data.Set (Set)
 import Data.Tuple (Tuple(..))
+import Num.Nat (class Succ)
 import Prim.Row as Row
 import Prim.RowList (kind RowList)
 import Prim.RowList as RowList
 import Prim.Symbol as Symbol
 import Prim.TypeError (class Fail, Beside, Text)
+import Record as Record
 import Record.Builder (Builder)
 import Record.Builder as Builder
-import Record as Record
+import Type.Prelude (class IsSymbol, class RowToList, RLProxy(..), SProxy(..))
+import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
+
 
 {-
 
@@ -68,10 +70,13 @@ testNewtype = showGenericRep (Proxy :: Proxy TestNewtype)
 
 data A = A
 derive instance genericA :: Generic A _
+instance showA :: Show A where show = genericShow
 data B = B
 derive instance genericB :: Generic B _
+instance showB :: Show B where show = genericShow
 data C = C
 derive instance genericC :: Generic C _
+instance showC :: Show C where show = genericShow
 
 data TestSum
   = Empty
@@ -91,6 +96,14 @@ _ThreeB = _Generic' <<< _SumInr <<< _SumInr <<< _SumInr <<< _SumInl <<< _Constru
 _ThreeC :: Traversal' TestSum C
 _ThreeC = _Generic' <<< _SumInr <<< _SumInr <<< _SumInr <<< _SumInl <<< _Constructor <<< _ProductSecond <<< _ProductSecond <<< _Argument
 
+-- DONE type
+type ThreeType =
+  { _1 :: A
+  , _2 :: B
+  , _3 :: C
+  }
+
+-- DONE Lenses
 _ThreeLenses
   :: forall p
   . Wander p
@@ -104,41 +117,41 @@ _ThreeLenses =
   , _3: _ThreeC
   }
 
-_Three :: forall p. Wander p => Optic' p TestSum { _1 :: A, _2 :: B, _3 :: C }
-_Three = wander _ThreeWander
+-- DONE Traversal
+_Three :: forall p. Wander p => Optic' p TestSum ThreeType -- Optic' p s (Record a)
+_Three = wander _ThreeMerge
 
-_ThreeWander
+-- DONE Merge
+_ThreeMerge
   :: forall f
   . Applicative f
-  => ({ _1 :: A, _2 :: B, _3 :: C } -> f { _1 :: A, _2 :: B, _3 :: C })
-  -> TestSum
-  -> f TestSum
-_ThreeWander coalg s =
+  => (ThreeType -> f ThreeType) -- Record a -> f (Record a)
+  -> TestSum -- s
+  -> f TestSum -- f s
+_ThreeMerge coalg s =
   fromMaybe (pure s)
   $ map (map $ _ThreeSet s)
   $ map coalg
   $ _ThreeGet s
 
+-- DONE Set
 _ThreeSet
-  :: TestSum
-  -> { _1 :: A
-    , _2 :: B
-    , _3 :: C
-    }
-  -> TestSum
+  :: TestSum -- s
+  -> ThreeType -- Record a
+  -> TestSum -- s
 _ThreeSet s a
   = s
-    # _ThreeA .~ (Record.get (SProxy :: SProxy "_1") a)
-    # _ThreeB .~ (Record.get (SProxy :: SProxy "_2") a)
-    # _ThreeC .~ (Record.get (SProxy :: SProxy "_3") a)
+    # (Record.get (SProxy :: SProxy "_1") _ThreeLenses)
+      .~ (Record.get (SProxy :: SProxy "_1") a)
+    # (Record.get (SProxy :: SProxy "_2") _ThreeLenses)
+      .~ (Record.get (SProxy :: SProxy "_2") a)
+    # (Record.get (SProxy :: SProxy "_3") _ThreeLenses)
+      .~ (Record.get (SProxy :: SProxy "_3") a)
 
+-- DONE Get
 _ThreeGet
   :: TestSum
-  -> Maybe
-     { _1 :: A
-     , _2 :: B
-     , _3 :: C
-     }
+  -> Maybe ThreeType
 _ThreeGet s
   = map (Builder.build <@> {})
   $ lift2 (<<<)
@@ -149,9 +162,10 @@ _ThreeGet s
     ( Builder.insert (SProxy :: SProxy "_2")
       <$> s ^? (Record.get (SProxy :: SProxy "_2") _ThreeLenses)
     )
-  $ ( Builder.insert (SProxy :: SProxy "_1")
+  $ lift2 (<<<) ( Builder.insert (SProxy :: SProxy "_1")
       <$> s ^? (Record.get (SProxy :: SProxy "_1") _ThreeLenses)
     )
+  $ Just identity
 
 class Generic a rep <= ShowGeneric a rep | a -> rep where
   showGenericRep :: Proxy a -> Proxy rep
@@ -170,38 +184,49 @@ testsum
 testsum = showGenericRep (Proxy :: Proxy TestSum)
 
 -- NOTE
-testsumPrism
-  :: forall p
-  . Profunctor p
-  => Wander p
-  => { _Empty :: Optic' p TestSum Unit
-    , _One :: { _A :: Optic' p TestSum Unit }
-    , _TestMap
-        :: String
-        -> { a :: { _A :: Optic' p TestSum Unit }
-          , a_ :: Optic' p TestSum A
-          }
-    , _TestRecord ::
-        { x :: { y :: { z :: { _Just :: { _A :: Optic' p TestSum Unit }
-                          , _Nothing :: Optic' p TestSum Unit
-                          }
-                    , z_ :: Optic' p TestSum (Maybe A)
-                    }
-              , y_ :: Optic' p TestSum { z :: Maybe A }
-              }
-        , x_ :: Optic' p TestSum { y :: { z :: Maybe A } }
-        }
-    , _Three ::
-        { _1 :: { _A :: Optic' p TestSum Unit }
-        , _2 :: { _B :: Optic' p TestSum Unit }
-        , _3 :: { _C :: Optic' p TestSum Unit }
-        }
-    , _Two ::
-        { _1 :: { _A :: Optic' p TestSum Unit }
-        , _2 :: { _B :: Optic' p TestSum Unit }
-        }
-    }
+testsumPrism :: forall p. Wander p =>
+  { _Empty_ :: Optic' p TestSum Unit
+  , _One :: { _A_ :: Optic' p TestSum Unit }
+  , _One_ :: Optic' p TestSum A
+  , _TestMap :: String ->
+      { a :: { _A_ :: Optic' p TestSum Unit }
+      , a_ :: Optic' p TestSum A
+      }
+  , _TestMap_ :: Optic' p TestSum (Map String { a :: A })
+  , _TestRecord ::
+      { x :: { y :: { z :: { _Just :: { _A_ :: Optic' p TestSum Unit }
+                        , _Just_ :: Optic' p TestSum A
+                        , _Nothing_ :: Optic' p TestSum Unit
+                        }
+                  , z_ :: Optic' p TestSum (Maybe A)
+                  }
+            , y_ :: Optic' p TestSum { z :: Maybe A }
+            }
+      , x_ :: Optic' p TestSum { y :: { z :: Maybe A } }
+      }
+  , _TestRecord_ :: Optic' p TestSum { x :: { y :: { z :: Maybe A } } }
+  , _Three ::
+      { _1 :: { _A_ :: Optic' p TestSum Unit }
+      , _2 :: { _B_ :: Optic' p TestSum Unit }
+      , _3 :: { _C_ :: Optic' p TestSum Unit }
+      }
+  , _Three_ :: Optic' p TestSum { _1 :: A, _2 :: B, _3 :: C }
+  , _Two ::
+      { _1 :: { _A_ :: Optic' p TestSum Unit }
+      , _2 :: { _B_ :: Optic' p TestSum Unit }
+      }
+  , _Two_ :: Optic' p TestSum { _1 :: A, _2 :: B }
+  }
 testsumPrism = genericTypeSort (Proxy :: Proxy TestSum) identity
+
+-- test _Ctor'
+
+_OneCtor :: Prism' TestSum A
+_OneCtor = _Ctor' (SProxy :: SProxy "One")
+
+_ThreeCtor :: Traversal' TestSum { _1 :: A, _2 :: B, _3 :: C }
+_ThreeCtor = _Ctor' (SProxy :: SProxy "Three")
+
 
 -----------------------------------
 -- Primitive Lenses for Generic Rep
@@ -315,6 +340,7 @@ instance genericCtorSumFail ::
   GenericCtor p ctor s (Constructor other b) a where
     _GenericCtor _ _ = unsafeCoerce
 
+-- Ctor > Arg
 class GenericCtorArg p s arg a | p s arg -> a where
   _GenericCtorArg :: Optic' p s arg -> Optic' p s a
 
@@ -322,21 +348,181 @@ instance genericCtorArgMatch ::
   Profunctor p =>
   GenericCtorArg p s (Argument a) a where
     _GenericCtorArg _i = _i <<< _Argument
-else
+
 instance genericCtorArgNone ::
   Profunctor p =>
   GenericCtorArg p s NoArguments Unit where
     _GenericCtorArg _i = _i <<< _NoArguments
-else
-instance genericCtorArgFail ::
-  Fail (
-    Text "Multiple arguments found for constructor `" <>
-    Text "`" ) =>
-  GenericCtorArg p s (Product l r) a where
-    _GenericCtorArg _i = unsafeCoerce
 
--- TODO class GenericCtorArgProduct
--- class GenericCtorArgProduct 
+instance genericCtorArgProduct
+  :: GenericCtorArgProduct p s (Product l r) a
+  => GenericCtorArg p s (Product l r) (Record a)
+  where
+    _GenericCtorArg = _GenericCtorArgProduct
+
+-- Ctor > Arg > Product
+class GenericCtorArgProduct p s arg (a :: # Type) | p s arg -> a where
+  _GenericCtorArgProduct :: Optic' p s arg -> Optic' p s (Record a)
+
+instance genericCtorArgProductImpl
+  :: ( GenericCtorArgProductType (Product l r) "1" () a
+    , GenericCtorArgProductLenses p s (Product l r) "1" () lenses
+    , GenericCtorArgProductGet lenses s a
+    , GenericCtorArgProductSet lenses s a
+    , Wander p
+    )
+  => GenericCtorArgProduct p s (Product l r) a
+  where
+    _GenericCtorArgProduct _i =
+      let
+        (lenses :: Record lenses)
+          = Builder.build <@> {}
+            $ _GenericCtorArgProductLenses (SProxy :: SProxy "1") _i
+
+        (get :: s -> Maybe (Record a))
+          = _GenericCtorArgProductGet lenses
+
+        (set :: s -> Record a -> s)
+          = _GenericCtorArgProductSet lenses
+
+        merge :: forall f. Applicative f => (Record a -> f (Record a)) -> s -> f s
+        merge coalg s =
+          fromMaybe (pure s)
+          $ map (map $ set s)
+          $ map coalg
+          $ get s
+      in
+       wander merge
+
+-- Ctor > Arg > Product > Type
+class GenericCtorArgProductType i (no :: Symbol) (from :: # Type) (to :: # Type)
+  | i from -> to
+
+instance _GenericCtorArgProductTypeArg
+  :: ( Symbol.Append "_" no label
+    , Row.Cons label a from to
+    )
+  => GenericCtorArgProductType (Argument a) no from to
+
+instance _GenericCtorArgProductTypeProduct
+  :: ( Succ noL noR
+    , GenericCtorArgProductType r noR from to1
+    , GenericCtorArgProductType l noL to1 to
+    )
+  => GenericCtorArgProductType (Product l r) noL from to
+
+-- Ctor > Arg > Product > Lenses
+class GenericCtorArgProductLenses p s i (no :: Symbol)(from :: # Type) (to :: # Type)
+  | p s i from -> to
+  where
+    _GenericCtorArgProductLenses :: SProxy no -> Optic' p s i -> Builder (Record from) (Record to)
+
+instance _GenericCtorArgProductArgument
+  :: ( Symbol.Append "_" no label
+    , IsSymbol label
+    , Row.Lacks label from
+    , Row.Cons label (p a a -> p s s) from to
+    , Profunctor p
+    )
+  => GenericCtorArgProductLenses p s (Argument a) no from to
+  where
+    _GenericCtorArgProductLenses _ _i
+      = Builder.insert (SProxy :: SProxy label)
+          (_i <<< _Argument)
+
+instance _GenericCtorArgProductProduct
+  :: ( Succ noL noR
+    , GenericCtorArgProductLenses p s r noR from to1
+    , GenericCtorArgProductLenses p s l noL to1 to
+    , Strong p
+    )
+  => GenericCtorArgProductLenses p s (Product l r) noL from to
+  where
+    _GenericCtorArgProductLenses _ _i
+      = _GenericCtorArgProductLenses (SProxy :: SProxy noL) (_i <<< _ProductFirst)
+      <<< _GenericCtorArgProductLenses (SProxy :: SProxy noR)(_i <<< _ProductSecond)
+
+-- Ctor > Arg > Product > Get
+class GenericCtorArgProductGet (lenses :: # Type) s (a :: # Type) where
+  _GenericCtorArgProductGet :: Record lenses -> s -> Maybe (Record a)
+
+instance _GenericCtorArgProductGetImpl
+  :: ( RowToList a aRl
+    , GenericCtorArgProductGetRL aRl lenses s () a
+    )
+  => GenericCtorArgProductGet lenses s a
+  where
+    _GenericCtorArgProductGet lenses s
+      = map (Builder.build <@> {})
+      $ _GenericCtorArgProductGetRL (RLProxy :: RLProxy aRl) lenses s
+
+class GenericCtorArgProductGetRL (aRl :: RowList) (lenses :: # Type) s (from :: # Type) (to :: # Type) | aRl lenses s from -> to
+  where
+    _GenericCtorArgProductGetRL :: RLProxy aRl -> Record lenses -> s -> Maybe (Builder (Record from) (Record to))
+
+instance _GenericCtorArgProductGetRLNil
+  :: GenericCtorArgProductGetRL RowList.Nil lenses s from from
+  where
+    _GenericCtorArgProductGetRL _ lenses s = Just identity
+
+instance _GenericCtorArgProductGetRLCons
+  :: ( GenericCtorArgProductGetRL restRl lenses s from to1
+    , IsSymbol label
+    , Row.Lacks label to1
+    , Row.Cons label typ to1 to
+    , Row.Cons label (p typ typ -> p s s) restLenses lenses -- NOTE
+    )
+  => GenericCtorArgProductGetRL (RowList.Cons label typ restRl) lenses s from to
+  where
+    _GenericCtorArgProductGetRL _ lenses s
+      = lift2 (<<<)
+          ( Builder.insert (SProxy :: SProxy label)
+                    -- NOTE not sure how to recover proof (Function ~ p)
+           <$> s ^? (unsafeCoerce (Record.get (SProxy :: SProxy label) lenses))
+          )
+          ( _GenericCtorArgProductGetRL (RLProxy :: RLProxy restRl)
+              lenses s
+          )
+
+-- Ctor > Arg > Product > Set
+class GenericCtorArgProductSet (lenses :: # Type) s (a :: # Type) where
+  _GenericCtorArgProductSet :: Record lenses -> s -> Record a -> s
+
+instance _GenericCtorArgProductSetImpl
+  :: ( RowToList a aRl
+    , GenericCtorArgProductSetRL aRl lenses s a
+    )
+  => GenericCtorArgProductSet lenses s a
+  where
+    _GenericCtorArgProductSet lenses s a
+      = _GenericCtorArgProductSetRL (RLProxy :: RLProxy aRl)
+          lenses s a
+
+class GenericCtorArgProductSetRL (aRl :: RowList) (lenses :: # Type) s (a :: # Type)
+  where
+    _GenericCtorArgProductSetRL :: RLProxy aRl -> Record lenses -> s -> Record a -> s
+
+instance _GenericCtorArgProductSetRLNil
+  :: GenericCtorArgProductSetRL RowList.Nil lenses s a
+  where
+    _GenericCtorArgProductSetRL _ _ s _ = s
+
+instance _GenericCtorArgProductSetRLCons
+  :: ( GenericCtorArgProductSetRL restRl lenses s a
+    , IsSymbol label
+    , Row.Cons label (p typ typ -> p s s) restLenses lenses -- NOTE Function ~ p
+    , Row.Cons label typ restA a
+    )
+  => GenericCtorArgProductSetRL (RowList.Cons label typ restRl) lenses s a
+  where
+    _GenericCtorArgProductSetRL _ lenses s a =
+      _GenericCtorArgProductSetRL (RLProxy :: RLProxy restRl)
+        lenses
+              -- NOTE not sure how to recover proof (Forget (First typ) ~ p)
+        (s # (unsafeCoerce (Record.get (SProxy :: SProxy label) lenses))
+           .~ (Record.get (SProxy :: SProxy label) a)
+        )
+        a
 
 ---------------
 -- GenericIndex
@@ -420,24 +606,21 @@ instance genericPrismSumImpl
       = Builder.build <@> {}
       $ genericPrismSumCtor (_i <<< _Generic')
 
+-- Ctor
 class GenericPrismSumCtor p s ctor (from :: # Type) (to :: # Type)
-  | p s ctor from -> to where
-  genericPrismSumCtor
-    :: Optic' p s ctor -> Builder (Record from) (Record to)
+  | p s ctor from -> to
+  where
+    genericPrismSumCtor :: Optic' p s ctor -> Builder (Record from) (Record to)
 
 instance genericPrismSumCtorConstructor
   :: ( Symbol.Append "_" label _label
-    , IsSymbol _label
-    , Row.Cons _label o from to
-    , Row.Lacks _label from
+    , GenericPrismSumArg p s arg _label from to
     , Profunctor p
-    , GenericPrismSumArg p s arg o
     )
   => GenericPrismSumCtor p s (Constructor label arg) from to
   where
     genericPrismSumCtor _i
-      = Builder.insert (SProxy :: SProxy _label)
-        $ genericPrismSumArg (_i <<< _Constructor)
+      = genericPrismSumArg (SProxy :: SProxy _label) (_i <<< _Constructor)
 
 instance genericPrismSumCtorSum
   :: ( GenericPrismSumCtor p s ctorR from to1
@@ -449,35 +632,67 @@ instance genericPrismSumCtorSum
       = genericPrismSumCtor (_i <<< _SumInl)
       <<< genericPrismSumCtor (_i <<< _SumInr)
 
-class GenericPrismSumArg p s arg o | p s arg -> o where
-  genericPrismSumArg :: Optic' p s arg -> o
+-- Ctor > Arg
+class GenericPrismSumArg p s arg (_label :: Symbol) (from :: # Type) (to :: # Type) | p s arg _label from -> to where
+  genericPrismSumArg :: SProxy _label -> Optic' p s arg -> Builder (Record from) (Record to)
 
 instance genericPrismSumArgNoArguments
-  :: Profunctor p
-  => GenericPrismSumArg p s NoArguments (p Unit Unit -> p s s) where
-    genericPrismSumArg _i = _i <<< _NoArguments
+  :: ( Symbol.Append _label "_" _label_
+    , IsSymbol _label_
+    , Row.Lacks _label_ from
+    , Row.Cons _label_ (p Unit Unit -> p s s) from to
+    , Profunctor p
+    )
+  => GenericPrismSumArg p s NoArguments _label from to
+  where
+    genericPrismSumArg _ _i =
+      Builder.insert (SProxy :: SProxy _label_) (_i <<< _NoArguments)
 
 instance genericPrismSumArgArgument
   :: ( Profunctor p
     , GenericTypeSort p s a o
+    , IsSymbol _label
+    , Row.Lacks _label from
+    , Row.Cons _label o from to1
+
+    , Symbol.Append _label "_" _label_
+    , IsSymbol _label_
+    , Row.Lacks _label_ to1
+    , Row.Cons _label_ (p a a -> p s s) to1 to
     )
-  => GenericPrismSumArg p s (Argument a) o
+  => GenericPrismSumArg p s (Argument a) _label from to
   where
-    genericPrismSumArg _i
-      = genericTypeSort (Proxy :: Proxy a)
+    genericPrismSumArg _label _i
+      = Builder.insert (SProxy :: SProxy _label_)
           (_i <<< _Argument)
+      <<< Builder.insert _label
+          (genericTypeSort (Proxy :: Proxy a) (_i <<< _Argument))
 
 instance genericPrismSumArgProductImpl
-  :: GenericPrismSumArgProduct p s (Product l r) "1" () o
-  => GenericPrismSumArg p s (Product l r) (Record o)
-  where
-    genericPrismSumArg _i =
-      Builder.build <@> {}
-      $ genericPrismSumArgProduct
-          (Proxy :: Proxy (Product l r))
-          (SProxy :: SProxy "1")
-          _i
+  :: ( GenericPrismSumArgProduct p s (Product l r) "1" () o
+    , IsSymbol _label
+    , Row.Lacks _label from
+    , Row.Cons _label (Record o) from to1
 
+    , Symbol.Append _label "_" _label_
+    , GenericCtorArgProduct p s (Product l r) a
+    , IsSymbol _label_
+    , Row.Lacks _label_ to1
+    , Row.Cons _label_ (p (Record a) (Record a) -> p s s) to1 to
+    )
+  => GenericPrismSumArg p s (Product l r) _label from to
+  where
+    genericPrismSumArg _label _i
+      = Builder.insert (SProxy :: SProxy _label_)
+          (_GenericCtorArgProduct _i)
+      <<< Builder.insert _label
+          (Builder.build <@> {}
+            $ genericPrismSumArgProduct
+                (Proxy :: Proxy (Product l r))
+                (SProxy :: SProxy "1")
+                _i)
+
+-- Ctor > Arg > Product
 class GenericPrismSumArgProduct p s arg (no :: Symbol) (from :: # Type) (to :: # Type)
   | p s arg no from -> to
   where
