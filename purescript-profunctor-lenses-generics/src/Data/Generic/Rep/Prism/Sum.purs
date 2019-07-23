@@ -170,38 +170,38 @@ testsum
 testsum = showGenericRep (Proxy :: Proxy TestSum)
 
 -- NOTE
--- testsumPrism
---   :: forall p
---   . Profunctor p
---   => Wander p
---   => { _Empty :: Optic' p TestSum Unit
---     , _One :: { _A :: Optic' p TestSum Unit }
---     , _TestMap
---         :: String
---         -> { a :: { _A :: Optic' p TestSum Unit }
---           , a_ :: Optic' p TestSum A
---           }
---     , _TestRecord ::
---         { x :: { y :: { z :: { _Just :: { _A :: Optic' p TestSum Unit }
---                           , _Nothing :: Optic' p TestSum Unit
---                           }
---                     , z_ :: Optic' p TestSum (Maybe A)
---                     }
---               , y_ :: Optic' p TestSum { z :: Maybe A }
---               }
---         , x_ :: Optic' p TestSum { y :: { z :: Maybe A } }
---         }
---     , _Three ::
---         { _1 :: { _A :: Optic' p TestSum Unit }
---         , _2 :: { _B :: Optic' p TestSum Unit }
---         , _3 :: { _C :: Optic' p TestSum Unit }
---         }
---     , _Two ::
---         { _1 :: { _A :: Optic' p TestSum Unit }
---         , _2 :: { _B :: Optic' p TestSum Unit }
---         }
---     }
--- testsumPrism = genericTypeSort (Proxy :: Proxy TestSum) identity
+testsumPrism
+  :: forall p
+  . Profunctor p
+  => Wander p
+  => { _Empty :: Optic' p TestSum Unit
+    , _One :: { _A :: Optic' p TestSum Unit }
+    , _TestMap
+        :: String
+        -> { a :: { _A :: Optic' p TestSum Unit }
+          , a_ :: Optic' p TestSum A
+          }
+    , _TestRecord ::
+        { x :: { y :: { z :: { _Just :: { _A :: Optic' p TestSum Unit }
+                          , _Nothing :: Optic' p TestSum Unit
+                          }
+                    , z_ :: Optic' p TestSum (Maybe A)
+                    }
+              , y_ :: Optic' p TestSum { z :: Maybe A }
+              }
+        , x_ :: Optic' p TestSum { y :: { z :: Maybe A } }
+        }
+    , _Three ::
+        { _1 :: { _A :: Optic' p TestSum Unit }
+        , _2 :: { _B :: Optic' p TestSum Unit }
+        , _3 :: { _C :: Optic' p TestSum Unit }
+        }
+    , _Two ::
+        { _1 :: { _A :: Optic' p TestSum Unit }
+        , _2 :: { _B :: Optic' p TestSum Unit }
+        }
+    }
+testsumPrism = genericTypeSort (Proxy :: Proxy TestSum) identity
 
 -----------------------------------
 -- Primitive Lenses for Generic Rep
@@ -274,71 +274,75 @@ _ProductSecond = _Product <<< _2
 _Ctor'
   :: forall ctor s a p rep
   . Generic s rep
-  => GenericCtor p ctor rep a
+  => GenericCtor p ctor rep rep a
   => Profunctor p
   => SProxy ctor
   -> Optic' p s a
-_Ctor' ctor = _Generic' <<< _GenericCtor ctor
+_Ctor' ctor = _Generic' <<< _GenericCtor ctor identity
 
-class GenericCtor p ctor rep a | p ctor rep -> a where
-  _GenericCtor :: SProxy ctor -> Optic' p rep a
+class GenericCtor p ctor s i a | p ctor s i -> a where
+  _GenericCtor :: SProxy ctor -> Optic' p s i -> Optic' p s a
 
-instance genericCtorSumFound ::
-  ( Choice p
-  , GenericCtorArg p arg a
-  ) =>
-  GenericCtor p ctor (Sum (Constructor ctor arg) r) a where
-    _GenericCtor ctor = _SumInl <<< _Constructor <<< _GenericCtorArg
+instance genericCtorSumFound
+  :: ( Choice p
+    , GenericCtorArg p s arg a
+    )
+  => GenericCtor p ctor s (Sum (Constructor ctor arg) r) a
+  where
+    _GenericCtor ctor _i = _GenericCtorArg (_i <<< _SumInl <<< _Constructor)
 else
-instance genericCtorSumNext ::
-  ( Choice p
-  , GenericCtor p ctor r a
-  ) =>
-  GenericCtor p ctor (Sum l r) a where
-    _GenericCtor ctor = _SumInr <<< _GenericCtor ctor
+instance genericCtorSumNext
+  :: ( Choice p
+    , GenericCtor p ctor s r a
+    )
+  => GenericCtor p ctor s (Sum l r) a
+  where
+    _GenericCtor ctor _i = _GenericCtor ctor (_i <<< _SumInr)
 else
-instance genericCtorSumLast ::
-  ( Profunctor p
-  , GenericCtorArg p arg a
-  ) =>
-  GenericCtor p ctor (Constructor ctor arg) a where
-    _GenericCtor ctor = _Constructor <<< _GenericCtorArg
+instance genericCtorSumLast
+  :: ( Profunctor p
+    , GenericCtorArg p s arg a
+    )
+  => GenericCtor p ctor s (Constructor ctor arg) a
+  where
+    _GenericCtor ctor _i = _GenericCtorArg (_i <<< _Constructor)
 else
 instance genericCtorSumFail ::
   Fail (
     Text "No constructors found called `" <>
     Text ctor <>
     Text "`" ) =>
-  GenericCtor p ctor (Constructor other b) a where
-    _GenericCtor _ = unsafeCoerce
+  GenericCtor p ctor s (Constructor other b) a where
+    _GenericCtor _ _ = unsafeCoerce
 
-class GenericCtorArg p arg a | p arg -> a where
-  _GenericCtorArg :: Optic' p arg a
+class GenericCtorArg p s arg a | p s arg -> a where
+  _GenericCtorArg :: Optic' p s arg -> Optic' p s a
 
 instance genericCtorArgMatch ::
   Profunctor p =>
-  GenericCtorArg p (Argument a) a where
-    _GenericCtorArg = _Argument
+  GenericCtorArg p s (Argument a) a where
+    _GenericCtorArg _i = _i <<< _Argument
 else
 instance genericCtorArgNone ::
   Profunctor p =>
-  GenericCtorArg p NoArguments Unit where
-    _GenericCtorArg = _NoArguments
+  GenericCtorArg p s NoArguments Unit where
+    _GenericCtorArg _i = _i <<< _NoArguments
 else
 instance genericCtorArgFail ::
   Fail (
     Text "Multiple arguments found for constructor `" <>
     Text "`" ) =>
-  GenericCtorArg p (Product l r) a where
-    _GenericCtorArg = unsafeCoerce
+  GenericCtorArg p s (Product l r) a where
+    _GenericCtorArg _i = unsafeCoerce
 
 -- TODO class GenericCtorArgProduct
+-- class GenericCtorArgProduct 
 
 ---------------
 -- GenericIndex
 
 class GenericIndex p s i o | p s i -> o where
-  genericIndex :: Proxy i -> Optic' p s i -> o
+  genericIndex :: Optic' p s i -> o
 
 instance genericIndexImpl
   :: ( Index i a b
@@ -347,7 +351,7 @@ instance genericIndexImpl
     )
   => GenericIndex p s i (a -> o)
   where
-    genericIndex _ _i a
+    genericIndex _i a
       = genericTypeSort (Proxy :: Proxy b)
           (_i <<< ix a)
 
@@ -355,7 +359,7 @@ instance genericIndexImpl
 -- GenericLensRecord
 
 class GenericLensRecord p s (i :: # Type) (o :: # Type) | i -> o where
-  genericLensRecord :: RProxy i -> Optic' p s (Record i) -> Record o
+  genericLensRecord :: Optic' p s (Record i) -> Record o
 
 instance genericLensRecordImpl
   :: ( RowToList i iRl
@@ -363,15 +367,15 @@ instance genericLensRecordImpl
     )
   => GenericLensRecord p s i o
   where
-    genericLensRecord _ _i
+    genericLensRecord _i
       = Builder.build <@> {}
-      $ genericLensRL (RProxy :: RProxy i) (RLProxy :: RLProxy iRl) _i
+      $ genericLensRL (RLProxy :: RLProxy iRl) _i
 
 class GenericLensRL p s i (iRl :: RowList) (to :: # Type) | p s i iRl -> to where
-  genericLensRL :: RProxy i -> RLProxy iRl -> Optic' p s (Record i) -> Builder {} (Record to)
+  genericLensRL :: RLProxy iRl -> Optic' p s (Record i) -> Builder {} (Record to)
 
 instance genericLensRLNil :: GenericLensRL p s i (RowList.Nil) () where
-  genericLensRL _ _ _ = identity
+  genericLensRL _ _ = identity
 
 instance genericLensRLCons
   :: ( IsSymbol label
@@ -390,20 +394,20 @@ instance genericLensRLCons
     )
   => GenericLensRL p s i (RowList.Cons label typ restRl) to
   where
-    genericLensRL _ _ _i
+    genericLensRL _ _i
       = Builder.insert (SProxy :: SProxy label_)
           (_i <<< prop (SProxy :: SProxy label))
       <<< Builder.insert (SProxy :: SProxy label)
           ( genericTypeSort (Proxy :: Proxy typ)
               (_i <<< prop (SProxy :: SProxy label))
           )
-      <<< genericLensRL (RProxy :: RProxy i) (RLProxy :: RLProxy restRl) _i
+      <<< genericLensRL (RLProxy :: RLProxy restRl) _i
 
 ------------------
 -- GenericPrismSum
 
 class GenericPrismSum p s i (o :: # Type) | p s i -> o where
-  genericPrismSum :: Proxy i -> Optic' p s i -> Record o
+  genericPrismSum :: Optic' p s i -> Record o
 
 instance genericPrismSumImpl
   :: ( GenericPrismSumCtor p s iRep () o
@@ -412,17 +416,14 @@ instance genericPrismSumImpl
     )
   => GenericPrismSum p s i o
   where
-    genericPrismSum _ _i
+    genericPrismSum _i
       = Builder.build <@> {}
-      $ genericPrismSumCtor (Proxy :: Proxy s) (Proxy :: Proxy iRep)
-          (_i <<< _Generic')
+      $ genericPrismSumCtor (_i <<< _Generic')
 
 class GenericPrismSumCtor p s ctor (from :: # Type) (to :: # Type)
   | p s ctor from -> to where
   genericPrismSumCtor
-    :: Proxy s -> Proxy ctor
-    -> Optic' p s ctor
-    -> Builder (Record from) (Record to)
+    :: Optic' p s ctor -> Builder (Record from) (Record to)
 
 instance genericPrismSumCtorConstructor
   :: ( Symbol.Append "_" label _label
@@ -434,11 +435,9 @@ instance genericPrismSumCtorConstructor
     )
   => GenericPrismSumCtor p s (Constructor label arg) from to
   where
-    genericPrismSumCtor _ _ _i
+    genericPrismSumCtor _i
       = Builder.insert (SProxy :: SProxy _label)
-        $ genericPrismSumArg
-            (Proxy :: Proxy arg)
-            (_i <<< _Constructor)
+        $ genericPrismSumArg (_i <<< _Constructor)
 
 instance genericPrismSumCtorSum
   :: ( GenericPrismSumCtor p s ctorR from to1
@@ -446,19 +445,17 @@ instance genericPrismSumCtorSum
     , Choice p
     )
   => GenericPrismSumCtor p s (Sum ctorL ctorR) from to where
-    genericPrismSumCtor _ _ _i
-      = genericPrismSumCtor (Proxy :: Proxy s) (Proxy :: Proxy ctorL)
-          (_i <<< _SumInl)
-      <<< genericPrismSumCtor (Proxy :: Proxy s) (Proxy :: Proxy ctorR)
-          (_i <<< _SumInr)
+    genericPrismSumCtor _i
+      = genericPrismSumCtor (_i <<< _SumInl)
+      <<< genericPrismSumCtor (_i <<< _SumInr)
 
 class GenericPrismSumArg p s arg o | p s arg -> o where
-  genericPrismSumArg :: Proxy arg -> Optic' p s arg -> o
+  genericPrismSumArg :: Optic' p s arg -> o
 
 instance genericPrismSumArgNoArguments
   :: Profunctor p
   => GenericPrismSumArg p s NoArguments (p Unit Unit -> p s s) where
-    genericPrismSumArg _ _i = _i <<< _NoArguments
+    genericPrismSumArg _i = _i <<< _NoArguments
 
 instance genericPrismSumArgArgument
   :: ( Profunctor p
@@ -466,7 +463,7 @@ instance genericPrismSumArgArgument
     )
   => GenericPrismSumArg p s (Argument a) o
   where
-    genericPrismSumArg _ _i
+    genericPrismSumArg _i
       = genericTypeSort (Proxy :: Proxy a)
           (_i <<< _Argument)
 
@@ -474,7 +471,7 @@ instance genericPrismSumArgProductImpl
   :: GenericPrismSumArgProduct p s (Product l r) "1" () o
   => GenericPrismSumArg p s (Product l r) (Record o)
   where
-    genericPrismSumArg _ _i =
+    genericPrismSumArg _i =
       Builder.build <@> {}
       $ genericPrismSumArgProduct
           (Proxy :: Proxy (Product l r))
@@ -581,18 +578,18 @@ instance genericTypeDispatchRecord
   => GenericTypeDispatch p s (Record i) TRecord (Record o)
   where
     genericTypeDispatch _ _ _i =
-      genericLensRecord (RProxy :: RProxy i) _i
+      genericLensRecord _i
 else
 instance genericTypeDispatchIndex
   :: GenericIndex p s i o
   => GenericTypeDispatch p s i TIndex o
   where
     genericTypeDispatch _ _ _i =
-      genericIndex (Proxy :: Proxy i) _i
+      genericIndex _i
 else
 instance genericTypeDispatchSum
   :: GenericPrismSum p s i o
   => GenericTypeDispatch p s i TSum (Record o)
   where
     genericTypeDispatch _ _ _i =
-      genericPrismSum (Proxy :: Proxy i) _i
+      genericPrismSum _i
