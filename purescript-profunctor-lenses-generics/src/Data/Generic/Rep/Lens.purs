@@ -1,12 +1,12 @@
-module Data.Generics.Rep.Prism.Sum where
+module Data.Generic.Rep.Lens where
 
 import Prelude
 
 import Control.Apply (lift2)
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), NoConstructors, Product(..), Sum(..), from, to)
-import Data.Generic.Rep.Show (genericShow)
-import Data.Lens (class Wander, Iso, Iso', Lens, Optic', Prism, Prism', Traversal', _1, _2, _Left, _Right, iso, wander, (.~), (^?))
+import Data.Lens (class Wander, Iso, Iso', Lens, Optic', Prism, _1, _2, _Left, _Right, iso, wander, (.~), (^?))
+import Data.Lens.At (class At, at)
 import Data.Lens.Index (class Index, ix)
 import Data.Lens.Record (prop)
 import Data.Map (Map)
@@ -29,204 +29,7 @@ import Type.Prelude (class IsSymbol, class RowToList, RLProxy(..), SProxy(..))
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
 
-
-{-
-
-- Lens, Strong =>
-  - Record
-
-- Indexed, Index =>
-  - Array
-  - List
-  - Set
-  - Map
-  - Object
-
-Generic =>
-- Iso, Profunctor =>
-  - Newtype
-    - Identity
-- Prism, Choice =>
-  - Sum
-    - Maybe
-
--}
-
 infixr 2 type Beside as <>
-infixr 2 type Sum as <\/>
-infixr 2 type Product as </\>
-
-newtype TestNewtype = TestNewtype { name :: String }
-derive instance genericTestNewtype :: Generic TestNewtype _
-
-testNewtype :: Proxy
-  (Constructor "TestNewtype"
-     (Argument
-        { name :: String
-        }
-     )
-  )
-testNewtype = showGenericRep (Proxy :: Proxy TestNewtype)
-
-data A = A
-derive instance genericA :: Generic A _
-instance showA :: Show A where show = genericShow
-data B = B
-derive instance genericB :: Generic B _
-instance showB :: Show B where show = genericShow
-data C = C
-derive instance genericC :: Generic C _
-instance showC :: Show C where show = genericShow
-
-data TestSum
-  = Empty
-  | One A
-  | Two A B
-  | Three A B C -- Optic' p TestSum { _1 :: A, _2 :: B, _3 :: C }
-  | TestRecord { x :: { y :: { z :: Maybe A } } }
-  | TestMap (Map String { a :: A })
-derive instance genericTestSum :: Generic TestSum _
-
-_ThreeA :: Traversal' TestSum A
-_ThreeA = _Generic' <<< _SumInr <<< _SumInr <<< _SumInr <<< _SumInl <<< _Constructor <<< _ProductFirst <<< _Argument
-
-_ThreeB :: Traversal' TestSum B
-_ThreeB = _Generic' <<< _SumInr <<< _SumInr <<< _SumInr <<< _SumInl <<< _Constructor <<< _ProductSecond <<< _ProductFirst <<< _Argument
-
-_ThreeC :: Traversal' TestSum C
-_ThreeC = _Generic' <<< _SumInr <<< _SumInr <<< _SumInr <<< _SumInl <<< _Constructor <<< _ProductSecond <<< _ProductSecond <<< _Argument
-
--- DONE type
-type ThreeType =
-  { _1 :: A
-  , _2 :: B
-  , _3 :: C
-  }
-
--- DONE Lenses
-_ThreeLenses
-  :: forall p
-  . Wander p
-  => { _1 :: Optic' p TestSum A
-    , _2 :: Optic' p TestSum B
-    , _3 :: Optic' p TestSum C
-    }
-_ThreeLenses =
-  { _1: _ThreeA
-  , _2: _ThreeB
-  , _3: _ThreeC
-  }
-
--- DONE Traversal
-_Three :: forall p. Wander p => Optic' p TestSum ThreeType -- Optic' p s (Record a)
-_Three = wander _ThreeMerge
-
--- DONE Merge
-_ThreeMerge
-  :: forall f
-  . Applicative f
-  => (ThreeType -> f ThreeType) -- Record a -> f (Record a)
-  -> TestSum -- s
-  -> f TestSum -- f s
-_ThreeMerge coalg s =
-  fromMaybe (pure s)
-  $ map (map $ _ThreeSet s)
-  $ map coalg
-  $ _ThreeGet s
-
--- DONE Set
-_ThreeSet
-  :: TestSum -- s
-  -> ThreeType -- Record a
-  -> TestSum -- s
-_ThreeSet s a
-  = s
-    # (Record.get (SProxy :: SProxy "_1") _ThreeLenses)
-      .~ (Record.get (SProxy :: SProxy "_1") a)
-    # (Record.get (SProxy :: SProxy "_2") _ThreeLenses)
-      .~ (Record.get (SProxy :: SProxy "_2") a)
-    # (Record.get (SProxy :: SProxy "_3") _ThreeLenses)
-      .~ (Record.get (SProxy :: SProxy "_3") a)
-
--- DONE Get
-_ThreeGet
-  :: TestSum
-  -> Maybe ThreeType
-_ThreeGet s
-  = map (Builder.build <@> {})
-  $ lift2 (<<<)
-    ( Builder.insert (SProxy :: SProxy "_3")
-      <$> s ^? (Record.get (SProxy :: SProxy "_3") _ThreeLenses)
-    )
-  $ lift2 (<<<)
-    ( Builder.insert (SProxy :: SProxy "_2")
-      <$> s ^? (Record.get (SProxy :: SProxy "_2") _ThreeLenses)
-    )
-  $ lift2 (<<<) ( Builder.insert (SProxy :: SProxy "_1")
-      <$> s ^? (Record.get (SProxy :: SProxy "_1") _ThreeLenses)
-    )
-  $ Just identity
-
-class Generic a rep <= ShowGeneric a rep | a -> rep where
-  showGenericRep :: Proxy a -> Proxy rep
-instance showGeneircImpl :: Generic a rep => ShowGeneric a rep where
-  showGenericRep _ = Proxy :: Proxy rep
-
-testsum
-  :: Proxy
-    ( Constructor "Empty" NoArguments
-    <\/> Constructor "One" (Argument A)
-    <\/> Constructor "Two" (Argument A </\> Argument B)
-    <\/> Constructor "Three" (Argument A </\> Argument B </\> Argument C)
-    <\/> Constructor "TestRecord" (Argument { x :: { y :: { z :: Maybe A }}})
-    <\/> Constructor "TestMap" (Argument (Map String { a :: A}))
-    )
-testsum = showGenericRep (Proxy :: Proxy TestSum)
-
--- NOTE
-testsumPrism :: forall p. Wander p =>
-  { _Empty_ :: Optic' p TestSum Unit
-  , _One :: { _A_ :: Optic' p TestSum Unit }
-  , _One_ :: Optic' p TestSum A
-  , _TestMap :: String ->
-      { a :: { _A_ :: Optic' p TestSum Unit }
-      , a_ :: Optic' p TestSum A
-      }
-  , _TestMap_ :: Optic' p TestSum (Map String { a :: A })
-  , _TestRecord ::
-      { x :: { y :: { z :: { _Just :: { _A_ :: Optic' p TestSum Unit }
-                        , _Just_ :: Optic' p TestSum A
-                        , _Nothing_ :: Optic' p TestSum Unit
-                        }
-                  , z_ :: Optic' p TestSum (Maybe A)
-                  }
-            , y_ :: Optic' p TestSum { z :: Maybe A }
-            }
-      , x_ :: Optic' p TestSum { y :: { z :: Maybe A } }
-      }
-  , _TestRecord_ :: Optic' p TestSum { x :: { y :: { z :: Maybe A } } }
-  , _Three ::
-      { _1 :: { _A_ :: Optic' p TestSum Unit }
-      , _2 :: { _B_ :: Optic' p TestSum Unit }
-      , _3 :: { _C_ :: Optic' p TestSum Unit }
-      }
-  , _Three_ :: Optic' p TestSum { _1 :: A, _2 :: B, _3 :: C }
-  , _Two ::
-      { _1 :: { _A_ :: Optic' p TestSum Unit }
-      , _2 :: { _B_ :: Optic' p TestSum Unit }
-      }
-  , _Two_ :: Optic' p TestSum { _1 :: A, _2 :: B }
-  }
-testsumPrism = genericTypeSort (Proxy :: Proxy TestSum) identity
-
--- test _Ctor'
-
-_OneCtor :: Prism' TestSum A
-_OneCtor = _Ctor' (SProxy :: SProxy "One")
-
-_ThreeCtor :: Traversal' TestSum { _1 :: A, _2 :: B, _3 :: C }
-_ThreeCtor = _Ctor' (SProxy :: SProxy "Three")
-
 
 -----------------------------------
 -- Primitive Lenses for Generic Rep
@@ -418,16 +221,16 @@ class GenericCtorArgProductLenses p s i (no :: Symbol)(from :: # Type) (to :: # 
     _GenericCtorArgProductLenses :: SProxy no -> Optic' p s i -> Builder (Record from) (Record to)
 
 instance _GenericCtorArgProductArgument
-  :: ( Symbol.Append "_" no label
-    , IsSymbol label
-    , Row.Lacks label from
-    , Row.Cons label (p a a -> p s s) from to
+  :: ( Symbol.Append "_" no _label
+    , IsSymbol _label
+    , Row.Lacks _label from
+    , Row.Cons _label (p a a -> p s s) from to
     , Profunctor p
     )
   => GenericCtorArgProductLenses p s (Argument a) no from to
   where
     _GenericCtorArgProductLenses _ _i
-      = Builder.insert (SProxy :: SProxy label)
+      = Builder.insert (SProxy :: SProxy _label)
           (_i <<< _Argument)
 
 instance _GenericCtorArgProductProduct
@@ -540,6 +343,23 @@ instance genericIndexImpl
     genericIndex _i a
       = genericTypeSort (Proxy :: Proxy b)
           (_i <<< ix a)
+
+------------
+-- GenericAt
+
+class GenericAt p s i o | p s i -> o where
+  genericAt :: Optic' p s i -> o
+
+instance genericAtImpl
+         :: ( At i a b
+            , Strong p
+            , GenericTypeSort p s (Maybe b) o
+            )
+         => GenericAt p s i (a -> o)
+  where
+    genericAt _i a
+      = genericTypeSort (Proxy :: Proxy (Maybe b))
+        (_i <<< at a)
 
 --------------------
 -- GenericLensRecord
@@ -703,19 +523,26 @@ class GenericPrismSumArgProduct p s arg (no :: Symbol) (from :: # Type) (to :: #
       -> Builder (Record from) (Record to)
 
 instance genericPrismSumArgProductArgument
-  :: ( IsSymbol label
-    , Profunctor p
-    , Symbol.Append "_" no label
+  :: ( Symbol.Append "_" no _label
     , GenericTypeSort p s a o
-    , Row.Cons label o from to
-    , Row.Lacks label from
+    , IsSymbol _label
+    , Row.Lacks _label from
+    , Row.Cons _label o from to1
+
+    , Symbol.Append _label "_" _label_
+    , IsSymbol _label_
+    , Row.Lacks _label_ to1
+    , Row.Cons _label_ (p a a -> p s s) to1 to
+
+    , Profunctor p
     )
   => GenericPrismSumArgProduct p s (Argument a) no from to
   where
     genericPrismSumArgProduct _ _ _i
-      = Builder.insert (SProxy :: SProxy label)
-        $ genericTypeSort (Proxy :: Proxy a)
-            (_i <<< _Argument)
+      = Builder.insert (SProxy :: SProxy _label_)
+          (_i <<< _Argument)
+      <<< Builder.insert (SProxy :: SProxy _label)
+          (genericTypeSort (Proxy :: Proxy a) (_i <<< _Argument))
 
 instance genericPrismSumArgProductProduct
   :: ( GenericPrismSumArgProduct p s r noR from to1
@@ -742,28 +569,20 @@ instance genericPrismSumArgProductProduct
 data TScalar
 data TRecord
 data TIndex
+data TAt
 data TSum
 
 class TTypeFamily t tt | t -> tt
 instance ttypeFamilyInt :: TTypeFamily Int TScalar
-else
 instance ttypeFamilyNumber :: TTypeFamily Number TScalar
-else
 instance ttypeFamilyString :: TTypeFamily String TScalar
-else
 instance ttypeFamilyChar :: TTypeFamily Char TScalar
-else
 instance ttypeFamilyBoolean :: TTypeFamily Boolean TScalar
-else
 instance ttypeFamilyRecord :: TTypeFamily (Record a) TRecord
-else
 instance ttypeFamilyArray :: TTypeFamily (Array a) TIndex
-else
-instance ttypeFamilySet :: TTypeFamily (Set v) TIndex
-else
-instance ttypeFamilyMap :: TTypeFamily (Map k v) TIndex
-else
-instance ttypeFamilySum :: TTypeFamily a TSum
+instance ttypeFamilySet :: TTypeFamily (Set v) TIndex -- TODO TAt
+instance ttypeFamilyMap :: TTypeFamily (Map k v) TIndex -- TODO TAt
+instance ttypeFamilyMaybe :: TTypeFamily (Maybe a) TSum
 
 class GenericTypeSort p s i o | p s i -> o where
   genericTypeSort :: Proxy i -> Optic' p s i -> o
@@ -787,24 +606,27 @@ instance genericTypeDispatchScalar
   :: GenericTypeDispatch p s i TScalar (p i i -> p s s)
   where
     genericTypeDispatch _ _ _i = _i
-else
+
 instance genericTypeDispatchRecord
   :: GenericLensRecord p s i o
   => GenericTypeDispatch p s (Record i) TRecord (Record o)
   where
-    genericTypeDispatch _ _ _i =
-      genericLensRecord _i
-else
+    genericTypeDispatch _ _ _i = genericLensRecord _i
+
 instance genericTypeDispatchIndex
   :: GenericIndex p s i o
   => GenericTypeDispatch p s i TIndex o
   where
-    genericTypeDispatch _ _ _i =
-      genericIndex _i
-else
+    genericTypeDispatch _ _ _i = genericIndex _i
+
+instance genericTypeDispatchAt
+  :: GenericAt p s i o
+  => GenericTypeDispatch p s i TAt o
+  where
+    genericTypeDispatch _ _ _i = genericAt _i
+
 instance genericTypeDispatchSum
   :: GenericPrismSum p s i o
   => GenericTypeDispatch p s i TSum (Record o)
   where
-    genericTypeDispatch _ _ _i =
-      genericPrismSum _i
+    genericTypeDispatch _ _ _i = genericPrismSum _i
