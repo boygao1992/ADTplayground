@@ -233,11 +233,11 @@ foreign import data CStrong :: ((Type -> Type -> Type) -> Type) -> Type
 foreign import data CChoice :: ((Type -> Type -> Type) -> Type) -> Type
 foreign import data CWander :: ((Type -> Type -> Type) -> Type) -> Type
 
-mkCProfunctor :: forall f p. Profunctor p => f p -> CProfunctor f
-mkCProfunctor = unsafeCoerce
+mkCWander :: forall f p. Wander p => f p -> CWander f
+mkCWander = unsafeCoerce
 
-runCProfunctor :: forall f r. (forall p. Profunctor p => f p -> r) -> CProfunctor f -> r
-runCProfunctor = unsafeCoerce
+runCWander :: forall f r. (forall p. Wander p => f p -> r) -> CWander f -> r
+runCWander = unsafeCoerce
 
 -- Lenses
 
@@ -254,6 +254,8 @@ newtype CPrism' s a = CPrism' (CChoice (OpticF s a))
 newtype CTraversal' s a = CTraversal' (CWander (OpticF s a))
 -- ~ forall p. Wander p => p a a -> p s s
 
+runCTraversal' :: forall s a r. (forall p. Wander p => (p a a -> p s s) -> r) -> CTraversal' s a -> r
+runCTraversal' f (CTraversal' cwander) = runCWander (f <<< unwarp) cwander
 
 -- Usage
 
@@ -267,6 +269,6 @@ testsumLenses = genericCLens (Proxy :: Proxy TestSum)
 testsumSample :: TestSum
 testsumSample = One A
 
-testOneA :: Maybe A
+testOneA :: Maybe Unit
 testOneA = runCTraversal (testsumLenses._One._A_) (testsumSample ^? _)
 ```
