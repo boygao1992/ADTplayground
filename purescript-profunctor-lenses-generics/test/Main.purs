@@ -4,7 +4,7 @@ import Prelude
 
 import Control.Apply (lift2)
 import Data.Generic.Rep (class Generic, Argument, Constructor, NoArguments, Product, Sum)
-import Data.Generic.Rep.Lens (class TTypeFamily, TSum, _Argument, _Constructor, _Ctor', _Generic', _ProductFirst, _ProductSecond, _SumInl, _SumInr, genericTypeSort)
+import Data.Generic.Rep.Lens (class TTypeFamily, TSum, _Argument, _Constructor, _Ctor', _Generic', _ProductFirst, _ProductSecond, _SumInl, _SumInr, genericLens)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Lens (class Wander, Optic', Prism', Traversal', wander, (.~), (^?))
 import Data.Map (Map)
@@ -190,7 +190,7 @@ testsumLenses :: forall p. Wander p =>
       }
   , _Two_ :: Optic' p TestSum { _1 :: A, _2 :: B }
   }
-testsumLenses = genericTypeSort (Proxy :: Proxy TestSum) identity
+testsumLenses = genericLens (Proxy :: Proxy TestSum)
 
 _TestSumThreeC :: Traversal' TestSum C
 _TestSumThreeC = testsumLenses._Three._3_

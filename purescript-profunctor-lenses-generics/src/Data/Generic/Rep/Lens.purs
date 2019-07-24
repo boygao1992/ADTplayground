@@ -31,6 +31,9 @@ import Unsafe.Coerce (unsafeCoerce)
 
 infixr 2 type Beside as <>
 
+genericLens :: forall p s o. GenericTypeSort p s s o => Proxy s -> o
+genericLens s = genericTypeSort s (identity :: Optic' p s s)
+
 -----------------------------------
 -- Primitive Lenses for Generic Rep
 

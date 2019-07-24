@@ -135,7 +135,7 @@ testsumLenses :: forall p. Wander p =>
       }
   , _TestMap_ :: Optic' p TestSum (Map String { a :: A })
   }
-testsumLenses = genericTypeSort (Proxy :: Proxy TestSum) identity
+testsumLenses = genericLens (Proxy :: Proxy TestSum)
 
 _ThreeC :: Traversal' TestSum C
 _ThreeC = testsumLenses._Three._3_
