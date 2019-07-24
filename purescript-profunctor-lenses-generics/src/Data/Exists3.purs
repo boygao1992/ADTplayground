@@ -1,5 +1,8 @@
 module Data.Exists3 where
 
+import Prelude
+
+import Data.Newtype
 import Data.Lens (class Wander)
 import Data.Profunctor (class Profunctor)
 import Data.Profunctor.Choice (class Choice)
@@ -38,6 +41,7 @@ runCWander = unsafeCoerce
 
 -- Test
 newtype OpticF s a p = OpticF (p a a -> p s s)
+derive instance newtypeOpticF :: Newtype (OpticF s a p) _
 
 newtype COptic' s a = COptic' (Exists3 (OpticF s a))
 -- ~ forall p. p a a -> p s s
@@ -49,3 +53,7 @@ newtype CPrism' s a = CPrism' (CChoice (OpticF s a))
 -- ~ forall p. Choice p => p a a -> p s s
 newtype CTraversal' s a = CTraversal' (CWander (OpticF s a))
 -- ~ forall p. Wander p => p a a -> p s s
+
+runCTraversal'
+  :: forall s a r. (forall p. Wander p => (p a a -> p s s) -> r) -> CTraversal' s a -> r
+runCTraversal' f (CTraversal' cwander) = runCWander (f <<< unwrap) cwander
