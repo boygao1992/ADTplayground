@@ -341,11 +341,13 @@ instance genericIndexImpl
     , Wander p
     , GenericTypeSort p s b o
     )
-  => GenericIndex p s i (a -> o)
+  => GenericIndex p s i (a -> { ix :: o, ix_ :: p b b -> p s s })
   where
-    genericIndex _i a
-      = genericTypeSort (Proxy :: Proxy b)
-          (_i <<< ix a)
+    genericIndex _i a =
+      { ix: genericTypeSort (Proxy :: Proxy b)
+              (_i <<< ix a)
+      , ix_: _i <<< ix a
+      }
 
 ------------
 -- GenericAt
@@ -354,15 +356,20 @@ class GenericAt p s i o | p s i -> o where
   genericAt :: Optic' p s i -> o
 
 instance genericAtImpl
-         :: ( At i a b
-            , Strong p
-            , GenericTypeSort p s (Maybe b) o
-            )
-         => GenericAt p s i (a -> o)
+  :: ( At i a b
+    , Index i a b
+    , Wander p
+    , GenericTypeSort p s (Maybe b) o1
+    , GenericTypeSort p s b o2
+    )
+  => GenericAt p s i (a -> { at :: o1, ix :: o2, at_ :: p (Maybe b) (Maybe b) -> p s s, ix_ :: p b b -> p s s })
   where
-    genericAt _i a
-      = genericTypeSort (Proxy :: Proxy (Maybe b))
-        (_i <<< at a)
+    genericAt _i a =
+      { at: genericTypeSort (Proxy :: Proxy (Maybe b)) (_i <<< at a)
+      , at_: _i <<< at a
+      , ix: genericTypeSort (Proxy :: Proxy b) (_i <<< ix a)
+      , ix_: _i <<< ix a
+      }
 
 --------------------
 -- GenericLensRecord
@@ -583,8 +590,8 @@ instance ttypeFamilyChar :: TTypeFamily Char TScalar
 instance ttypeFamilyBoolean :: TTypeFamily Boolean TScalar
 instance ttypeFamilyRecord :: TTypeFamily (Record a) TRecord
 instance ttypeFamilyArray :: TTypeFamily (Array a) TIndex
-instance ttypeFamilySet :: TTypeFamily (Set v) TIndex -- TODO TAt
-instance ttypeFamilyMap :: TTypeFamily (Map k v) TIndex -- TODO TAt
+instance ttypeFamilySet :: TTypeFamily (Set v) TAt
+instance ttypeFamilyMap :: TTypeFamily (Map k v) TAt
 instance ttypeFamilyMaybe :: TTypeFamily (Maybe a) TSum
 
 class GenericTypeSort p s i o | p s i -> o where

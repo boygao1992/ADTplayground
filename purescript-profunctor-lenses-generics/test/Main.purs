@@ -156,11 +156,22 @@ testsumLenses :: forall p. Wander p =>
   { _Empty_ :: Optic' p TestSum Unit
   , _One :: { _A_ :: Optic' p TestSum Unit }
   , _One_ :: Optic' p TestSum A
-  , _TestMap :: String ->
-      { a :: { _A_ :: Optic' p TestSum Unit }
-      , a_ :: Optic' p TestSum A
+  , _Two ::
+      { _1 :: { _A_ :: Optic' p TestSum Unit }
+      , _1_ :: Optic' p TestSum A
+      , _2 :: { _B_ :: Optic' p TestSum Unit }
+      , _2_ :: Optic' p TestSum B
       }
-  , _TestMap_ :: Optic' p TestSum (Map String { a :: A })
+  , _Two_ :: Optic' p TestSum { _1 :: A, _2 :: B }
+  , _Three ::
+      { _1 :: { _A_ :: Optic' p TestSum Unit }
+      , _1_ :: Optic' p TestSum A
+      , _2 :: { _B_ :: Optic' p TestSum Unit }
+      , _2_ :: Optic' p TestSum B
+      , _3 :: { _C_ :: Optic' p TestSum Unit }
+      , _3_ :: Optic' p TestSum C
+      }
+  , _Three_ :: Optic' p TestSum { _1 :: A, _2 :: B, _3 :: C }
   , _TestRecord ::
       { x :: { y :: { z :: { _Just :: { _A_ :: Optic' p TestSum Unit }
                         , _Just_ :: Optic' p TestSum A
@@ -173,30 +184,33 @@ testsumLenses :: forall p. Wander p =>
       , x_ :: Optic' p TestSum { y :: { z :: Maybe A } }
       }
   , _TestRecord_ :: Optic' p TestSum { x :: { y :: { z :: Maybe A } } }
-  , _Three ::
-      { _1 :: { _A_ :: Optic' p TestSum Unit }
-      , _1_ :: Optic' p TestSum A
-      , _2 :: { _B_ :: Optic' p TestSum Unit }
-      , _2_ :: Optic' p TestSum B
-      , _3 :: { _C_ :: Optic' p TestSum Unit }
-      , _3_ :: Optic' p TestSum C
+  , _TestMap :: String ->
+      { ix ::
+          { a :: { _A_ :: Optic' p TestSum Unit }
+          , a_ :: Optic' p TestSum A
+          }
+      , ix_ :: Optic' p TestSum { a :: A }
+      , at ::
+          { _Just :: { a :: { _A_ :: Optic' p TestSum Unit }
+                    , a_ :: Optic' p TestSum A
+                    }
+          , _Just_ :: Optic' p TestSum { a :: A }
+          , _Nothing_ :: Optic' p TestSum Unit
+          }
+      , at_ :: Optic' p TestSum (Maybe { a :: A })
       }
-  , _Three_ :: Optic' p TestSum { _1 :: A, _2 :: B, _3 :: C }
-  , _Two ::
-      { _1 :: { _A_ :: Optic' p TestSum Unit }
-      , _1_ :: Optic' p TestSum A
-      , _2 :: { _B_ :: Optic' p TestSum Unit }
-      , _2_ :: Optic' p TestSum B
-      }
-  , _Two_ :: Optic' p TestSum { _1 :: A, _2 :: B }
+  , _TestMap_ :: Optic' p TestSum (Map String { a :: A })
   }
 testsumLenses = genericLens (Proxy :: Proxy TestSum)
 
 _TestSumThreeC :: Traversal' TestSum C
 _TestSumThreeC = testsumLenses._Three._3_
 
-_TestSumTestMapA :: String -> Traversal' TestSum A
-_TestSumTestMapA str = testsumLenses._TestMap str # _.a_
+_TestSumTestMapAt :: String -> Traversal' TestSum (Maybe { a :: A })
+_TestSumTestMapAt key = testsumLenses._TestMap key # _.at_
+
+_TestSumTestMapIxA :: String -> Traversal' TestSum A
+_TestSumTestMapIxA key = testsumLenses._TestMap key # _.ix.a_
 
 _TestSumTestRecordXYZJust :: Traversal' TestSum A
 _TestSumTestRecordXYZJust = testsumLenses._TestRecord.x.y.z._Just_

@@ -38,7 +38,6 @@ Any data-type other than the mentioned ones below needs an instance for `Data.Ge
     , which is also an instance of `Data.Lens.Index (class Index)`
   - `Set v`
   - `Map k v`
-  - TODO currently all assigned to `TIndex`, need to add an extra path whenever facing an instance of `TAt`
 - `data TSum`
   - data-type with a Generic instance
   - `Maybe a`
@@ -51,6 +50,11 @@ Any data-type other than the mentioned ones below needs an instance for `Data.Ge
   - `_1`, `_2`, etc.
 - Nested Sum
   - `_` prefix + Constructor label
+- Index (e.g. `Array`)
+  - `ix`
+- At (e.g. `Map`, `Set`)
+  - `ix`
+  - `at`
 
 Leaf nodes have an extra `_` suffix
 
@@ -130,8 +134,19 @@ testsumLenses :: forall p. Wander p =>
       }
   , _TestRecord_ :: Optic' p TestSum { x :: { y :: { z :: Maybe A } } }
   , _TestMap :: String ->
-      { a :: { _A_ :: Optic' p TestSum Unit }
-      , a_ :: Optic' p TestSum A
+      { ix ::
+          { a :: { _A_ :: Optic' p TestSum Unit }
+          , a_ :: Optic' p TestSum A
+          }
+      , ix_ :: Optic' p TestSum { a :: A }
+      , at ::
+          { _Just :: { a :: { _A_ :: Optic' p TestSum Unit }
+                    , a_ :: Optic' p TestSum A
+                    }
+          , _Just_ :: Optic' p TestSum { a :: A }
+          , _Nothing_ :: Optic' p TestSum Unit
+          }
+      , at_ :: Optic' p TestSum (Maybe { a :: A })
       }
   , _TestMap_ :: Optic' p TestSum (Map String { a :: A })
   }
@@ -140,8 +155,11 @@ testsumLenses = genericLens (Proxy :: Proxy TestSum)
 _ThreeC :: Traversal' TestSum C
 _ThreeC = testsumLenses._Three._3_
 
-_TestMapA :: String -> Traversal' TestSum A
-_TestMapA key = testsumLenses._TestMap key # _.a_
+_TestMapAt :: String -> Traversal' TestSum (Maybe { a :: A })
+_TestMapAt key = testsumLenses._TestMap key # _.at_
+
+_TestMapIxA :: String -> Traversal' TestSum A
+_TestMapIxA key = testsumLenses._TestMap key # _.ix.a_
 
 _TestRecordXYZJust :: Traversal' TestSum A
 _TestRecordXYZJust = testsumLenses._TestRecord.x.y.z._Just_
