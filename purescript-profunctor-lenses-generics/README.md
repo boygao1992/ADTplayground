@@ -242,6 +242,8 @@ runCProfunctor = unsafeCoerce
 -- Lenses
 
 newtype OpticF s a p = OpticF (p a a -> p s s)
+
+newtype COptic' s a = COptic' (Exists3 (OpticF s a))
 -- ~ forall p. p a a -> p s s
 newtype CIso' s a = CIso' (CProfunctor (OpticF s a))
 -- ~ forall p. Profunctor p => p a a -> p s s
