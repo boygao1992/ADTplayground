@@ -176,24 +176,24 @@ Without `Constraint Kind` in Purescript, current solution doesn't assign minimal
 
 `Record` fields are eagerly evaluated thus won't automatically lift types to 2-rank, i.e.
 ```purescript
-foo :: forall a b c. (forall p. p a a -> p s s) -> b -> c
+foo :: forall s a b c. (forall p. p a a -> p s s) -> b -> c
 ```
 is different from
 ```purescript
-type Args a b =
+type Args s a b =
   { _1 :: forall p. p a a -> p s s -- NOTE `p` must be provided at the time a Record of `type Args a b` is constructed
   , _2 :: b
   }
-bar :: forall a b c. Args a b -> c
+bar :: forall s a b c. Args s a b -> c
 ```
 
 A lazy step is needed,
 ```purescript
-type Args' a b =
+type Args' s a b =
   { _1 :: Unit -> (forall p. p a a -> p s s)
   , _2 :: b
   }
-bar :: forall a b c. Args a b -> c
+bar :: forall s a b c. Args a b -> c
 ```
 
 ### 2.2 Existential Type in Type-level Functions
@@ -214,3 +214,57 @@ Later could potentially solve this using `unsafeCoerce` tricks for `Type -> Type
 
 Might even extend this approach to solve the first limitation without `Constraint Kind`.
 But an immediate drop back is the recovery of proof will be delayed to the call site which is less user friendly.
+
+```purescript
+-- Order-3 Existential Type
+
+foreign import data Exists3 :: ((Type -> Type -> Type) -> Type) -> Type
+
+mkExists3 :: forall f p. f p -> Exists3 f
+mkExists3 = unsafeCoerce
+
+runExists3 :: forall f r. (forall p. f p -> r) -> Exists3 f -> r
+runExists3 = unsafeCoerce
+
+-- Order-3 Existential Types with Constraints
+
+foreign import data CProfunctor :: ((Type -> Type -> Type) -> Type) -> Type
+foreign import data CStrong :: ((Type -> Type -> Type) -> Type) -> Type
+foreign import data CChoice :: ((Type -> Type -> Type) -> Type) -> Type
+foreign import data CWander :: ((Type -> Type -> Type) -> Type) -> Type
+
+mkCProfunctor :: forall f p. Profunctor p => f p -> CProfunctor f
+mkCProfunctor = unsafeCoerce
+
+runCProfunctor :: forall f r. (forall p. Profunctor p => f p -> r) -> CProfunctor f -> r
+runCProfunctor = unsafeCoerce
+
+-- Lenses
+
+newtype OpticF s a p = OpticF (p a a -> p s s)
+-- ~ forall p. p a a -> p s s
+newtype CIso' s a = CIso' (CProfunctor (OpticF s a))
+-- ~ forall p. Profunctor p => p a a -> p s s
+newtype CLens' s a = CLens' (CStrong (OpticF s a))
+-- ~ forall p. Strong p => p a a -> p s s
+newtype CPrism' s a = CPrism' (CChoice (OpticF s a))
+-- ~ forall p. Choice p => p a a -> p s s
+newtype CTraversal' s a = CTraversal' (CWander (OpticF s a))
+-- ~ forall p. Wander p => p a a -> p s s
+
+
+-- Usage
+
+testsumLenses ::
+  { _Empty_ :: CPrism' TestSum Unit
+  , _One :: { _A_ :: CTraversal' TestSum Unit }
+  , _One_ :: CPrism' TestSum A
+  }
+testsumLenses = genericCLens (Proxy :: Proxy TestSum)
+
+testsumSample :: TestSum
+testsumSample = One A
+
+testOneA :: Maybe A
+testOneA = runCTraversal (testsumLenses._One._A_) (testsumSample ^? _)
+```
