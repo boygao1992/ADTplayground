@@ -4,8 +4,8 @@ A data-type generic solution to derive all possible simple lenses for any deeply
 
 supported types
 - Iso (Profunctor p =>)
-  - Newtype
-    - Identity
+  - Newtype (Newtype t a =>)
+    - Identity (Newtype (Identity a) a =>)
 - Lens (Strong p =>)
   - Record
   - Product (Generic =>)
@@ -15,8 +15,13 @@ supported types
 - Index (Wander p =>)
   - Array (Index (Array a) Int a =>)
 - At (Wander p =>)
-  - Set (Index (Set v) v Unit =>)
-  - Map (Index (Map k v) k v =>)
+  - Set (At (Set v) v Unit =>)
+  - Map (At (Map k v) k v =>)
+
+TODO
+- mapping :: forall s t a b f g. Functor f => Functor g => AnIso s t a b -> Iso (f s) (g t) (f a) (g b)
+- folded :: forall g a b t r. Monoid r => Foldable g => Fold r (g a) b a t
+- traversed :: forall t a b. Traversable t => Traversal (t a) (t b) a b
 
 # Extensibility
 
