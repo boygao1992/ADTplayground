@@ -5,12 +5,15 @@ import Prelude
 import Control.Apply (lift2)
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), NoConstructors, Product(..), Sum(..), from, to)
+import Data.Identity (Identity)
 import Data.Lens (class Wander, Iso, Iso', Lens, Optic', Prism, _1, _2, _Left, _Right, iso, wander, (.~), (^?))
 import Data.Lens.At (class At, at)
 import Data.Lens.Index (class Index, ix)
+import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
 import Data.Map (Map)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Newtype (class Newtype)
 import Data.Profunctor (class Profunctor)
 import Data.Profunctor.Choice (class Choice)
 import Data.Profunctor.Strong (class Strong)
@@ -330,6 +333,23 @@ instance _GenericCtorArgProductSetRLCons
         )
         a
 
+-----------------
+-- GenericNewtype
+
+class GenericNewtype p s i o | p s i -> o where
+  genericNewtype :: Optic' p s i -> o
+
+instance genericNewtypeImpl
+  :: ( Newtype i i'
+    , Profunctor p
+    , GenericTypeSort p s i' o
+    )
+  => GenericNewtype p s i o
+  where
+    genericNewtype _i =
+      genericTypeSort (Proxy :: Proxy i')
+        (_i <<< _Newtype)
+
 ---------------
 -- GenericIndex
 
@@ -581,6 +601,7 @@ data TRecord
 data TIndex
 data TAt
 data TSum
+data TNewtype
 
 class TTypeFamily t tt | t -> tt
 instance ttypeFamilyInt :: TTypeFamily Int TScalar
@@ -593,6 +614,7 @@ instance ttypeFamilyArray :: TTypeFamily (Array a) TIndex
 instance ttypeFamilySet :: TTypeFamily (Set v) TAt
 instance ttypeFamilyMap :: TTypeFamily (Map k v) TAt
 instance ttypeFamilyMaybe :: TTypeFamily (Maybe a) TSum
+instance ttypeFamilyNewtype :: TTypeFamily (Identity a) TNewtype
 
 class GenericTypeSort p s i o | p s i -> o where
   genericTypeSort :: Proxy i -> Optic' p s i -> o
@@ -640,3 +662,9 @@ instance genericTypeDispatchSum
   => GenericTypeDispatch p s i TSum (Record o)
   where
     genericTypeDispatch _ _ _i = genericPrismSum _i
+
+instance genericTypeDispatchNewtype
+  :: GenericNewtype p s i o
+  => GenericTypeDispatch p s i TNewtype o
+  where
+    genericTypeDispatch _ _ _i = genericNewtype _i

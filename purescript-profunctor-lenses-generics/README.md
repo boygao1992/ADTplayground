@@ -5,6 +5,7 @@ A data-type generic solution to derive all possible simple lenses for any deeply
 supported types
 - Iso (Profunctor p =>)
   - Newtype
+    - Identity
 - Lens (Strong p =>)
   - Record
   - Product (Generic =>)
@@ -13,12 +14,13 @@ supported types
     - Maybe
 - Index (Wander p =>)
   - Array (Index (Array a) Int a =>)
+- At (Wander p =>)
   - Set (Index (Set v) v Unit =>)
   - Map (Index (Map k v) k v =>)
 
 # Extensibility
 
-Any data-type other than the mentioned ones below needs an instance for `Data.Generic.Rep.Lens (class TTypeFamily)` to be recognized by the solver.
+Any data-type other than the ones mentioned below needs an instance for `Data.Generic.Rep.Lens (class TTypeFamily)` to be recognized by the solver.
 
 `kind TType`
 - `data TScalar`
@@ -28,8 +30,14 @@ Any data-type other than the mentioned ones below needs an instance for `Data.Ge
   - `String`
   - `Char`
   - `Boolean`
+- `data TNewtype`
+  - data-type with a Newtype instance
+  - `Identity a`
 - `data TRecord`
   - `Record` only, should not be exposed
+- `data TSum`
+  - data-type with a Generic instance
+  - `Maybe a`
 - `data TIndex`
   - data-type with a `Data.Lens.Index (class Index)` instance
   - `Array a`
@@ -38,9 +46,6 @@ Any data-type other than the mentioned ones below needs an instance for `Data.Ge
     , which is also an instance of `Data.Lens.Index (class Index)`
   - `Set v`
   - `Map k v`
-- `data TSum`
-  - data-type with a Generic instance
-  - `Maybe a`
 
 # Naming Strategy
 
