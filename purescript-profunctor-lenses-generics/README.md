@@ -283,3 +283,14 @@ testsumSample = One A
 testOneA :: Maybe Unit
 testOneA = runCTraversal (testsumLenses._One._A_) (testsumSample ^? _)
 ```
+
+Found a built-in solution with `AIso`, `ALens`, `APrism`, `ATraversal`:
+```purescript
+lensesInRecord :: { name :: forall a. ALens' { name :: a } a }
+lensesInRecord =
+  { name: lens _.name $ _ { name = _ }
+  }
+
+_name :: forall a. Lens' { name :: a } a
+_name = cloneLens lensesInRecord.name
+```
