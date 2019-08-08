@@ -9,33 +9,37 @@ import Data.Maybe (Maybe)
 import Selda.SqlType (Lit, SqlTypeRep)
 import Selda.Types (ColName)
 
+type SomeExp sql = Exists (SomeF sql)
+newtype SomeF sql a = SomeF (Exp sql a)
+mkSomeExp :: forall sql a. Exp sql a -> SomeExp sql
+mkSomeExp = mkExists <<< SomeF
+runSomeExp :: forall sql r. SomeExp sql -> (forall a. Exp sql a -> r) -> r
+runSomeExp someExp f = runExists (\(SomeF exp) -> f exp) someExp
+
 -- | A type-erased column, which may also be renamed.
 --   Only for internal use.
 data SomeCol sql
-  = Some (Exists (SomeF sql))
-  | Named (Exists (NamedF sql))
-newtype SomeF sql a = SomeF (Exp sql a)
-data NamedF sql a = NamedF ColName (Exp sql a)
+  = Some (SomeExp sql)
+  | Named ColName (SomeExp sql)
 -- Some  :: !(Exp sql a) -> SomeCol sql
 some :: forall sql a. Exp sql a -> SomeCol sql
-some = Some <<< mkExists <<< SomeF
+some = Some <<< mkSomeExp
 -- Named :: !ColName -> !(Exp sql a) -> SomeCol sql
 named :: forall sql a. ColName -> Exp sql a -> SomeCol sql
-named cn eA = Named $ mkExists $ NamedF cn eA
+named cn eA = Named cn (mkSomeExp eA)
 
 data UntypedCol sql
-  = Untyped (Exists (SomeF sql))
+  = Untyped (SomeExp sql)
 -- Untyped :: !(Exp sql a) -> UntypedCol sql
 untyped :: forall sql a. Exp sql a -> UntypedCol sql
-untyped = Untyped <<< mkExists <<< SomeF
+untyped = Untyped <<< mkSomeExp
 
 -- | Turn a renamed column back into a regular one.
 --   If the column was renamed, it will be represented by a literal column,
 --   and not its original expression.
 hideRenaming :: forall sql. SomeCol sql -> UntypedCol sql
-hideRenaming (Named namedF) =
-  untyped $ col $ runExists (\(NamedF cn _) -> cn) namedF
-hideRenaming (Some someF)    = Untyped someF
+hideRenaming (Named cn _) = untyped $ col cn
+hideRenaming (Some someF) = Untyped someF
 
 -- | Underlying column expression type, parameterised over the type of
 --   SQL queries.
@@ -45,19 +49,16 @@ data Exp sql a
   | BinOp (Exists2 (BinOpF2 sql a))
   | UnOp (Exists (UnOpF sql a))
   | NulOp (NulOp a)
-  | Fun2 (Exists2 (Fun2F2 sql a))
+  | Fun2 (Exists2 (Fun2F2 sql))
   | If (Exp sql Boolean) (Exp sql a) (Exp sql a)
-  | Cast (Exists (CastF sql a))
-  | AggrEx (Exists (AggrExF sql a))
-  | InList (Exists (InListF sql)) -- (a ~ Boolean)
-  | InQuery (Exists (InQueryF sql)) -- (a ~ Boolean)
+  | Cast SqlTypeRep (SomeExp sql)
+  | AggrEx String (SomeExp sql)
+  | InList (Exists (InListF sql)) -- NOTE (a ~ Boolean)
+  | InQuery (SomeExp sql) sql -- NOTE (a ~ Boolean)
 data BinOpF2 sql c a b = BinOpF2 (BinOp a b c) (Exp sql a) (Exp sql b)
 data UnOpF sql b a = UnOpF (UnOp a b) (Exp sql a)
-data Fun2F2 sql c a b = Fun2F2 String  (Exp sql a)  (Exp sql b)
-data CastF sql b a = CastF SqlTypeRep  (Exp sql a)
-data AggrExF sql b a = AggrExF String (Exp sql a)
+data Fun2F2 sql a b = Fun2F2 String  (Exp sql a)  (Exp sql b)
 data InListF sql a = InListF (Exp sql a) (Array (Exp sql a))
-data InQueryF sql a = InQueryF (Exp sql a) sql
 -- Col     :: !ColName -> Exp sql a
 col = Col :: forall sql a. ColName -> Exp sql a
 -- Lit     :: !(Lit a) -> Exp sql a
@@ -77,16 +78,16 @@ fun2 label eA eB = Fun2 $ mkExists2 $ Fun2F2 label eA eB
 if_ = If :: forall sql a. Exp sql Boolean -> Exp sql a -> Exp sql a -> Exp sql a
 -- Cast    :: !SqlTypeRep -> !(Exp sql a) -> Exp sql b
 cast :: forall sql a b. SqlTypeRep -> Exp sql a -> Exp sql b
-cast rep eA = Cast $ mkExists $ CastF rep eA
+cast rep eA = Cast rep (mkSomeExp eA)
 -- AggrEx  :: !Text -> !(Exp sql a) -> Exp sql b
 aggrEx :: forall sql a b. String -> Exp sql a -> Exp sql b
-aggrEx label eA = AggrEx $ mkExists $ AggrExF label eA
+aggrEx label eA = AggrEx label (mkSomeExp eA)
 -- InList  :: !(Exp sql a) -> ![Exp sql a] -> Exp sql Bool
 inList :: forall sql a. Exp sql a -> Array (Exp sql a) -> Exp sql Boolean
 inList eA eAs = InList $ mkExists $ InListF eA eAs
 -- InQuery :: !(Exp sql a) -> !sql -> Exp sql Bool
 inQuery :: forall sql a. Exp sql a -> sql -> Exp sql Boolean
-inQuery eA sql = InQuery $ mkExists $ InQueryF eA sql
+inQuery eA sql = InQuery (mkSomeExp eA) sql
 
 data NulOp a
   = Fun0 String
