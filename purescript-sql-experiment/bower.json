@@ -1,0 +1,25 @@
+{
+  "name": "purescript-sql-experiment",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.1.1",
+    "purescript-console": "^4.2.0",
+    "purescript-effect": "^2.0.1",
+    "purescript-typelevel-prelude": "^5.0.0",
+    "purescript-leibniz": "^5.0.0",
+    "purescript-exists": "^4.0.0",
+    "purescript-profunctor-lenses": "^6.2.0",
+    "purescript-generics-rep": "^6.1.1",
+    "purescript-strings": "^4.0.1",
+    "purescript-uuid": "^6.0.0",
+    "purescript-datetime": "^4.1.1"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^4.0.0"
+  }
+}
