@@ -3,8 +3,6 @@ module Selda.Types where
 import Prelude
 
 import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Eq (genericEq)
-import Data.Generic.Rep.Ord (genericCompare)
 import Data.String as String
 
 --------
@@ -56,10 +54,10 @@ data NonEmptyHList a b = NEHL a b
 infixr 1 type NonEmptyHList as :*:
 infixr 1 NEHL as :*:
 derive instance genericNonEmptyHList :: Generic (a :*: b) _
+derive instance eqNonEmptyHList :: (Eq a, Eq b) => Eq (a :*: b)
+derive instance ordNonEmptyHList :: (Ord a, Ord b) => Ord (a :*: b)
 instance showNonEmptyHList :: (Show a, Show b) => Show (a :*: b) where
   show (a :*: b) = show a <> " :*: " <> show b
-instance eqNonEmptyHList :: (Eq a, Eq b) => Eq (a :*: b) where eq x y = genericEq x y
-instance ordNonEmptyHList :: (Ord a, Ord b) => Ord (a :*: b) where compare x y = genericCompare x y
 
 class Head i o | i -> o where
   tupHead :: i -> o

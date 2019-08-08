@@ -1,0 +1,164 @@
+module Selda.Exp where
+
+import Prelude
+
+import Data.Exists (Exists, mkExists, runExists)
+import Data.Exists2 (Exists2, mkExists2)
+import Data.Maybe (Maybe)
+
+import Selda.SqlType (Lit, SqlTypeRep)
+import Selda.Types (ColName)
+
+-- | A type-erased column, which may also be renamed.
+--   Only for internal use.
+data SomeCol sql
+  = Some (Exists (SomeF sql))
+  | Named (Exists (NamedF sql))
+newtype SomeF sql a = SomeF (Exp sql a)
+data NamedF sql a = NamedF ColName (Exp sql a)
+-- Some  :: !(Exp sql a) -> SomeCol sql
+some :: forall sql a. Exp sql a -> SomeCol sql
+some = Some <<< mkExists <<< SomeF
+-- Named :: !ColName -> !(Exp sql a) -> SomeCol sql
+named :: forall sql a. ColName -> Exp sql a -> SomeCol sql
+named cn eA = Named $ mkExists $ NamedF cn eA
+
+data UntypedCol sql
+  = Untyped (Exists (SomeF sql))
+-- Untyped :: !(Exp sql a) -> UntypedCol sql
+untyped :: forall sql a. Exp sql a -> UntypedCol sql
+untyped = Untyped <<< mkExists <<< SomeF
+
+-- | Turn a renamed column back into a regular one.
+--   If the column was renamed, it will be represented by a literal column,
+--   and not its original expression.
+hideRenaming :: forall sql. SomeCol sql -> UntypedCol sql
+hideRenaming (Named namedF) =
+  untyped $ col $ runExists (\(NamedF cn _) -> cn) namedF
+hideRenaming (Some someF)    = Untyped someF
+
+-- | Underlying column expression type, parameterised over the type of
+--   SQL queries.
+data Exp sql a
+  = Col ColName
+  | Lit (Lit a)
+  | BinOp (Exists2 (BinOpF2 sql a))
+  | UnOp (Exists (UnOpF sql a))
+  | NulOp (NulOp a)
+  | Fun2 (Exists2 (Fun2F2 sql a))
+  | If (Exp sql Boolean) (Exp sql a) (Exp sql a)
+  | Cast (Exists (CastF sql a))
+  | AggrEx (Exists (AggrExF sql a))
+  | InList (Exists (InListF sql)) -- (a ~ Boolean)
+  | InQuery (Exists (InQueryF sql)) -- (a ~ Boolean)
+data BinOpF2 sql c a b = BinOpF2 (BinOp a b c) (Exp sql a) (Exp sql b)
+data UnOpF sql b a = UnOpF (UnOp a b) (Exp sql a)
+data Fun2F2 sql c a b = Fun2F2 String  (Exp sql a)  (Exp sql b)
+data CastF sql b a = CastF SqlTypeRep  (Exp sql a)
+data AggrExF sql b a = AggrExF String (Exp sql a)
+data InListF sql a = InListF (Exp sql a) (Array (Exp sql a))
+data InQueryF sql a = InQueryF (Exp sql a) sql
+-- Col     :: !ColName -> Exp sql a
+col = Col :: forall sql a. ColName -> Exp sql a
+-- Lit     :: !(Lit a) -> Exp sql a
+lit = Lit :: forall sql a. Lit a -> Exp sql a
+-- BinOp   :: !(BinOp a b c) -> !(Exp sql a) -> !(Exp sql b) -> Exp sql c
+binOp :: forall sql a b c. BinOp a b c -> Exp sql a -> Exp sql b -> Exp sql c
+binOp bop eA eB = BinOp $ mkExists2 $ BinOpF2 bop eA eB
+-- UnOp    :: !(UnOp a b) -> !(Exp sql a) -> Exp sql b
+unOp :: forall sql a b. UnOp a b -> Exp sql a -> Exp sql b
+unOp uop eA = UnOp $ mkExists $ UnOpF uop eA
+-- NulOp   :: !(NulOp a) -> Exp sql a
+nulOp = NulOp :: forall sql a. NulOp a -> Exp sql a
+-- Fun2    :: !Text -> !(Exp sql a) -> !(Exp sql b) -> Exp sql c
+fun2 :: forall sql a b c. String -> Exp sql a -> Exp sql b -> Exp sql c
+fun2 label eA eB = Fun2 $ mkExists2 $ Fun2F2 label eA eB
+-- If      :: !(Exp sql Bool) -> !(Exp sql a) -> !(Exp sql a) -> Exp sql a
+if_ = If :: forall sql a. Exp sql Boolean -> Exp sql a -> Exp sql a -> Exp sql a
+-- Cast    :: !SqlTypeRep -> !(Exp sql a) -> Exp sql b
+cast :: forall sql a b. SqlTypeRep -> Exp sql a -> Exp sql b
+cast rep eA = Cast $ mkExists $ CastF rep eA
+-- AggrEx  :: !Text -> !(Exp sql a) -> Exp sql b
+aggrEx :: forall sql a b. String -> Exp sql a -> Exp sql b
+aggrEx label eA = AggrEx $ mkExists $ AggrExF label eA
+-- InList  :: !(Exp sql a) -> ![Exp sql a] -> Exp sql Bool
+inList :: forall sql a. Exp sql a -> Array (Exp sql a) -> Exp sql Boolean
+inList eA eAs = InList $ mkExists $ InListF eA eAs
+-- InQuery :: !(Exp sql a) -> !sql -> Exp sql Bool
+inQuery :: forall sql a. Exp sql a -> sql -> Exp sql Boolean
+inQuery eA sql = InQuery $ mkExists $ InQueryF eA sql
+
+data NulOp a
+  = Fun0 String
+-- Fun0 :: !Text -> NulOp a
+fun0 = Fun0 :: forall a. String -> NulOp a
+
+data UnOp a b
+  = Abs
+  | Not
+  | Neg
+  | Sgn
+  | IsNull
+  | Fun String
+-- Abs    :: UnOp a a
+abs = Abs :: forall a. UnOp a a
+-- Not    :: UnOp Bool Bool
+not = Not :: UnOp Boolean Boolean
+-- Neg    :: UnOp a a
+neg = Neg :: forall a. UnOp a a
+-- Sgn    :: UnOp a a
+sgn = Sgn :: forall a. UnOp a a
+-- IsNull :: UnOp (Maybe a) Bool
+isNull = IsNull :: forall a. UnOp (Maybe a) Boolean
+-- Fun    :: !Text -> UnOp a b
+fun = Fun :: forall a b. String -> UnOp a b
+
+data BinOp a b c
+  = Gt
+  | Lt
+  | Gte
+  | Lte
+  | Eq
+  | Neq
+  | And
+  | Or
+  | Add
+  | Sub
+  | Mul
+  | Div
+  | Like
+  | CustomOp String
+-- Gt   :: BinOp a a Bool
+gt = Gt :: forall a. BinOp a a Boolean
+-- Lt   :: BinOp a a Bool
+lt = Lt :: forall a. BinOp a a Boolean
+-- Gte  :: BinOp a a Bool
+gte = Gte :: forall a. BinOp a a Boolean
+-- Lte  :: BinOp a a Bool
+lte = Lte :: forall a. BinOp a a Boolean
+-- Eq   :: BinOp a a Bool
+eq = Eq :: forall a. BinOp a a Boolean
+-- Neq  :: BinOp a a Bool
+neq = Neq :: forall a. BinOp a a Boolean
+-- And  :: BinOp Bool Bool Bool
+and = And :: BinOp Boolean Boolean Boolean
+-- Or   :: BinOp Bool Bool Bool
+or = Or :: BinOp Boolean Boolean Boolean
+-- Add  :: BinOp a a a
+add = Add :: forall a. BinOp a a a
+-- Sub  :: BinOp a a a
+sub = Sub :: forall a. BinOp a a a
+-- Mul  :: BinOp a a a
+mul = Mul :: forall a. BinOp a a a
+-- Div  :: BinOp a a a
+div = Div :: forall a. BinOp a a a
+-- Like :: BinOp Text Text Bool
+like = Like :: BinOp String String Boolean
+-- CustomOp :: !Text -> BinOp a b c
+customOp = CustomOp :: forall a b c. String -> BinOp a b c
+
+class Names a where
+  -- | Get all column names used in the given expression.
+  allNamesIn :: a -> Array ColName
+
+-- TODO instances
