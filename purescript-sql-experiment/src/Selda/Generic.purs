@@ -1,0 +1,2 @@
+module Selda.Generic where
+

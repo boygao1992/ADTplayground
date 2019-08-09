@@ -9,3 +9,6 @@ mkExists2 = unsafeCoerce
 
 runExists2 :: forall f r. (forall a b. f a b -> r) -> Exists2 f -> r
 runExists2 = unsafeCoerce
+
+flippedRunExists2 :: forall f r. Exists2 f -> (forall a b. f a b -> r) -> r
+flippedRunExists2 e f = unsafeCoerce f e
