@@ -13,6 +13,13 @@ potential directions
 - build on top of a SQL eDSL
   - why eDSL
     - Raw SQL lives in structureless string space and is not composable.
+  - related projects
+    - [tathougies/beam](https://github.com/tathougies/beam)
+    - [valderman/selda](https://github.com/valderman/selda)
+    - [morphismtech/squeal](https://github.com/morphismtech/squeal)
+    - [maxigit/sql-fragment](https://github.com/maxigit/sql-fragment)
+      - [explanation from author](https://www.reddit.com/r/haskell/comments/8qxvir/a_comparison_among_various_database_edsls_selda/e0qrzri/)
+    - [uber/queryparser](https://github.com/uber/queryparser)
   - pro: no data migration needed for existing data in a RDBMS
   - con: codebase of non-trivial SQL eDSLs (with type-safe join operators, which rules out Persist-Esqueleto) are hard to comprehend e.g. Beam
 - build on top of a graph database with RDBMS backend support
@@ -31,3 +38,13 @@ potential directions
     - [Dgraph](https://dgraph.io/)
     - [Cayley](https://github.com/cayleygraph/cayley)
   - generality v.s. extra layers of indirection
+
+# Selda
+
+[Reddit - Selda: a monadic database EDSL](https://www.reddit.com/r/haskell/comments/66ih1l/selda_a_monadic_database_edsl/)
+
+> Selda is able to get away safely with a monad because `Query` has a phantom type parameter which stops columns leaking into aggregated subqueries.
+> This is a clever trick and I couldn't work out how to do this when I designed Opaleye.
+> The key is `Inner` whereas I tried an `ST` style approach which doesn't seem to work.
+> I'm not mathematically convinced that it's safe but nonetheless I can't see any reason it shouldn't be.
+
