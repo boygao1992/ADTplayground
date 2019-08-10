@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "start": "parcel assets/index.html"
+  },
+  "name": "purescript-tensor-visualized",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "echarts": "^4.2.1"
+  }
+}

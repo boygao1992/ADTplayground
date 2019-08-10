@@ -1,0 +1,20 @@
+{
+  "name": "purescript-tensor-visualized",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.1.1",
+    "purescript-console": "^4.2.0",
+    "purescript-effect": "^2.0.1",
+    "purescript-arrays": "^5.3.0",
+    "purescript-web-html": "^2.2.1",
+    "purescript-halogen": "https://github.com/slamdata/purescript-halogen.git#5.0.0-rc.6"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^4.0.0"
+  }
+}
