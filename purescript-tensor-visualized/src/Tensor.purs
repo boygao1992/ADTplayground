@@ -56,19 +56,53 @@ tensorProduct
 tensorProduct f (Matrix xs) (Matrix ys)
   = Matrix $ join $ outerProduct ((join <<< _) <<< outerProduct f) xs ys
 
-o2 :: Matrix Int
-o2 = Matrix
+toBoolMatrix :: Matrix Int -> Matrix Boolean
+toBoolMatrix = map (\i -> i > 0)
+
+tensorProductBool :: Matrix Boolean -> Matrix Boolean -> Matrix Boolean
+tensorProductBool = tensorProduct (&&)
+
+o2 :: Matrix Boolean
+o2 = toBoolMatrix $ Matrix
   [[0,1,1]
   ,[0,0,0]
   ,[0,0,0]
   ]
 
-i3 :: Matrix Int
-i3 = Matrix
+i3 :: Matrix Boolean
+i3 = toBoolMatrix $ Matrix
   [[0,0,0,1]
   ,[0,0,0,1]
   ,[0,0,0,1]
   ,[0,0,0,0]
   ]
 
+exerciseX :: Matrix Boolean
+exerciseX = toBoolMatrix $ Matrix
+ [[0,1,0,0,0,0,0,0,0]
+ ,[0,0,1,0,0,0,0,0,0]
+ ,[0,0,0,1,0,0,0,0,0]
+ ,[0,0,0,0,1,0,0,0,0]
+ ,[0,0,1,0,0,0,0,0,0]
+ ,[0,0,1,0,0,0,0,0,0]
+ ,[0,0,0,1,0,0,0,0,0]
+ ,[0,0,0,0,0,0,0,0,1]
+ ,[0,0,0,0,0,0,0,1,0]
+ ]
 
+exerciseY :: Matrix Boolean
+exerciseY = toBoolMatrix $ Matrix
+  [[0,0,1,0,0,0,0,0,0,0,0,0,0]
+  ,[0,0,1,0,0,0,0,0,0,0,0,0,0]
+  ,[0,0,0,1,0,0,0,0,0,0,0,0,0]
+  ,[0,0,0,0,1,0,0,0,0,0,0,0,0]
+  ,[0,0,0,0,0,1,0,0,0,0,0,0,0]
+  ,[0,0,0,0,0,0,1,0,0,0,0,0,0]
+  ,[0,0,0,1,0,0,0,0,0,0,0,0,0]
+  ,[0,0,0,0,0,0,0,0,1,0,0,0,0]
+  ,[0,0,0,0,0,0,0,1,0,0,0,0,0]
+  ,[0,0,0,0,0,0,0,0,0,0,1,0,0]
+  ,[0,0,0,0,0,0,0,0,0,0,0,1,0]
+  ,[0,0,0,0,0,0,0,0,0,0,0,0,1]
+  ,[0,0,0,0,0,0,0,0,0,0,1,0,0]
+  ]

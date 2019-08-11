@@ -27,20 +27,30 @@ debugChart chart = runEffectFn1 _debugChart chart
 
 type Id = String
 
+type Graph =
+  { nodes :: Array Node
+  , edges :: Array Edge
+  }
+
 type Node =
   { name :: Id
-  , value :: Number
+  , value :: String
   }
 
 type Edge =
   { source :: Id
   , target :: Id
-  , weight :: Number
+  }
+
+adjacencyMatrixToGraph :: Matrix Boolean -> Graph
+adjacencyMatrixToGraph m =
+  { nodes: adjacencyMatrixToNodes m
+  , edges: adjacencyMatrixToEdges m
   }
 
 adjacencyMatrixToNodes :: forall a. Matrix a -> Array Node
 adjacencyMatrixToNodes (Matrix xss) =
-  Array.mapWithIndex (\idx _ -> { name: show idx, value: 1.0 }) xss
+  Array.mapWithIndex (\idx _ -> { name: show idx, value: "" }) xss
 
 adjacencyMatrixToEdges :: Matrix Boolean -> Array Edge
 adjacencyMatrixToEdges (Matrix xss) =
@@ -49,7 +59,7 @@ adjacencyMatrixToEdges (Matrix xss) =
         foldlWithIndex
           (\iy row x ->
               if x
-              then row <> [{ source: show ix, target: show iy, weight: 1.0 }]
+              then row <> [{ source: show ix, target: show iy }]
               else row
           )
           []
@@ -60,7 +70,7 @@ adjacencyMatrixToEdges (Matrix xss) =
 
 type Option =
   { tooltip :: Tooltip
-  , title :: Title
+  , name :: Title
   , series :: Series
   }
 
@@ -79,15 +89,16 @@ type TitleItem =
 type Series = Array SeriesItem
 
 type SeriesItem =
-  { "type" :: String
+  { name :: String
+  , "type" :: String
   , layout :: String
   , itemStyle :: ItemStyle
   , nodes :: Array Node
   , edges :: Array Edge
   , left :: String
   , top :: String
-  , bottom :: String
   , width :: String
+  , height :: String
   , force :: Force
   , draggable :: Boolean
   , edgeSymbol :: Array String
@@ -114,17 +125,17 @@ type Force =
   { repulsion :: Number
   }
 
-title :: TitleItem
-title =
-  { text: "Title"
-  , left: "25%"
-  , top: "10%"
-  , textAlign: "center"
+type Position =
+  { left :: String
+  , top :: String
+  , width :: String
+  , height :: String
   }
 
-graphSeriesItem :: Array Node -> Array Edge -> SeriesItem
-graphSeriesItem nodes edges =
-  { "type": "graph"
+graphSeriesItem :: String -> Position -> Graph -> SeriesItem
+graphSeriesItem name { left, top, width, height } { nodes, edges } =
+  { name
+  , "type": "graph"
   , layout: "force"
   , itemStyle:
       { normal:
@@ -134,12 +145,12 @@ graphSeriesItem nodes edges =
       }
   , nodes
   , edges
-  , left: "0"
-  , top: "0"
-  , width: "100%"
-  , bottom: "0"
+  , left
+  , top
+  , width
+  , height
   , force: {
-      repulsion: 50.0
+      repulsion: 40.0
     }
   , draggable: true
   , edgeSymbol: ["none", "arrow"]
