@@ -2,14 +2,17 @@ module Selda.SQL where
 
 import Prelude
 
+import Data.Array as Array
 import Data.Exists (Exists)
-import Data.Maybe (Maybe)
-import Data.Tuple.Nested (type (/\))
-import Selda.Exp (Exp, SomeCol)
-import Selda.SqlType (Lit)
-import Selda.Types (TableName)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
+import Data.Maybe (Maybe)
+import Data.Newtype (class Newtype)
+import Data.Tuple (snd)
+import Data.Tuple.Nested (type (/\))
+import Selda.Exp (class Names, Exp, SomeCol, allNamesIn)
+import Selda.SqlType (Lit)
+import Selda.Types (TableName)
 
 -- | A source for an SQL query.
 data SqlSource
@@ -32,9 +35,24 @@ newtype SQL = SQL
   , limits    :: Maybe (Int /\ Int)
   , distinct  :: Boolean
   }
+derive instance newtypeSQL :: Newtype SQL _
 
--- TODO instance Names SqlSource where
--- TODO instance Names SQL where
+instance namesSqlSource :: Names SqlSource where
+  allNamesIn (Product qs)   = Array.foldMap allNamesIn qs
+  allNamesIn (Join _ e l r) = allNamesIn e <> allNamesIn l <> allNamesIn r
+  allNamesIn (Values vs _)  = allNamesIn vs
+  allNamesIn (TableName _)  = []
+  allNamesIn (EmptyTable)   = []
+
+instance namesSQL :: Names SQL where
+  -- Note that we don't include @cols@ here: the names in @cols@ are not
+  -- necessarily used, only declared.
+  allNamesIn (SQL { groups, ordering, restricts, source })
+    = allNamesIn groups
+    <> Array.foldMap (allNamesIn <<< snd) ordering
+    <> allNamesIn restricts
+    <> allNamesIn source
+
 
 -- TODO sqlFrom :: [SomeCol SQL] -> SqlSource -> SQL
 

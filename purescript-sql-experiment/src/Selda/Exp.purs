@@ -2,10 +2,11 @@ module Selda.Exp where
 
 import Prelude
 
-import Data.Exists (Exists, mkExists, runExists)
-import Data.Exists2 (Exists2, mkExists2)
+import Data.Array ((:))
+import Data.Array as Array
+import Data.Exists (Exists, flippedRunExists, mkExists, runExists)
+import Data.Exists2 (Exists2, flippedRunExists2, mkExists2)
 import Data.Maybe (Maybe)
-
 import Selda.SqlType (Lit, SqlTypeRep)
 import Selda.Types (ColName)
 
@@ -57,7 +58,7 @@ data Exp sql a
   | InQuery (SomeExp sql) sql -- NOTE (a ~ Boolean)
 data BinOpF2 sql c a b = BinOpF2 (BinOp a b c) (Exp sql a) (Exp sql b)
 data UnOpF sql b a = UnOpF (UnOp a b) (Exp sql a)
-data Fun2F2 sql a b = Fun2F2 String  (Exp sql a)  (Exp sql b)
+data Fun2F2 sql a b = Fun2F2 String (Exp sql a)  (Exp sql b)
 data InListF sql a = InListF (Exp sql a) (Array (Exp sql a))
 -- Col     :: !ColName -> Exp sql a
 col = Col :: forall sql a. ColName -> Exp sql a
@@ -163,3 +164,29 @@ class Names a where
   allNamesIn :: a -> Array ColName
 
 -- TODO instances
+instance namesArray :: Names a => Names (Array a) where
+  allNamesIn = Array.foldMap allNamesIn
+
+instance namesExp :: Names sql => Names (Exp sql a) where
+  allNamesIn (Col n)          = [n]
+  allNamesIn (Lit _)          = []
+  allNamesIn (BinOp binOpF2)  = flippedRunExists2 binOpF2 \(BinOpF2 _ a b) ->
+    allNamesIn a <> allNamesIn b
+  allNamesIn (UnOp unOpF)     = flippedRunExists unOpF \(UnOpF _ a) -> allNamesIn a
+  allNamesIn (NulOp _)        = []
+  allNamesIn (Fun2 fun2F2)    = flippedRunExists2 fun2F2 \(Fun2F2 _ a b) ->
+    allNamesIn a <> allNamesIn b
+  allNamesIn (If a b c)       = allNamesIn a <> allNamesIn b <> allNamesIn c
+  allNamesIn (Cast _ x)       = runSomeExp x allNamesIn
+  allNamesIn (AggrEx _ x)     = runSomeExp x allNamesIn
+  allNamesIn (InList inListF) = flippedRunExists inListF \(InListF x xs) ->
+    Array.foldMap allNamesIn (x:xs)
+  allNamesIn (InQuery x q)    = runSomeExp x allNamesIn <> allNamesIn q
+
+instance namesSomeCol :: Names sql => Names (SomeCol sql) where
+  allNamesIn (Some c)    = runSomeExp c allNamesIn
+  allNamesIn (Named n c) = n : runSomeExp c allNamesIn
+
+instance namesUntypedCol :: Names sql => Names (UntypedCol sql) where
+  allNamesIn (Untyped c) = runSomeExp c allNamesIn
+

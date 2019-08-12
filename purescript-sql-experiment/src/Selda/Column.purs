@@ -2,6 +2,8 @@ module Selda.Column where
 
 import Prelude
 
+import Data.Newtype (class Newtype)
+
 import Selda.Exp (Exp(..), UntypedCol)
 import Selda.SQL (SQL)
 import Selda.SqlType (class SqlType, mkLit)
@@ -23,9 +25,11 @@ class Columns a where
 -- | A database column. A column is often a literal column table, but can also
 --   be an expression over such a column or a constant expression.
 newtype Col s a = One (Exp SQL a)
+derive instance newtypeCol :: Newtype (Col s a) _
 
 -- | A database row. A row is a collection of one or more columns.
 newtype Row s a = Many (Array (UntypedCol SQL))
+derive instance newtypeRow :: Newtype (Row s a) _
 
 -- | A literal expression.
 literal :: forall s a. SqlType a => a -> Col s a
