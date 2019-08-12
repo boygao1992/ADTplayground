@@ -6,7 +6,7 @@ import Data.Array as Array
 import Data.Exists (Exists)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Tuple (snd)
 import Data.Tuple.Nested (type (/\))
@@ -54,7 +54,18 @@ instance namesSQL :: Names SQL where
     <> allNamesIn source
 
 
--- TODO sqlFrom :: [SomeCol SQL] -> SqlSource -> SQL
+-- | Build a plain SQL query with the given columns and source, with no filters,
+--   ordering, etc.
+sqlFrom :: Array (SomeCol SQL) -> SqlSource -> SQL
+sqlFrom cs src = SQL
+  { cols: cs
+  , source: src
+  , restricts: []
+  , groups: []
+  , ordering: []
+  , limits: Nothing
+  , distinct: false
+  }
 
 -- | The order in which to sort result rows.
 data Order = Asc | Desc

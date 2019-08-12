@@ -7,7 +7,7 @@ import Data.Traversable (traverse)
 import Data.Tuple.Nested (type (/\), (/\))
 import Selda.Exp (Exp(..), SomeCol(..), UntypedCol(..), runSomeExp)
 import Selda.SQL (SQL)
-import Selda.Types (addColSuffix, mkColName)
+import Selda.Types
 
 type Scope = Int
 type Ident = Int
@@ -84,3 +84,9 @@ freshId = do
   st <- get
   put $ st { nameSupply = st.nameSupply + 1 }
   pure $ Name st.nameScope st.nameSupply
+
+-- | Get a guaranteed unique column name.
+freshName :: State GenState ColName
+freshName = do
+  n <- freshId
+  pure $ mkColName $ "tmp_" <> show n

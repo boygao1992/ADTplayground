@@ -3,12 +3,14 @@ module Selda.SqlRow where
 import Prelude
 import Type.Prelude
 
-import Selda.SqlType
+import Data.Generic.Rep (class Generic, from, to)
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested
 import Data.Array as Array
 import Control.Monad.State
 import Data.Variant.Internal
+
+import Selda.SqlType
 
 newtype ResultReader a = R (State (Array SqlValue) a)
 derive newtype instance functorResultReader :: Functor ResultReader
@@ -38,11 +40,18 @@ class SqlRow a where
   -- default nestedCols :: (Generic a, GSqlRow (Rep a)) => Proxy a -> Int
   -- nestedCols _ = gNestedCols (Proxy :: Proxy (Rep a))
 
+instance sqlRowDefault :: (Generic a rep, GSqlRow rep) => SqlRow a where
+  nextResult = to <$> gNextResult
+  nestedCols _ = gNestedCols (Proxy :: Proxy rep)
 
 -- * Generic derivation for SqlRow
-class GSqlRow f where
-  gNextResult :: forall x. ResultReader (f x)
-  gNestedCols :: FProxy f -> Int
+{- class GSqlRow f where
+  gNextResult :: ResultReader (f x)
+  gNestedCols :: Proxy f -> Int
+-}
+class GSqlRow rep where
+  gNextResult :: ResultReader rep
+  gNestedCols :: Proxy rep -> Int
 
 -- TODO instance SqlType a => GSqlRow (K1 i a) where
 -- TODO instance GSqlRow f => GSqlRow (M1 c i f) where

@@ -37,7 +37,7 @@ newtype ColInfo = ColInfo
   { colName  :: ColName
   , colType  :: SqlTypeRep
   , colAttrs :: Array ColAttr
-  , colFKs   :: Array (Table () /\ ColName)
+  , colFKs   :: Array (Table Unit /\ ColName)
   , colExpr  :: UntypedCol SQL
   }
 
