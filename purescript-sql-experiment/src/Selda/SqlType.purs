@@ -1,8 +1,8 @@
 module Selda.SqlType where
 
 import Prelude
-import Type.Prelude (Proxy)
 
+import Effect.Exception.Unsafe
 import Data.DateTime (DateTime, Time)
 import Data.Enum (class BoundedEnum)
 import Data.Exists (Exists)
@@ -11,6 +11,7 @@ import Data.Generic.Rep.Show (genericShow)
 import Data.Leibniz (type (~))
 import Data.Maybe (Maybe)
 import Data.UUID (UUID)
+import Type.Prelude (Proxy)
 
 -- | Format string used to represent date and time when
 --   representing timestamps as text.
@@ -130,8 +131,9 @@ data SqlValue
   | SqlTime    Time
   -- TODO | SqlDate    Day
   | SqlNull
-
--- TODO instance Show SqlValue
+derive instance genericSqlValue :: Generic SqlValue _
+instance showSqlValue :: Show SqlValue where
+  show = genericShow
 
 -- | A row identifier for some table.
 --   This is the type of auto-incrementing primary keys.
@@ -191,6 +193,12 @@ isInvalidId (ID rowID)= isInvalidRowId rowID
 
 -- TODO SqlType instances
 
+instance sqlTypeInt :: SqlType Int where
+  mkLit x = LInt x identity
+  sqlType _ = TInt
+  fromSql (SqlInt x) = x
+  fromSql v = unsafeThrow $ "fromSql: int column with non-int value: " <> show v
+  defaultValue = LInt 0 identity
 
 -- | Both PostgreSQL and SQLite to weird things with time zones.
 --   Long term solution is to use proper binary types internally for
