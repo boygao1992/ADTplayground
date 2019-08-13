@@ -80,8 +80,7 @@ class BoundedEnum a <= SqlEnum a where
   toText :: a -> String
   fromText :: String -> a
 
-
--- TODO instance (BoundedEnum a, Show a, Read a) <= SqlEnum a
+-- TODO instance (BoundedEnum a, Show a, Read a) => SqlEnum a
 
 -- | An SQL literal.
 data Lit a

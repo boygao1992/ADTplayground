@@ -3,7 +3,7 @@ module Selda.SQL where
 import Prelude
 
 import Data.Array as Array
-import Data.Exists (Exists)
+import Data.Exists (Exists, mkExists, runExists)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
@@ -11,7 +11,7 @@ import Data.Newtype (class Newtype)
 import Data.Tuple (snd)
 import Data.Tuple.Nested (type (/\))
 import Selda.Exp (class Names, Exp, SomeCol, allNamesIn)
-import Selda.SqlType (Lit)
+import Selda.SqlType (class SqlType, Lit, mkLit)
 import Selda.Types (TableName)
 
 -- | A source for an SQL query.
@@ -77,9 +77,14 @@ instance showOrder :: Show Order where show = genericShow
 -- | A parameter to a prepared SQL statement.
 newtype Param = Param (Exists Lit)
 -- TODO instance Eq, Ord, Show
+mkParam :: forall a. Lit a -> Param
+mkParam = Param <<< mkExists
+runParam :: forall r. (forall a. Lit a -> r) -> Param -> r
+runParam f (Param p) = runExists f p
 
 -- | Create a parameter from the given value.
--- TODO param :: SqlType a => a -> Param
+param :: forall a. SqlType a => a -> Param
+param = mkParam <<< mkLit
 
 -- | The SQL type of the given parameter.
 -- TODO paramType :: Param -> SqlTypeRep
