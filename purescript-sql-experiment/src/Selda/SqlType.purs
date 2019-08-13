@@ -199,6 +199,15 @@ instance sqlTypeInt :: SqlType Int where
   fromSql v = unsafeThrow $ "fromSql: int column with non-int value: " <> show v
   defaultValue = LInt 0 identity
 
+instance sqlTypeBoolean :: SqlType Boolean where
+  mkLit x = LBool x identity
+  sqlType _ = TBool
+  fromSql (SqlBool x) = x
+  fromSql (SqlInt 0)  = false
+  fromSql (SqlInt _)  = true
+  fromSql v = unsafeThrow $ "fromSql: bool column with non-bool value: " <> show v
+  defaultValue = LBool false identity
+
 -- | Both PostgreSQL and SQLite to weird things with time zones.
 --   Long term solution is to use proper binary types internally for
 --   time values, so this is really just an interim solution.

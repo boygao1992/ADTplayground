@@ -10,12 +10,13 @@ import Data.Maybe (Maybe(..))
 import Data.Sequence as Seq
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
+import Unsafe.Coerce (unsafeCoerce)
+
 import Selda.Column (Col(..), Row(..))
 import Selda.Exp (SomeExp, UntypedCol(..), runSomeExp, untyped)
 import Selda.SQL (SQL)
 import Selda.SqlRow (class SqlRow)
 import Selda.SqlType (class SqlType)
-import Unsafe.Coerce (unsafeCoerce)
 
 -- | A column selector. Column selectors can be used together with the '!' and
 --   'with' functions to get and set values on rows, or to specify
@@ -41,11 +42,10 @@ unsafeSelector :: forall a b. SqlRow a => SqlType b => Int -> Selector a b
 unsafeSelector = Selector
 
 -- | Extract the given column from the given row.
--- NOTE (!) :: Partial => SqlType a => Row s t -> Selector t a -> Col s a
-extractColumn :: forall s t a. SqlType a => Row s t -> Selector t a -> Maybe (Col s a)
+extractColumn :: forall s t a. SqlType a => Row s t -> Selector t a -> Col s a
 extractColumn (Many xs) (Selector i) = case xs !! i of
-  Nothing -> Nothing
-  Just (Untyped x) -> Just $ One (unsafeCoerce x)
+  Nothing -> unsafeThrow "invalid Selector when extractColumn" -- NOTE unsafe
+  Just (Untyped x) -> One (unsafeCoerce x)
 infixl 9 extractColumn as !
 
 -- | Extract the given column from the given nullable row.
@@ -57,10 +57,10 @@ extractNullableColumn
   :: forall s t a o
   . SqlType a
   => Coalesce (Maybe a) o
-  => Row s (Maybe t) -> Selector t a -> Maybe (Col s o)
+  => Row s (Maybe t) -> Selector t a -> Col s o
 extractNullableColumn (Many xs) (Selector i) = case xs !! i of
-  Nothing -> Nothing
-  Just (Untyped x) -> Just $ One (unsafeCoerce x)
+  Nothing -> unsafeThrow "invalid Selector when extractNullableColumn" -- NOTE unsafe
+  Just (Untyped x) -> One (unsafeCoerce x)
 infixl 9 extractNullableColumn as ?
 
 -- TODO optimize implementation

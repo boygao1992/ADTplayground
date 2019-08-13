@@ -39,7 +39,7 @@ literal = One <<< Lit <<< mkLit
 
 liftC3
   :: forall s a b c d
-  . (Exp SQL a -> Exp SQL b -> Exp SQL c -> Exp SQL d)
+  .(Exp SQL a -> Exp SQL b -> Exp SQL c -> Exp SQL d)
   -> Col s a
   -> Col s b
   -> Col s c
@@ -47,7 +47,7 @@ liftC3
 liftC3 f (One a) (One b) (One c) = One (f a b c)
 
 -- | Denotes that scopes @s@ and @t@ are identical.
-class TypeEquals s t <= Same s t where
+class TypeEquals s t <= Same s t | s -> t, t -> s where
   liftC2
     :: forall a b c
     . (Exp SQL a -> Exp SQL b -> Exp SQL c)

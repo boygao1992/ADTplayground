@@ -7,7 +7,7 @@ import Data.Traversable (traverse)
 import Data.Tuple.Nested (type (/\), (/\))
 import Selda.Exp (Exp(..), SomeCol(..), UntypedCol(..), runSomeExp)
 import Selda.SQL (SQL)
-import Selda.Types
+import Selda.Types (ColName, addColSuffix, mkColName)
 
 type Scope = Int
 type Ident = Int
