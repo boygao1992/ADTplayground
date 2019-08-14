@@ -8,6 +8,14 @@ composable queries under Lens interface
   - type-level functions can enforce lenses to be disjoint during the composition step (distinct paths is isomorphic to distinct nominal types)
     - [fclabels | parallel composition of lenses for record](http://fvisser.nl/post/2013/okt/1/fclabels-2.0.html)
   - for relational database access (which can be roughly interpreted as nested records access using GraphQL encoding of relational algebra), they are disjoint paths in a graph traversal
+- eDSL
+  - Monadic Bind
+    - [Simple and Compositional Reification of Monadic Embedded Languages](https://svenssonjoel.github.io/writing/bb.pdf)
+      - [svenssonjoel/Robot](https://github.com/svenssonjoel/Robot)
+  - Obsidian
+    - [svenssonjoel/Obsidian](https://github.com/svenssonjoel/Obsidian)
+    - [Design Exploration through Code-generating DSLs](http://dl.acm.org/citation.cfm?id=2626374)
+    - [A Language for Hierarchical Data Parallel Design-space Exploration on GPUs](http://journals.cambridge.org/action/displayFulltext?type=1&fid=10242178&jid=JFP&volumeId=26&issueId=-1&aid=10242156)
 
 potential directions
 - build on top of a SQL eDSL
