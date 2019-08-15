@@ -5,17 +5,33 @@ composable queries under Lens interface
     - [Relational Lenses: A Language for Updateable Views](http://www.cis.upenn.edu/~bcpierce/papers/dblenses-tr.pdf)
     - [Combinators for bidirectional tree transformations: A linguistic approach to the view-update problem](http://www.cis.upenn.edu/~bcpierce/papers/lenses-toplas-final.pdf)
 - parallel/vertical composition of non-disjoint lenses is not law abiding
-  - type-level functions can enforce lenses to be disjoint during the composition step (distinct paths is isomorphic to distinct nominal types)
+  - type-level functions can enforce lenses to be disjoint during the composition step (distinct paths are isomorphic to distinct nominal types)
     - [fclabels | parallel composition of lenses for record](http://fvisser.nl/post/2013/okt/1/fclabels-2.0.html)
   - for relational database access (which can be roughly interpreted as nested records access using GraphQL encoding of relational algebra), they are disjoint paths in a graph traversal
 - eDSL
   - Monadic Bind
     - [Simple and Compositional Reification of Monadic Embedded Languages](https://svenssonjoel.github.io/writing/bb.pdf)
       - [svenssonjoel/Robot](https://github.com/svenssonjoel/Robot)
-  - Obsidian
+        - [Mops](https://github.com/svenssonjoel/Robot/blob/master/Comp.hs)
+          - re-discovery of `Free`
+          - auto injection of sub-language through type-level pattern matching
+    - [Church encoding | Asymptotic Improvement of Computations over Free Monads](https://web.archive.org/web/20110607105555/http://www.iai.uni-bonn.de/~jv/mpc08.pdf)
+      - [Control.Monad.Trans.Free.Church](https://hackage.haskell.org/package/free-5.1.1/docs/Control-Monad-Trans-Free-Church.html)
+      - [Free 0.1.6](https://github.com/purescript/purescript-free/blob/v0.1.6/src/Control/Monad/Free.purs)
+    - [Reflection without Remorse](http://okmij.org/ftp/Haskell/zseq.pdf)
+      - [Free 0.6.1](https://github.com/purescript/purescript-free/blob/v0.6.1/src/Control/Monad/Free.purs)
+  - Data Parallel Computation
+    - [svenssonjoel/EmbArBB](https://github.com/svenssonjoel/EmbArBB)
+      - [Parallel Programming in Haskell Almost for Free](http://svenssonjoel.github.io/writing/almost_free.pdf)
     - [svenssonjoel/Obsidian](https://github.com/svenssonjoel/Obsidian)
-    - [Design Exploration through Code-generating DSLs](http://dl.acm.org/citation.cfm?id=2626374)
-    - [A Language for Hierarchical Data Parallel Design-space Exploration on GPUs](http://journals.cambridge.org/action/displayFulltext?type=1&fid=10242178&jid=JFP&volumeId=26&issueId=-1&aid=10242156)
+      - [Design Exploration through Code-generating DSLs](http://dl.acm.org/citation.cfm?id=2626374)
+      - [A Language for Hierarchical Data Parallel Design-space Exploration on GPUs](http://journals.cambridge.org/action/displayFulltext?type=1&fid=10242178&jid=JFP&volumeId=26&issueId=-1&aid=10242156)
+      - [(Thesis) Embedded Languages for Data-Parallel Programming](http://svenssonjoel.github.io/thesis/thesis.pdf)
+    - [accelerate](https://www.acceleratehs.org/publications.html)
+      - OPLSS 2018 - Purely Functional Array Programming - Gabrielle Keller
+        - [1/3](https://www.youtube.com/watch?v=RCPsNceeXk4)
+        - [2/3](https://www.youtube.com/watch?v=on1ReFZi31w)
+        - [3/3](https://www.youtube.com/watch?v=G3aMnU7n0v4)
 
 potential directions
 - build on top of a SQL eDSL
@@ -48,6 +64,8 @@ potential directions
   - generality v.s. extra layers of indirection
 
 # Selda
+
+[Scoping Monadic Relational Database Queries](https://ekblad.cc/pubs/selda-paper.pdf)
 
 [Reddit - Selda: a monadic database EDSL](https://www.reddit.com/r/haskell/comments/66ih1l/selda_a_monadic_database_edsl/)
 

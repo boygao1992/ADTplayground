@@ -42,14 +42,15 @@ newtype ColInfo = ColInfo
   }
 
 -- | Get all table columns with an explicit index.
-indexedCols :: forall a. Table a -> Array (ColName /\ Maybe IndexMethod)
-indexedCols (Table t) = do
-  (ColInfo col) <- t.tableCols
-  colAttr <- col.colAttrs
-  let mmethod = case colAttr of
-        Indexed mmethod' -> mmethod'
-        _ -> Nothing
-  pure (col.colName /\ mmethod)
+-- NOTE deprecated from 0.5.0.0
+-- indexedCols :: forall a. Table a -> Array (ColName /\ Maybe IndexMethod)
+-- indexedCols (Table t) = do
+--   (ColInfo col) <- t.tableCols
+--   colAttr <- col.colAttrs
+--   let mmethod = case colAttr of
+--         Indexed mmethod' -> mmethod'
+--         _ -> Nothing
+--   pure (col.colName /\ mmethod)
 
 -- | Strongly or weakly auto-incrementing primary key?
 data AutoIncType = Weak | Strong

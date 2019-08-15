@@ -169,17 +169,17 @@ suchThat q p = inner $ do
 --   the row in question from the current set.
 --   To test for @NULL@, use 'isNull' instead of @.== literal Nothing@.
 equals :: forall s t a. Same s t => SqlType a => Col s a -> Col t a -> Col s Boolean
-equals = liftC2 $ binOp Eq
+equals cs1 ct2 = (liftC2 $ binOp Eq) cs1 (colFrom ct2)
 notEquals :: forall s t a. Same s t => SqlType a => Col s a -> Col t a -> Col s Boolean
-notEquals = liftC2 $ binOp Neq
+notEquals cs1 ct2 = (liftC2 $ binOp Neq) cs1 (colFrom ct2)
 greaterThan :: forall s t a. Same s t => SqlOrd a => Col s a -> Col t a -> Col s Boolean
-greaterThan  = liftC2 $ binOp Gt
+greaterThan cs1 ct2 = (liftC2 $ binOp Gt) cs1 (colFrom ct2)
 lessThan :: forall s t a. Same s t => SqlOrd a => Col s a -> Col t a -> Col s Boolean
-lessThan  = liftC2 $ binOp Lt
+lessThan cs1 ct2 = (liftC2 $ binOp Lt) cs1 (colFrom ct2)
 greaterEqual :: forall s t a. Same s t => SqlOrd a => Col s a -> Col t a -> Col s Boolean
-greaterEqual = liftC2 $ binOp Gte
+greaterEqual cs1 ct2 = (liftC2 $ binOp Gte) cs1 (colFrom ct2)
 lessEqual :: forall s t a. Same s t => SqlOrd a => Col s a -> Col t a -> Col s Boolean
-lessEqual = liftC2 $ binOp Lte
+lessEqual cs1 ct2 = (liftC2 $ binOp Lte) cs1 (colFrom ct2)
 infixl 4 equals as .==
 infixl 4 notEquals as ./=
 infixl 4 greaterThan as .>
@@ -195,18 +195,25 @@ isNull = liftC $ unOp IsNull
 --   and returns the given default value where it is.
 --
 --   This is the Selda equivalent of 'maybe'.
--- TODO cast
--- matchNull
---   :: forall s t a b
---   . SqlType a
---   => SqlType b
---   => Same s t
---   => Col s b
---   -> (Col s a -> Col s b)
---   -> Col t (Maybe a)
---   -> Col s b
--- matchNull nullvalue f x = ifThenElse (isNull x) nullvalue (f (cast x))
-
+-- NOTE mod
+matchNull
+  :: forall s t a b
+  . SqlType a
+  => SqlType b
+  => Same s t
+  => Col s b
+  -> (Col s a -> Col s b)
+  -> Col t (Maybe a)
+  -> Col s b
+matchNull nullvalue f ct =
+  let
+    cs = colFrom ct
+  in
+    -- NOTE cannot reuse ifThenElse, solver will force unification (s ~ t)
+    -- TODO may delay unification by adding an extra type class in the middle
+    liftC3 if_ (isNull $ cs)
+      nullvalue
+      (f $ cast cs)
 
 -- | True and false boolean literals.
 true_ :: forall s. Col s Boolean
@@ -215,11 +222,11 @@ false_ :: forall s. Col s Boolean
 false_ = literal false
 
 -- | Perform a conditional on a column
--- TODO liftC3
--- ifThenElse
---   :: forall s t u a
---   . Same s t
---   => Same t u
---   => SqlType a
---   => Col s Boolean -> Col t a -> Col u a -> Col s a
--- ifThenElse = liftC3 if_
+-- NOTE mod
+ifThenElse
+  :: forall s t u a
+  . Same s t
+  => Same t u
+  => SqlType a
+  => Col s Boolean -> Col t a -> Col u a -> Col s a
+ifThenElse cs1 ct2 cu3 = (liftC3 if_) cs1 (colFrom ct2) (colFrom $ colFrom cu3)

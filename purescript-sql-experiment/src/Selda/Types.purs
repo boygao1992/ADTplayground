@@ -2,6 +2,8 @@ module Selda.Types where
 
 import Prelude
 
+import Data.Newtype (class Newtype, unwrap)
+import Data.Array as Array
 import Data.Generic.Rep (class Generic)
 import Data.String as String
 
@@ -16,11 +18,13 @@ escapeQuotes = String.replace (String.Pattern "\"") (String.Replacement "\"\"")
 -- Types
 
 newtype ColName = ColName String
+derive instance newtypeColName :: Newtype ColName _
 derive instance eqColName :: Eq ColName
 derive instance ordColName :: Ord ColName
 derive newtype instance showColName :: Show ColName
 
 newtype TableName = TableName String
+derive instance newtypeTableName :: Newtype TableName _
 derive instance eqTableName :: Eq TableName
 derive instance ordTableName :: Ord TableName
 derive newtype instance showTableName :: Show TableName
@@ -36,6 +40,15 @@ addColSuffix (ColName cn) s = ColName $ cn <> s
 
 fromColName :: ColName -> String
 fromColName (ColName cn) = "\"" <> escapeQuotes cn <> "\""
+
+-- | Convert column names into a string, without quotes, intercalating the given
+-- string.
+--
+-- @
+-- intercalateColNames "_" [ColName "a", ColName "b"] == "a_b"
+-- @
+intercalateColNames :: String -> Array ColName -> String
+intercalateColNames inter cs = Array.intercalate inter (escapeQuotes <<< unwrap <$> cs)
 
 fromTableName :: TableName -> String
 fromTableName (TableName tn) = "\"" <> escapeQuotes tn <> "\""
