@@ -2,7 +2,8 @@ module Selda.Column where
 
 import Prelude
 import Prim.TypeError (class Fail, Text)
-import Effect.Exception.Unsafe
+import Effect.Exception.Unsafe (unsafeThrow)
+import Type.Equality (class TypeEquals)
 
 import Data.Newtype (class Newtype)
 
@@ -37,23 +38,38 @@ literal = One <<< Lit <<< mkLit
 
 -- TODO instance IsString (Col s Text) where
 
+
+{- NOTE problem of `class Same s t | s -> t, t -> s`
+cannot reuse ifThenElse, solver will force unification (s ~ t)
+1. matchNull call ifThenElse with type variables filled (s:=s, t:=s, u:=s a:=a)
+2. Same (s:=s) (t:=s) forces evaluation of Some s t
+3. `s` and `t` being separately defined type variables at the moment don't carry enough information to coincide with the duplex fundeps from Same s t
+DONE may delay unification by adding an extra type class in the middle
+
+Reference
+[13.14. Equality constraints, Coercible, and the kind Constraint](https://downloads.haskell.org/~ghc/8.6.5/docs/html/users_guide/glasgow_exts.html#equality-constraints-coercible-and-the-kind-constraint)
+-}
+
 -- | Denotes that scopes @s@ and @t@ are identical.
 -- NOTE seems this type class is only used to display a comprehensible error message
+-- NOTE TypeEquals carries duplex fundeps which enforces type equality
+--      Same serves as a lazy step which delays the equality check
 -- NOTE mod
-class Same s t | s -> t, t -> s where
-  colTo :: forall a. Col s a -> Col t a
-  colFrom :: forall a. Col t a -> Col s a
+class TypeEquals s t <= Same s t where
+  to :: forall a. Col s a -> Col t a
+  from :: forall a. Col t a -> Col s a
 
 instance sameRefl :: Same s s where
-  colTo s = s
-  colFrom s = s
+  to s = s
+  from s = s
 else
 instance sameNot
-  :: Fail
-  ( Text "An identifier from an outer scope may not be used in an inner query.")
+  :: ( Fail (Text "An identifier from an outer scope may not be used in an inner query.")
+    , TypeEquals s t
+    )
   => Same s t where
-  colTo _ = unsafeThrow "An identifier from an outer scope may not be used in an inner query."
-  colFrom _ = unsafeThrow "An identifier from an outer scope may not be used in an inner query."
+  to _ = unsafeThrow "An identifier from an outer scope may not be used in an inner query."
+  from _ = unsafeThrow "An identifier from an outer scope may not be used in an inner query."
 
 liftC :: forall s a b. (Exp SQL a -> Exp SQL b) -> Col s a -> Col s b
 liftC f (One x) = One (f x)

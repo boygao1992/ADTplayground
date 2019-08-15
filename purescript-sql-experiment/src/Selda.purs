@@ -1,22 +1,23 @@
 module Selda where
 
 import Prelude
-import Type.Prelude
+import Type.Prelude (Proxy(..))
 
-import Data.Maybe
-import Data.Generic.Rep
-import Effect.Exception.Unsafe
-import Unsafe.Coerce
+import Data.Maybe (Maybe)
+import Data.Generic.Rep (class Generic)
+import Effect.Exception.Unsafe (unsafeThrow)
+import Unsafe.Coerce (unsafeCoerce)
 
-import Selda.Unsafe
-import Selda.Inner
-import Selda.Generic
-import Selda.Exp
-import Selda.SqlType
-import Selda.Selectors
 import Selda.Column
+import Selda.Column (from, to) as Same
+import Selda.Exp
+import Selda.Generic
+import Selda.Inner
 import Selda.Query
 import Selda.Query.Type
+import Selda.Selectors
+import Selda.SqlType
+import Selda.Unsafe
 
 
 -- | Any column type that can be used with the 'min_' and 'max_' functions.
@@ -168,18 +169,19 @@ suchThat q p = inner $ do
 --   semantics are used. This means that comparing to a @NULL@ field will remove
 --   the row in question from the current set.
 --   To test for @NULL@, use 'isNull' instead of @.== literal Nothing@.
+-- NOTE mod
 equals :: forall s t a. Same s t => SqlType a => Col s a -> Col t a -> Col s Boolean
-equals cs1 ct2 = (liftC2 $ binOp Eq) cs1 (colFrom ct2)
+equals cs1 ct2 = (liftC2 $ binOp Eq) cs1 (Same.from ct2)
 notEquals :: forall s t a. Same s t => SqlType a => Col s a -> Col t a -> Col s Boolean
-notEquals cs1 ct2 = (liftC2 $ binOp Neq) cs1 (colFrom ct2)
+notEquals cs1 ct2 = (liftC2 $ binOp Neq) cs1 (Same.from ct2)
 greaterThan :: forall s t a. Same s t => SqlOrd a => Col s a -> Col t a -> Col s Boolean
-greaterThan cs1 ct2 = (liftC2 $ binOp Gt) cs1 (colFrom ct2)
+greaterThan cs1 ct2 = (liftC2 $ binOp Gt) cs1 (Same.from ct2)
 lessThan :: forall s t a. Same s t => SqlOrd a => Col s a -> Col t a -> Col s Boolean
-lessThan cs1 ct2 = (liftC2 $ binOp Lt) cs1 (colFrom ct2)
+lessThan cs1 ct2 = (liftC2 $ binOp Lt) cs1 (Same.from ct2)
 greaterEqual :: forall s t a. Same s t => SqlOrd a => Col s a -> Col t a -> Col s Boolean
-greaterEqual cs1 ct2 = (liftC2 $ binOp Gte) cs1 (colFrom ct2)
+greaterEqual cs1 ct2 = (liftC2 $ binOp Gte) cs1 (Same.from ct2)
 lessEqual :: forall s t a. Same s t => SqlOrd a => Col s a -> Col t a -> Col s Boolean
-lessEqual cs1 ct2 = (liftC2 $ binOp Lte) cs1 (colFrom ct2)
+lessEqual cs1 ct2 = (liftC2 $ binOp Lte) cs1 (Same.from ct2)
 infixl 4 equals as .==
 infixl 4 notEquals as ./=
 infixl 4 greaterThan as .>
@@ -205,15 +207,10 @@ matchNull
   -> (Col s a -> Col s b)
   -> Col t (Maybe a)
   -> Col s b
-matchNull nullvalue f ct =
-  let
-    cs = colFrom ct
-  in
-    -- NOTE cannot reuse ifThenElse, solver will force unification (s ~ t)
-    -- TODO may delay unification by adding an extra type class in the middle
-    liftC3 if_ (isNull $ cs)
-      nullvalue
-      (f $ cast cs)
+matchNull nullvalue f x =
+  ifThenElse (isNull $ Same.from x)
+    nullvalue
+    (f $ cast $ Same.from x)
 
 -- | True and false boolean literals.
 true_ :: forall s. Col s Boolean
@@ -226,7 +223,7 @@ false_ = literal false
 ifThenElse
   :: forall s t u a
   . Same s t
-  => Same t u
+  => Same s u
   => SqlType a
   => Col s Boolean -> Col t a -> Col u a -> Col s a
-ifThenElse cs1 ct2 cu3 = (liftC3 if_) cs1 (colFrom ct2) (colFrom $ colFrom cu3)
+ifThenElse cs1 ct2 cu3 = (liftC3 if_) cs1 (Same.from ct2) (Same.from cu3)
