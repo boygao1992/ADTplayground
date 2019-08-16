@@ -8,16 +8,15 @@ import Data.Array as Array
 import Data.Array.NonEmpty as NEA
 import Data.Either (Either(..))
 import Data.Either.Nested (type (\/))
-import Data.Exists (flippedRunExists, runExists)
+import Data.Exists (flippedRunExists)
 import Data.Exists2 (flippedRunExists2)
 import Data.Maybe (Maybe(..))
 import Data.Traversable (for, sequence, traverse)
 import Data.Tuple.Nested (type (/\), (/\))
-
 import Selda.Exp (BinOp(..), BinOpF2(..), Exp(..), Fun2F2(..), InListF(..), NulOp(..), SomeCol(..), UnOp(..), UnOpF(..), runSomeExp)
 import Selda.SQL (JoinType(..), Order(..), Param, SQL(..), SqlSource(..), mkParam, runParam)
 import Selda.SQL.Print.Config (PPConfig(..))
-import Selda.SqlType (Lit(..), SqlTypeRep)
+import Selda.SqlType (LJustF(..), Lit(..), SqlTypeRep)
 import Selda.Types as Types
 
 snub :: forall a. Ord a => Array a -> Array a
@@ -109,8 +108,8 @@ compDelete cfg tbl p = runPP cfg ppDelete
 -- | Pretty-print a literal as a named parameter and save the
 --   name-value binding in the environment.
 ppLit :: forall a. Lit a -> PP String
-ppLit (LNull)     = pure "NULL" -- NOTE proof ignored
-ppLit (LJust l)   = runExists ppLit l     -- NOTE proof ignored
+ppLit (LNull _)      = pure "NULL" -- NOTE proof ignored
+ppLit (LJust lJustF) = flippedRunExists lJustF \(LJustF proof l) -> ppLit l -- NOTE proof ignored
 ppLit l = do
   ps <- gets _.ppParams
   ns <- gets _.ppParamNS

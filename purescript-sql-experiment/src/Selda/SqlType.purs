@@ -9,7 +9,7 @@ import Data.Enum (class BoundedEnum)
 import Data.Exists
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Leibniz (type (~))
+import Data.Leibniz
 import Data.Maybe (Maybe(..))
 import Data.UUID (UUID)
 import Type.Prelude (Proxy)
@@ -85,46 +85,66 @@ class BoundedEnum a <= SqlEnum a where
 
 -- | An SQL literal.
 data Lit a
-  = LText      String
-  | LInt       Int
-  | LDouble    Number
-  | LBool      Boolean
-  | LDateTime  DateTime
-  | LDate      Day -- TODO different semantics
-  | LTime      Time
-  | LJust      (Exists Lit)
-  -- TODO
-  -- LNull     :: SqlType a => Lit (Maybe a)
-  | LNull
+  = LText      (a ~ String)   String
+  | LInt       (a ~ Int)      Int
+  | LDouble    (a ~ Number)   Number
+  | LBool      (a ~ Boolean)  Boolean
+  | LDateTime  (a ~ DateTime) DateTime
+  | LDate      (a ~ Day)      Day -- TODO different semantics
+  | LTime      (a ~ Time)     Time
+  -- TODO LBlob     :: !ByteString -> Lit ByteString
+  | LJust      (Exists (LJustF a))
+  | LNull      (Exists (LNullF a))
   | LCustom    SqlTypeRep (Exists Lit)
-  | LUUID      UUID
+  | LUUID      (a ~ UUID) UUID
+data LJustF a b = LJustF (a ~ (Maybe b)) (Lit b)
+data LNullF a b = LNullF (a ~ (Maybe b)) (Proxy b -> SqlTypeRep) -- NOTE `SqlType b` constraint cannot survive `mkExists` (which uses unsafeCoerce under the hood), so we box the `sqlType` function during construction
+-- Proxy a -> SqlTypeRep
 -- LText     :: !Text       -> Lit Text
-lText = LText :: String -> Lit String
+lText = LText identity :: String -> Lit String
 -- LInt      :: !Int        -> Lit Int
-lInt = LInt :: Int -> Lit Int
+lInt = LInt identity :: Int -> Lit Int
 -- LDouble   :: !Double     -> Lit Double
-lDouble = LDouble :: Number -> Lit Number
+lDouble = LDouble identity :: Number -> Lit Number
 -- LBool     :: !Bool       -> Lit Bool
-lBool = LBool :: Boolean -> Lit Boolean
+lBool = LBool identity :: Boolean -> Lit Boolean
 -- LDateTime :: !UTCTime    -> Lit UTCTime
-lDateTime = LDateTime :: DateTime -> Lit DateTime
+lDateTime = LDateTime identity :: DateTime -> Lit DateTime
 -- LDate     :: !Day        -> Lit Day
-lDate = LDate :: Day -> Lit Day
+lDate = LDate identity :: Day -> Lit Day
 -- LTime     :: !TimeOfDay  -> Lit TimeOfDay
-lTime = LTime :: Time -> Lit Time
+lTime = LTime identity :: Time -> Lit Time
 -- LJust     :: SqlType a => !(Lit a) -> Lit (Maybe a)
 lJust :: forall a. SqlType a => Lit a -> Lit (Maybe a)
-lJust = LJust <<< mkExists
--- LBlob     :: !ByteString -> Lit ByteString
-lNull = LNull :: forall a. SqlType a => Lit (Maybe a)
+lJust = LJust <<< mkExists <<< LJustF identity
+-- LNull     :: SqlType a => Lit (Maybe a)
+lNull :: forall a. SqlType a => Lit (Maybe a)
+lNull = LNull $ mkExists $ LNullF identity sqlType
 -- LCustom   :: SqlTypeRep  -> Lit a -> Lit b
 lCustom :: forall a b. SqlTypeRep -> Lit a -> Lit b
 lCustom rep = LCustom rep <<< mkExists
 -- LUUID     :: !UUID       -> Lit UUID
-lUUID = LUUID :: UUID -> Lit UUID
+lUUID = LUUID identity :: UUID -> Lit UUID
 
--- | The SQL type representation for the given literal.
--- TODO litType :: Lit a -> SqlTypeRep
+-- TODO | The SQL type representation for the given literal.
+litType :: forall a. Lit a -> SqlTypeRep
+litType (LText _ _)     = TText
+litType (LInt _ _)      = TInt
+litType (LDouble _ _)   = TFloat
+litType (LBool _ _)     = TBool
+litType (LDateTime _ _) = TDateTime
+litType (LDate _ _)     = TDate
+litType (LTime _ _)     = TTime
+-- litType (LBlob _)     = TBlob
+litType (LJust lJustF) = flippedRunExists lJustF \(LJustF proof x) -> litType x -- NOTE proof ignored
+litType (LNull lNullF) = flippedRunExists lNullF \(LNullF proof f) ->
+  f (proxyFor proof)
+  where
+    -- NOTE mod
+    proxyFor :: forall b. a ~ (Maybe b) -> Proxy b
+    proxyFor (Leibniz _) = Proxy :: Proxy b
+litType (LCustom t _) = t
+litType (LUUID _ _)     = TUUID
 
 -- TODO instance Eq (Lit a) where
 -- TODO instance Ord (Lit a) where
@@ -143,7 +163,7 @@ data SqlValue
   -- TODO | SqlBlob    ByteString
   | SqlUTCTime DateTime
   | SqlTime    Time
-  -- TODO | SqlDate    Day
+  | SqlDate    Day
   | SqlNull
 derive instance genericSqlValue :: Generic SqlValue _
 instance showSqlValue :: Show SqlValue where
@@ -152,7 +172,6 @@ instance showSqlValue :: Show SqlValue where
 -- | A row identifier for some table.
 --   This is the type of auto-incrementing primary keys.
 newtype RowID = RowID Int
-derive instance genericRowID :: Generic RowID _
 derive instance eqRowID :: Eq RowID
 derive instance ordRowID :: Ord RowID
 derive newtype instance showRowID :: Show RowID
@@ -184,7 +203,6 @@ newtype ID a = ID RowID
 derive instance eqID :: Eq (ID a)
 derive instance ordID :: Ord (ID a)
 derive newtype instance showID :: Show (ID a)
-
 -- | Create a typed row identifier from an integer.
 --   Use with caution, preferably only when reading user input.
 toId :: forall a. Int -> ID a
@@ -206,6 +224,17 @@ isInvalidId :: forall a. ID a -> Boolean
 isInvalidId (ID rowID)= isInvalidRowId rowID
 
 -- TODO SqlType instances
+
+instance sqlTypeRowID :: SqlType RowID where
+  mkLit (RowID n) = lCustom TRowID (lInt n)
+  sqlType _ = TRowID
+  fromSql (SqlInt x) = RowID x
+  fromSql v = unsafeThrow $ "fromSql: RowID column with non-int value: " <> show v
+  defaultValue =
+    let (RowID n) = invalidRowId
+    in lCustom TRowID (lInt n)
+
+derive newtype instance sqlTypeId :: SqlType (ID a)
 
 instance sqlTypeInt :: SqlType Int where
   mkLit x = lInt x
@@ -237,6 +266,18 @@ instance sqlTypeBoolean :: SqlType Boolean where
   fromSql v = unsafeThrow $ "fromSql: bool column with non-bool value: " <> show v
   defaultValue = lBool false
 
+-- TODO instance SqlType DateTime
+-- TODO instance SqlType Day
+-- TODO instance SqlType Time
+
+-- | Both PostgreSQL and SQLite to weird things with time zones.
+--   Long term solution is to use proper binary types internally for
+--   time values, so this is really just an interim solution.
+-- TODO withWeirdTimeZone :: ParseTime t => String -> String -> Maybe t
+
+-- TODO instance SqlType ByteString
+-- TODO instance SqlType UUID
+
 instance sqlTypeMaybe :: SqlType a => SqlType (Maybe a) where
   mkLit (Just x) = lJust (mkLit x)
   mkLit Nothing  = lNull
@@ -245,7 +286,6 @@ instance sqlTypeMaybe :: SqlType a => SqlType (Maybe a) where
   fromSql x       = Just $ fromSql x
   defaultValue = lNull
 
--- | Both PostgreSQL and SQLite to weird things with time zones.
---   Long term solution is to use proper binary types internally for
---   time values, so this is really just an interim solution.
--- TODO withWeirdTimeZone :: ParseTime t => String -> String -> Maybe t
+-- instance sqlTypeOrdering :: SqlType Ordering where
+--   mkLit = lCustom TText <<< lText <<< toText
+--   sqlType _ = litType
