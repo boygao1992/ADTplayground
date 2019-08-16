@@ -8,7 +8,7 @@ import Data.Array as Array
 import Data.Array.NonEmpty as NEA
 import Data.Either (Either(..))
 import Data.Either.Nested (type (\/))
-import Data.Exists (flippedRunExists)
+import Data.Exists (flippedRunExists, runExists)
 import Data.Exists2 (flippedRunExists2)
 import Data.Maybe (Maybe(..))
 import Data.Traversable (for, sequence, traverse)
@@ -109,8 +109,8 @@ compDelete cfg tbl p = runPP cfg ppDelete
 -- | Pretty-print a literal as a named parameter and save the
 --   name-value binding in the environment.
 ppLit :: forall a. Lit a -> PP String
-ppLit (LNull proof)     = pure "NULL" -- NOTE proof ignored
-ppLit (LJust l proof)   = ppLit l     -- NOTE proof ignored
+ppLit (LNull)     = pure "NULL" -- NOTE proof ignored
+ppLit (LJust l)   = runExists ppLit l     -- NOTE proof ignored
 ppLit l = do
   ps <- gets _.ppParams
   ns <- gets _.ppParamNS
