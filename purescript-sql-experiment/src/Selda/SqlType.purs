@@ -1,15 +1,16 @@
 module Selda.SqlType where
 
 import Prelude
+import Type.Prelude
 
 import Effect.Exception.Unsafe
-import Data.DateTime (DateTime, Time)
+import Data.DateTime
 import Data.Enum (class BoundedEnum)
-import Data.Exists (Exists)
+import Data.Exists
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Leibniz (type (~))
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
 import Data.UUID (UUID)
 import Type.Prelude (Proxy)
 
@@ -84,29 +85,43 @@ class BoundedEnum a <= SqlEnum a where
 
 -- | An SQL literal.
 data Lit a
-  -- LText     :: !Text       -> Lit Text
-  = LText      String   (a ~ String)
-  -- LInt      :: !Int        -> Lit Int
-  | LInt       Int      (a ~ Int)
-  -- LDouble   :: !Double     -> Lit Double
-  | LDouble    Number   (a ~ Number)
-  -- LBool     :: !Bool       -> Lit Bool
-  | LBool      Boolean  (a ~ Boolean)
-  -- LDateTime :: !UTCTime    -> Lit UTCTime
-  | LDateTime  DateTime (a ~ DateTime)
-  -- TODO LDate     :: !Day        -> Lit Day
-  -- | LDate      Day      (a ~ Day)
-  -- LTime     :: !TimeOfDay  -> Lit TimeOfDay
-  | LTime      Time     (a ~ Time)
-  -- LJust     :: SqlType a => !(Lit a) -> Lit (Maybe a)
-  | LJust      (Lit a)  (SqlType a => a ~ (Maybe a))
-  -- TODO LBlob     :: !ByteString -> Lit ByteString
+  = LText      String
+  | LInt       Int
+  | LDouble    Number
+  | LBool      Boolean
+  | LDateTime  DateTime
+  | LDate      Day -- TODO different semantics
+  | LTime      Time
+  | LJust      (Exists Lit)
+  -- TODO
   -- LNull     :: SqlType a => Lit (Maybe a)
-  | LNull               (SqlType a => a ~ (Maybe a))
-  -- LCustom   :: SqlTypeRep  -> Lit a -> Lit b
-  | LCustom    SqlTypeRep (Exists Lit) a
-  -- LUUID     :: !UUID       -> Lit UUID
-  | LUUID      UUID     (a ~ UUID)
+  | LNull
+  | LCustom    SqlTypeRep (Exists Lit)
+  | LUUID      UUID
+-- LText     :: !Text       -> Lit Text
+lText = LText :: String -> Lit String
+-- LInt      :: !Int        -> Lit Int
+lInt = LInt :: Int -> Lit Int
+-- LDouble   :: !Double     -> Lit Double
+lDouble = LDouble :: Number -> Lit Number
+-- LBool     :: !Bool       -> Lit Bool
+lBool = LBool :: Boolean -> Lit Boolean
+-- LDateTime :: !UTCTime    -> Lit UTCTime
+lDateTime = LDateTime :: DateTime -> Lit DateTime
+-- LDate     :: !Day        -> Lit Day
+lDate = LDate :: Day -> Lit Day
+-- LTime     :: !TimeOfDay  -> Lit TimeOfDay
+lTime = LTime :: Time -> Lit Time
+-- LJust     :: SqlType a => !(Lit a) -> Lit (Maybe a)
+lJust :: forall a. SqlType a => Lit a -> Lit (Maybe a)
+lJust = LJust <<< mkExists
+-- LBlob     :: !ByteString -> Lit ByteString
+lNull = LNull :: forall a. SqlType a => Lit (Maybe a)
+-- LCustom   :: SqlTypeRep  -> Lit a -> Lit b
+lCustom :: forall a b. SqlTypeRep -> Lit a -> Lit b
+lCustom rep = LCustom rep <<< mkExists
+-- LUUID     :: !UUID       -> Lit UUID
+lUUID = LUUID :: UUID -> Lit UUID
 
 -- | The SQL type representation for the given literal.
 -- TODO litType :: Lit a -> SqlTypeRep
@@ -193,20 +208,42 @@ isInvalidId (ID rowID)= isInvalidRowId rowID
 -- TODO SqlType instances
 
 instance sqlTypeInt :: SqlType Int where
-  mkLit x = LInt x identity
+  mkLit x = lInt x
   sqlType _ = TInt
   fromSql (SqlInt x) = x
   fromSql v = unsafeThrow $ "fromSql: int column with non-int value: " <> show v
-  defaultValue = LInt 0 identity
+  defaultValue = lInt 0
+
+instance sqlTypeNumber :: SqlType Number where
+  mkLit = lDouble
+  sqlType _ = TFloat
+  fromSql (SqlFloat x) = x
+  fromSql v = unsafeThrow $ "fromSql: float column with non-float value: " <> show v
+  defaultValue = lDouble 0.0
+
+instance sqlTypeString :: SqlType String where
+  mkLit = lText
+  sqlType _ = TText
+  fromSql (SqlString x) = x
+  fromSql v = unsafeThrow $ "fromSql: text column with non-text value: " <> show v
+  defaultValue = lText ""
 
 instance sqlTypeBoolean :: SqlType Boolean where
-  mkLit x = LBool x identity
+  mkLit x = lBool x
   sqlType _ = TBool
   fromSql (SqlBool x) = x
-  fromSql (SqlInt 0)  = false
-  fromSql (SqlInt _)  = true
+  fromSql (SqlInt 0)  = false -- NOTE implicit type coercion
+  fromSql (SqlInt _)  = true  -- NOTE implicit type coercion
   fromSql v = unsafeThrow $ "fromSql: bool column with non-bool value: " <> show v
-  defaultValue = LBool false identity
+  defaultValue = lBool false
+
+instance sqlTypeMaybe :: SqlType a => SqlType (Maybe a) where
+  mkLit (Just x) = lJust (mkLit x)
+  mkLit Nothing  = lNull
+  sqlType _ = sqlType (Proxy :: Proxy a)
+  fromSql SqlNull = Nothing
+  fromSql x       = Just $ fromSql x
+  defaultValue = lNull
 
 -- | Both PostgreSQL and SQLite to weird things with time zones.
 --   Long term solution is to use proper binary types internally for

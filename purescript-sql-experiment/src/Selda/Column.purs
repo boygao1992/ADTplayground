@@ -7,7 +7,8 @@ import Type.Equality (class TypeEquals)
 
 import Data.Newtype (class Newtype)
 
-import Selda.Exp (Exp(..), UntypedCol)
+import Selda.Exp (Exp(..), UntypedCol, binOp)
+import Selda.Exp as Exp
 import Selda.SQL (SQL)
 import Selda.SqlType (class SqlType, mkLit)
 -- import Selda.SqlRow
@@ -88,6 +89,19 @@ liftC3
   -> Col s a -> Col s b -> Col s c -> Col s d
 liftC3 f (One a) (One b) (One c) = One $ f a b c
 
--- TODO instance (SqlType a, Num a) => Num (Col s a) where
--- TODO instance Fractional (Col s Double) where
--- TODO instance Fractional (Col s Int) where
+-- NOTE instance (SqlType a, Num a) => Num (Col s a) where
+instance semiringCol :: (Semiring a, SqlType a) => Semiring (Col s a) where
+  add = liftC2 $ binOp Exp.add
+  zero = literal zero
+  mul = liftC2 $ binOp Exp.mul
+  one = literal one
+instance ringCol :: (Ring a, SqlType a) => Ring (Col s a) where
+  sub = liftC2 $ binOp Exp.sub
+instance commutativeRingCol :: (CommutativeRing a, SqlType a) => CommutativeRing (Col s a)
+-- NOTE instance Fractional (Col s Double) where
+-- NOTE instance Fractional (Col s Int) where
+instance euclideanRingCol :: (EuclideanRing a, SqlType a) => EuclideanRing (Col s a) where
+  degree _ = unsafeThrow "unsupported operator: degree" -- NOTE
+  div = liftC2 $ binOp Exp.div
+  mod _ _ = unsafeThrow "unsupported operator: mod" -- NOTE
+

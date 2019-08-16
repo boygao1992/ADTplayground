@@ -78,8 +78,8 @@ fun2 label eA eB = Fun2 $ mkExists2 $ Fun2F2 label eA eB
 -- If      :: !(Exp sql Bool) -> !(Exp sql a) -> !(Exp sql a) -> Exp sql a
 if_ = If :: forall sql a. Exp sql Boolean -> Exp sql a -> Exp sql a -> Exp sql a
 -- Cast    :: !SqlTypeRep -> !(Exp sql a) -> Exp sql b
-cast_ :: forall sql a b. SqlTypeRep -> Exp sql a -> Exp sql b
-cast_ rep eA = Cast rep (mkSomeExp eA)
+cast :: forall sql a b. SqlTypeRep -> Exp sql a -> Exp sql b
+cast rep eA = Cast rep (mkSomeExp eA)
 -- AggrEx  :: !Text -> !(Exp sql a) -> Exp sql b
 aggrEx :: forall sql a b. String -> Exp sql a -> Exp sql b
 aggrEx label eA = AggrEx label (mkSomeExp eA)
