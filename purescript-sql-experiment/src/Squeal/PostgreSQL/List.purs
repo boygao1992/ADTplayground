@@ -2,7 +2,7 @@ module Squeal.PostgreSQL.List where
 
 import Prelude
 import Type.Prelude
-import Data.Exists
+import Data.Exists1
 
 import Data.Tuple.Nested (type (/\), (/\))
 import Type.Data.List (kind List, type (:))

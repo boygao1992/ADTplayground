@@ -8,7 +8,7 @@ import Data.Array as Array
 import Data.Array.NonEmpty as NEA
 import Data.Either (Either(..))
 import Data.Either.Nested (type (\/))
-import Data.Exists (flippedRunExists)
+import Data.Exists1 (flippedRunExists)
 import Data.Exists2 (flippedRunExists2)
 import Data.Maybe (Maybe(..))
 import Data.Traversable (for, sequence, traverse)

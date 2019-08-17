@@ -1,4 +1,4 @@
-module Data.Exists where
+module Data.Exists1 where
 
 import Unsafe.Coerce
 

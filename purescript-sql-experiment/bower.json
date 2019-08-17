@@ -19,7 +19,8 @@
     "purescript-datetime": "^4.1.1",
     "purescript-variant": "^6.0.1",
     "purescript-exceptions": "^4.0.0",
-    "purescript-sequences": "^2.1.0"
+    "purescript-sequences": "^2.1.0",
+    "purescript-read": "^1.0.1"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"

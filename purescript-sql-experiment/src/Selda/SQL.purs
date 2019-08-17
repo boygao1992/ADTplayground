@@ -3,7 +3,7 @@ module Selda.SQL where
 import Prelude
 
 import Data.Array as Array
-import Data.Exists (Exists, mkExists, runExists)
+import Data.Exists1 (Exists, mkExists, runExists)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))

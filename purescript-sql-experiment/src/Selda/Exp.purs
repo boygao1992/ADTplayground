@@ -4,7 +4,7 @@ import Prelude
 
 import Data.Array ((:))
 import Data.Array as Array
-import Data.Exists (Exists, flippedRunExists, mkExists, runExists)
+import Data.Exists1 (Exists, flippedRunExists, mkExists, runExists)
 import Data.Exists2 (Exists2, flippedRunExists2, mkExists2)
 import Data.Maybe (Maybe)
 import Selda.SqlType (Lit, SqlTypeRep)

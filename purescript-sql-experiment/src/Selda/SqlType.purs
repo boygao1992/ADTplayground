@@ -1,18 +1,18 @@
 module Selda.SqlType where
 
 import Prelude
-import Type.Prelude
+import Type.Prelude (Proxy(..))
 
-import Effect.Exception.Unsafe
-import Data.DateTime
+import Data.DateTime (DateTime, Day, Time)
 import Data.Enum (class BoundedEnum)
-import Data.Exists
+import Data.Exists1 (Exists, flippedRunExists, mkExists, runExists)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Leibniz
-import Data.Maybe (Maybe(..))
-import Data.UUID (UUID)
-import Type.Prelude (Proxy)
+import Data.Leibniz (type (~), Leibniz(..))
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.String.Read (class Read, read)
+import Data.UUID (UUID, emptyUUID, parseUUID)
+import Effect.Exception.Unsafe (unsafeThrow)
 
 -- | Format string used to represent date and time when
 --   representing timestamps as text.
@@ -81,7 +81,11 @@ class BoundedEnum a <= SqlEnum a where
   toText :: a -> String
   fromText :: String -> a
 
--- TODO instance (BoundedEnum a, Show a, Read a) => SqlEnum a
+instance sqlEnumImpl :: (BoundedEnum a, Show a, Read a) => SqlEnum a where
+  toText = show
+  fromText
+    = fromMaybe (unsafeThrow "unrecognized constructor") -- FIXME
+    <<< read
 
 -- | An SQL literal.
 data Lit a
@@ -99,7 +103,7 @@ data Lit a
   | LUUID      (a ~ UUID) UUID
 data LJustF a b = LJustF (a ~ (Maybe b)) (Lit b)
 data LNullF a b = LNullF (a ~ (Maybe b)) (Proxy b -> SqlTypeRep) -- NOTE `SqlType b` constraint cannot survive `mkExists` (which uses unsafeCoerce under the hood), so we box the `sqlType` function during construction
--- Proxy a -> SqlTypeRep
+
 -- LText     :: !Text       -> Lit Text
 lText = LText identity :: String -> Lit String
 -- LInt      :: !Int        -> Lit Int
@@ -126,7 +130,7 @@ lCustom rep = LCustom rep <<< mkExists
 -- LUUID     :: !UUID       -> Lit UUID
 lUUID = LUUID identity :: UUID -> Lit UUID
 
--- TODO | The SQL type representation for the given literal.
+-- | The SQL type representation for the given literal.
 litType :: forall a. Lit a -> SqlTypeRep
 litType (LText _ _)     = TText
 litType (LInt _ _)      = TInt
@@ -146,14 +150,59 @@ litType (LNull lNullF) = flippedRunExists lNullF \(LNullF proof f) ->
 litType (LCustom t _) = t
 litType (LUUID _ _)     = TUUID
 
--- TODO instance Eq (Lit a) where
--- TODO instance Ord (Lit a) where
--- TODO instance Show (Lit a) where
+instance eqLit :: Eq (Lit a) where
+  eq a b = compLit a b == EQ
+instance ordLit :: Ord (Lit a) where
+  compare = compLit
+instance showLit :: Show (Lit a) where
+  show (LText _ s)     = show s
+  show (LInt _ i)      = show i
+  show (LDouble _ d)   = show d
+  show (LBool _ b)     = show b
+  show (LDateTime _ s) = show s
+  show (LDate _ s)     = show s
+  show (LTime _ s)     = show s
+  -- show (LBlob b)     = show b
+  show (LJust lJustF)  = "Just " <> flippedRunExists lJustF \(LJustF _ x) -> show x
+  show (LNull _)       = "Nothing"
+  show (LCustom _ e)   = runExists show e
+  show (LUUID _ u)     = show u
 
 -- | Constructor tag for all literals. Used for Ord instance.
--- TODO litConTag :: Lit a -> Int
+litConTag :: forall a. Lit a -> Int
+litConTag (LText _ _)     = 0
+litConTag (LInt _ _)      = 1
+litConTag (LDouble _ _)   = 2
+litConTag (LBool _ _)     = 3
+litConTag (LDateTime _ _) = 4
+litConTag (LDate _ _)     = 5
+litConTag (LTime _ _)     = 6
+litConTag (LJust _)     = 7
+-- litConTag (LBlob _)     = 8
+litConTag (LNull _)       = 9
+litConTag (LCustom _ _)   = 10
+litConTag (LUUID _ _)     = 11
+
 -- | Compare two literals of different type for equality.
--- TODO compLit :: Lit a -> Lit b -> Ordering
+compLit :: forall a b. Lit a -> Lit b -> Ordering
+compLit (LText _ x)     (LText _ x')     = x `compare` x'
+compLit (LInt _ x)      (LInt _ x')      = x `compare` x'
+compLit (LDouble _ x)   (LDouble _ x')   = x `compare` x'
+compLit (LBool _ x)     (LBool _ x')     = x `compare` x'
+compLit (LDateTime _ x) (LDateTime _ x') = x `compare` x'
+compLit (LDate _ x)     (LDate _ x')     = x `compare` x'
+compLit (LTime _ x)     (LTime _ x')     = x `compare` x'
+-- compLit (LBlob x)     (LBlob x')     = x `compare` x'
+compLit (LJust lJustF)  (LJust lJustF')  =
+  flippedRunExists lJustF \(LJustF _ x) ->
+    flippedRunExists lJustF' \(LJustF _ x') ->
+      x `compLit` x'
+compLit (LCustom _ e)   (LCustom _ e')   =
+  flippedRunExists e \x ->
+    flippedRunExists e' \x' ->
+      x `compLit` x'
+compLit (LUUID _ x)     (LUUID _ x')     = x `compare` x'
+compLit a               b                = litConTag a `compare` litConTag b
 
 data SqlValue
   = SqlInt     Int
@@ -165,6 +214,8 @@ data SqlValue
   | SqlTime    Time
   | SqlDate    Day
   | SqlNull
+derive instance eqSqlValue :: Eq SqlValue
+derive instance ordSqlValue :: Ord SqlValue
 derive instance genericSqlValue :: Generic SqlValue _
 instance showSqlValue :: Show SqlValue where
   show = genericShow
@@ -223,8 +274,6 @@ invalidId = ID invalidRowId
 isInvalidId :: forall a. ID a -> Boolean
 isInvalidId (ID rowID)= isInvalidRowId rowID
 
--- TODO SqlType instances
-
 instance sqlTypeRowID :: SqlType RowID where
   mkLit (RowID n) = lCustom TRowID (lInt n)
   sqlType _ = TRowID
@@ -276,7 +325,16 @@ instance sqlTypeBoolean :: SqlType Boolean where
 -- TODO withWeirdTimeZone :: ParseTime t => String -> String -> Maybe t
 
 -- TODO instance SqlType ByteString
--- TODO instance SqlType UUID
+
+instance sqlTypeUUID :: SqlType UUID where
+  mkLit = lUUID
+  sqlType _ = TUUID
+  fromSql v
+    = fromMaybe (unsafeThrow $ "fromSql: invalid UUID: " <> show v)
+    <<< parseUUID
+    <<< fromSql
+    $ v
+  defaultValue = lUUID emptyUUID
 
 instance sqlTypeMaybe :: SqlType a => SqlType (Maybe a) where
   mkLit (Just x) = lJust (mkLit x)
@@ -286,6 +344,16 @@ instance sqlTypeMaybe :: SqlType a => SqlType (Maybe a) where
   fromSql x       = Just $ fromSql x
   defaultValue = lNull
 
--- instance sqlTypeOrdering :: SqlType Ordering where
---   mkLit = lCustom TText <<< lText <<< toText
---   sqlType _ = litType
+-- NOTE useful?
+instance sqlTypeOrdering :: SqlType Ordering where
+  mkLit = lCustom TText <<< lText <<< show
+  sqlType _ = litType $ lCustom TText <<< lText $ "Ordering"
+  fromSql = readOrdering <<< fromSql
+    where
+      readOrdering :: String -> Ordering
+      readOrdering "LT" = LT
+      readOrdering "EQ" = EQ
+      readOrdering "GT" = GT
+      readOrdering v = unsafeThrow $ "fromSql: invalid Ordering: " <> v -- FIXME
+  defaultValue = lCustom TText <<< lText <<< show $ LT
+

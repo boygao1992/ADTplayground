@@ -5,7 +5,7 @@ import Prelude
 import Data.Array ((!!), (:))
 import Data.Array as Array
 import Data.Bifunctor (bimap)
-import Data.Exists (Exists, flippedRunExists, mkExists)
+import Data.Exists1 (Exists, flippedRunExists, mkExists)
 import Data.Maybe (Maybe(..))
 import Data.Sequence as Seq
 import Data.Tuple.Nested (type (/\), (/\))

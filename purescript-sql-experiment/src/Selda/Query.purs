@@ -8,7 +8,7 @@ import Control.Monad.State (get, modify_, put)
 import Data.Array ((:))
 import Data.Array as Array
 import Data.Either (Either(..))
-import Data.Exists (runExists)
+import Data.Exists1 (runExists)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), isNothing)
 import Data.Newtype (over)
