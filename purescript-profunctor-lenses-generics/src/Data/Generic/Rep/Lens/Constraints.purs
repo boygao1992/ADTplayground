@@ -2,8 +2,14 @@ module Data.Generic.Rep.Lens.Constraints where
 
 import Prelude
 
-import Data.Maybe
-import Data.Lens
+import Data.Maybe (Maybe)
+import Data.Lens (Iso, Lens, Optic, Prism, Traversal, preview, set)
+
+-- foreign import kind Constraint
+-- foreign import data CProfunctor :: Constraint
+-- foreign import data CStrong :: Constraint
+-- foreign import data CChoice :: Constraint
+-- foreign import data CWander :: Constraint
 
 newtype COptic s t a b = COptic (forall p. Optic p s t a b)
 newtype CIso s t a b = CIso (Iso s t a b)
@@ -23,20 +29,14 @@ unwrapPrism (CPrism l) = l
 unwrapTraversal :: forall s t a b. CTraversal s t a b -> Traversal s t a b
 unwrapTraversal (CTraversal l) = l
 
--- foreign import kind Constraint
--- foreign import data CProfunctor :: Constraint
--- foreign import data CStrong :: Constraint
--- foreign import data CChoice :: Constraint
--- foreign import data CWander :: Constraint
-
 ----------
 -- CLenses
 
 class CLenses (p :: Type -> Type -> Type -> Type -> Type)
-instance cLensesCOptic :: CLenses COptic
-instance cLensesCIso :: CLenses CIso
-instance cLensesCLens :: CLenses CLens
-instance cLensesCPrism :: CLenses CPrism
+instance cLensesCOptic     :: CLenses COptic
+instance cLensesCIso       :: CLenses CIso
+instance cLensesCLens      :: CLenses CLens
+instance cLensesCPrism     :: CLenses CPrism
 instance cLensesCTraversal :: CLenses CTraversal
 
 ---------------------
@@ -165,3 +165,4 @@ instance cComposeCTraversalCPrism ::
 instance cComposeCTraversalCTraversal ::
   CCompose CTraversal CTraversal CTraversal where
   cCompose (CTraversal l1) (CTraversal l2) = CTraversal (l1 <<< l2)
+
