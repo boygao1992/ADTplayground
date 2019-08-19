@@ -111,78 +111,85 @@ testsum
     )
 testsum = showGenericRep (Proxy :: Proxy TestSum)
 
-testsumLenses :: forall p. Wander p =>
-  { _Empty_ :: Optic' p TestSum Unit
-  , _One :: { _A_ :: Optic' p TestSum Unit }
-  , _One_ :: Optic' p TestSum A
-  , _Two ::
-      { _1 :: { _A_ :: Optic' p TestSum Unit }
-      , _1_ :: Optic' p TestSum A
-      , _2 :: { _B_ :: Optic' p TestSum Unit }
-      , _2_ :: Optic' p TestSum B
-      }
-  , _Two_ :: Optic' p TestSum { _1 :: A, _2 :: B }
-  , _Three ::
-      { _1 :: { _A_ :: Optic' p TestSum Unit }
-      , _1_ :: Optic' p TestSum A
-      , _2 :: { _B_ :: Optic' p TestSum Unit }
-      , _2_ :: Optic' p TestSum B
-      , _3 :: { _C_ :: Optic' p TestSum Unit }
-      , _3_ :: Optic' p TestSum C
-      }
-  , _Three_ :: Optic' p TestSum { _1 :: A, _2 :: B, _3 :: C }
-  , _TestRecord ::
-      { x :: { y :: { z :: { _Just :: { _A_ :: Optic' p TestSum Unit }
-                           , _Just_ :: Optic' p TestSum A
-                           , _Nothing_ :: Optic' p TestSum Unit
-                           }
-                  , z_ :: Optic' p TestSum (Maybe A)
-                  }
-            , y_ :: Optic' p TestSum { z :: Maybe A }
-            }
-      , x_ :: Optic' p TestSum { y :: { z :: Maybe A } }
-      }
-  , _TestRecord_ :: Optic' p TestSum { x :: { y :: { z :: Maybe A } } }
+testsumLenses ::
+  { _Empty_ :: CPrism' TestSum Unit
+  , _One :: { _A_ :: CPrism' TestSum Unit }
+  , _One_ :: CPrism' TestSum A
   , _TestMap :: String ->
-      { ix ::
-          { a :: { _A_ :: Optic' p TestSum Unit }
-          , a_ :: Optic' p TestSum A
+      { at ::
+          { _Just ::
+              { a :: { _A_ :: CTraversal' TestSum Unit }
+              , a_ :: CTraversal' TestSum A
+              }
+          , _Just_ :: CTraversal' TestSum { a :: A }
+          , _Nothing_ :: CTraversal' TestSum Unit
           }
-      , ix_ :: Optic' p TestSum { a :: A }
-      , at ::
-          { _Just :: { a :: { _A_ :: Optic' p TestSum Unit }
-                    , a_ :: Optic' p TestSum A
-                    }
-          , _Just_ :: Optic' p TestSum { a :: A }
-          , _Nothing_ :: Optic' p TestSum Unit
+      , at_ :: CTraversal' TestSum (Maybe { a :: A })
+      , ix ::
+          { a :: { _A_ :: CTraversal' TestSum Unit }
+          , a_ :: CTraversal' TestSum A
           }
-      , at_ :: Optic' p TestSum (Maybe { a :: A })
+      , ix_ :: CTraversal' TestSum { a :: A }
       }
-  , _TestMap_ :: Optic' p TestSum (Map String { a :: A })
+  , _TestMap_ :: CPrism' TestSum (Map String { a :: A })
+  , _TestRecord ::
+       { x :: { y :: { z :: { _Just :: { _A_ :: CTraversal' TestSum Unit }
+                         , _Just_ :: CTraversal' TestSum A
+                         , _Nothing_ :: CTraversal' TestSum Unit
+                         }
+                   , z_ :: CTraversal' TestSum (Maybe A)
+                   }
+             , y_ :: CTraversal' TestSum { z :: Maybe A }
+             }
+      , x_ :: CTraversal' TestSum { y :: { z :: Maybe A } }
+      }
+  , _TestRecord_ :: CPrism' TestSum { x :: { y :: { z :: Maybe A } } }
+  , _Three ::
+      { _1 :: { _A_ :: CTraversal' TestSum Unit }
+      , _1_ :: CTraversal' TestSum A
+      , _2 :: { _B_ :: CTraversal' TestSum Unit }
+      , _2_ :: CTraversal' TestSum B
+      , _3 :: { _C_ :: CTraversal' TestSum Unit }
+      , _3_ :: CTraversal' TestSum C
+      }
+  , _Three_ :: CTraversal' TestSum { _1 :: A , _2 :: B , _3 :: C }
+  , _Two ::
+      { _1 :: { _A_ :: CTraversal' TestSum Unit }
+      , _1_ :: CTraversal' TestSum A
+      , _2 :: { _B_ :: CTraversal' TestSum Unit }
+      , _2_ :: CTraversal' TestSum B
+      }
+  , _Two_ :: CTraversal' TestSum { _1 :: A , _2 :: B }
   }
 testsumLenses = genericLens (Proxy :: Proxy TestSum)
 
-_ThreeC :: Traversal' TestSum C
-_ThreeC = testsumLenses._Three._3_
+_TestSumThreeC :: CTraversal' TestSum C
+_TestSumThreeC = testsumLenses._Three._3_
 
-_TestMapAt :: String -> Traversal' TestSum (Maybe { a :: A })
-_TestMapAt key = testsumLenses._TestMap key # _.at_
+_TestSumTestMapAt :: String -> CTraversal' TestSum (Maybe { a :: A })
+_TestSumTestMapAt key = testsumLenses._TestMap key # _.at_
 
-_TestMapIxA :: String -> Traversal' TestSum A
-_TestMapIxA key = testsumLenses._TestMap key # _.ix.a_
+_TestSumTestMapIxA :: String -> CTraversal' TestSum A
+_TestSumTestMapIxA key = testsumLenses._TestMap key # _.ix.a_
 
-_TestRecordXYZJust :: Traversal' TestSum A
-_TestRecordXYZJust = testsumLenses._TestRecord.x.y.z._Just_
+_TestSumTestRecordXYZJust :: CTraversal' TestSum A
+_TestSumTestRecordXYZJust = testsumLenses._TestRecord.x.y.z._Just_
 
 ```
 
 # Limitations
 
-### 1. Constraint Kind
+### CLenses
+
+On call site, user needs to unwrap CLenses `newtype` constructors (i.e. `COptic'`, `CIso'`, `CLens'`, `CPrism'`, `CTraversal'`) by calling corresponding `unwarpC` functions in `Data.Generic.Rep.Lens.Constraints.Simple` the same way as recovering ALenses by corresponding `clone` functions but with less performance penalty.
+
+User can use the generic functions defined in `Data.Generic.Rep.Lens.Constraint.Simple` like `cPreview'` and `cSet'` instead of the original ones to automatically unwrap these constructors but only a handful of operators have currently been implemented.
+
+### ~~1. Constraint Kind~~
 
 Without `Constraint Kind` in Purescript, current solution doesn't assign minimal constraints for each branch but a shared constraint for all the branches, usually `Wander p =>`.
 
-### 2.1 Rank-N Type in Record
+### ~~2.1 Rank-N Type in Record~~
 
 `Record` fields are eagerly evaluated thus won't automatically lift types to 2-rank, i.e.
 ```purescript
@@ -206,7 +213,7 @@ type Args' s a b =
 bar :: forall s a b c. Args a b -> c
 ```
 
-### 2.2 Existential Type in Type-level Functions
+### ~~2.2 Existential Type in Type-level Functions~~
 
 Purescript parser and solver doesn't support `forall` keyword in constraints:
 

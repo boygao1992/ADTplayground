@@ -1,4 +1,4 @@
-module Data.Generic.Rep.CLens where
+module Data.Generic.Rep.CLens.Simple where
 
 import Prelude
 import Type.Prelude (class IsSymbol, class RowToList, Proxy(..), RLProxy(..), SProxy(..))
@@ -9,12 +9,11 @@ import Prim.RowList (kind RowList)
 import Prim.RowList as RowList
 import Prim.Symbol as Symbol
 import Prim.TypeError (class Fail, Beside, Text)
-import Unsafe.Coerce (unsafeCoerce)
 
 import Control.Apply (lift2)
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), NoConstructors, Product(..), Sum(..), from, to)
-import Data.Generic.Rep.Lens.Constraints (class CCompose, class CLenses, class CPreview, class CSet, CIso(..), CLens(..), COptic(..), CPrism(..), CTraversal(..), (..~), (.<<<), (.^?))
+import Data.Generic.Rep.Lens.Constraints.Simple (class CCompose', class CLenses', class CPreview', class CSet', CIso'(..), CLens'(..), COptic'(..), CPrism'(..), CTraversal'(..), (..~), (.<<<), (.^?))
 import Data.Identity (Identity)
 import Data.Lens (class Wander, _1, _2, _Left, _Right, iso, wander)
 import Data.Lens.At (class At, at)
@@ -29,40 +28,33 @@ import Data.Tuple (Tuple(..))
 import Record as Record
 import Record.Builder (Builder)
 import Record.Builder as Builder
+import Unsafe.Coerce (unsafeCoerce)
 
 infixr 2 type Beside as <>
 
-genericLens :: forall s o. GenericTypeSort COptic s s o => Proxy s -> o
-genericLens _ = genericTypeSort (COptic identity :: COptic s s s s)
+genericLens :: forall s o. GenericTypeSort COptic' s s o => Proxy s -> o
+genericLens _ = genericTypeSort (COptic' identity :: COptic' s s)
 
 -----------------------------------
 -- Primitive Lenses for Generic Rep
 
--- | Iso between types and their generic rep.
-_Generic
-  :: forall s t sRep tRep
-  . Generic s sRep
-  => Generic t tRep
-  => CIso s t sRep tRep
-_Generic = CIso (iso from to)
-
 -- | Iso between a type and its rep.
-_Generic' :: forall s sRep. Generic s sRep => CIso s s sRep sRep
-_Generic' = _Generic
+_Generic' :: forall s sRep. Generic s sRep => CIso' s sRep
+_Generic' = CIso' (iso from to)
 
 -- | NoConstructors is equivalent to Void
-_NoConstructors :: CIso NoConstructors NoConstructors Void Void
-_NoConstructors = CIso (iso unsafeCoerce absurd)
+_NoConstructors' :: CIso' NoConstructors Void
+_NoConstructors' = CIso' (iso unsafeCoerce absurd)
 
 -- | Iso between a Constructor and its argument rep
-_Constructor
-  :: forall label1 label2 arg1 arg2
-  . CIso (Constructor label1 arg1) (Constructor label2 arg2) arg1 arg2
-_Constructor = CIso (iso (\(Constructor a) -> a) Constructor)
+_Constructor'
+  :: forall label1 arg1
+  . CIso' (Constructor label1 arg1) arg1
+_Constructor' = CIso' (iso (\(Constructor a) -> a) Constructor)
 
 -- | Iso between Sum and Either
-_Sum :: forall a b c d. CIso (Sum a b) (Sum c d) (Either a b) (Either c d)
-_Sum = CIso
+_Sum' :: forall a b . CIso' (Sum a b) (Either a b)
+_Sum' = CIso'
   (iso
     (case _ of
       Inl a -> Left a
@@ -72,35 +64,35 @@ _Sum = CIso
       Right d -> Inr d))
 
 -- | Prism into the Inl of Sum
-_SumInl :: forall a b r. CPrism (Sum a r) (Sum b r) a b
-_SumInl = _Sum .<<< CPrism _Left
+_Sum'Inl' :: forall a r. CPrism' (Sum a r) a
+_Sum'Inl' = _Sum' .<<< CPrism' _Left
 
 -- | Prism into the Inr of Sum
-_SumInr :: forall l a b. CPrism (Sum l a) (Sum l b) a b
-_SumInr = _Sum .<<< CPrism _Right
+_Sum'Inr' :: forall l a. CPrism' (Sum l a) a
+_Sum'Inr' = _Sum' .<<< CPrism' _Right
 
 -- | Iso between NoArguments and Unit
-_NoArguments :: CIso NoArguments NoArguments Unit Unit
-_NoArguments = CIso (iso (const unit) (const NoArguments))
+_NoArguments' :: CIso' NoArguments Unit
+_NoArguments' = CIso' (iso (const unit) (const NoArguments))
 
 -- | Iso between Argument and its wrapped type
-_Argument :: forall a b. CIso (Argument a) (Argument b) a b
-_Argument = CIso (iso (\(Argument a) -> a) Argument)
+_Argument' :: forall a. CIso' (Argument a) a
+_Argument' = CIso' (iso (\(Argument a) -> a) Argument)
 
 -- | Iso between Product and Tuple
-_Product :: forall a b c d. CIso (Product a b) (Product c d) (Tuple a b) (Tuple c d)
-_Product = CIso
+_Product' :: forall a b. CIso' (Product a b) (Tuple a b)
+_Product' = CIso'
   (iso
     (\(Product a b) -> Tuple a b)
     (\(Tuple c d) -> Product c d))
 
 -- | Lens into the first of a Product
-_ProductFirst :: forall a b r. CLens (Product a r) (Product b r) a b
-_ProductFirst = _Product .<<< CLens _1
+_Product'First' :: forall a r. CLens' (Product a r) a
+_Product'First' = _Product' .<<< CLens' _1
 
 -- | Lens into the second of a Product
-_ProductSecond :: forall l a b. CLens (Product l a) (Product l b) a b
-_ProductSecond = _Product .<<< CLens _2
+_Product'Second' :: forall l a. CLens' (Product l a) a
+_Product'Second' = _Product' .<<< CLens' _2
 
 -------
 -- Ctor
@@ -108,36 +100,36 @@ _ProductSecond = _Product .<<< CLens _2
 _Ctor'
   :: forall ctor s a rep lo
   . Generic s rep
-  => GenericCtor ctor CIso s rep lo a
+  => GenericCtor ctor CIso' s rep lo a
   => Proxy s
   -> SProxy ctor
-  -> lo s s a a
+  -> lo s a
 _Ctor' _ ctor = _GenericCtor ctor _Generic'
 
-class (CLenses li, CLenses lo) <=
+class (CLenses' li, CLenses' lo) <=
   GenericCtor ctor li s i lo a | ctor li s i -> lo a where
-  _GenericCtor :: SProxy ctor -> li s s i i -> lo s s a a
+  _GenericCtor :: SProxy ctor -> li s i -> lo s a
 
 instance genericCtorSumFound ::
-  ( CCompose li CPrism li1
+  ( CCompose' li CPrism' li1
   , GenericCtorArg li1 s arg lo a
   )
   => GenericCtor ctor li s (Sum (Constructor ctor arg) r) lo a where
-  _GenericCtor ctor _i = _GenericCtorArg (_i .<<< _SumInl .<<< _Constructor)
+  _GenericCtor ctor _i = _GenericCtorArg (_i .<<< _Sum'Inl' .<<< _Constructor')
 else
 instance genericCtorSumNext ::
-  ( CCompose li CPrism li1
+  ( CCompose' li CPrism' li1
   , GenericCtor ctor li1 s r lo a
   )
   => GenericCtor ctor li s (Sum l r) lo a where
-  _GenericCtor ctor _i = _GenericCtor ctor (_i .<<< _SumInr)
+  _GenericCtor ctor _i = _GenericCtor ctor (_i .<<< _Sum'Inr')
 else
 instance genericCtorSumLast ::
-  ( CCompose li CIso li1
+  ( CCompose' li CIso' li1
   , GenericCtorArg li1 s arg lo a
   )
   => GenericCtor ctor li s (Constructor ctor arg) lo a where
-  _GenericCtor ctor _i = _GenericCtorArg (_i .<<< _Constructor)
+  _GenericCtor ctor _i = _GenericCtorArg (_i .<<< _Constructor')
 else
 instance genericCtorSumFail ::
   ( Fail
@@ -145,39 +137,39 @@ instance genericCtorSumFail ::
       Text ctor <>
       Text "`"
     )
-  , CLenses li
-  , CLenses lo
+  , CLenses' li
+  , CLenses' lo
   )
   => GenericCtor ctor li s (Constructor other b) lo a where
   _GenericCtor _ = unsafeCoerce
 
 -- Ctor > Arg
-class (CLenses li, CLenses lo) <=
+class (CLenses' li, CLenses' lo) <=
   GenericCtorArg li s arg lo a | li s arg -> lo a where
-  _GenericCtorArg :: li s s arg arg -> lo s s a a
+  _GenericCtorArg :: li s arg -> lo s a
 
 instance genericCtorArgMatch ::
-  CCompose li CIso lo
+  CCompose' li CIso' lo
   => GenericCtorArg li s (Argument a) lo a where
-  _GenericCtorArg _i = _i .<<< _Argument
+  _GenericCtorArg _i = _i .<<< _Argument'
 
 instance genericCtorArgNone ::
-  CCompose li CIso lo
+  CCompose' li CIso' lo
   => GenericCtorArg li s NoArguments lo Unit where
-  _GenericCtorArg _i = _i .<<< _NoArguments
+  _GenericCtorArg _i = _i .<<< _NoArguments'
 
 instance genericCtorArgProduct ::
   GenericCtorArgProduct li s (Product l r) a
-  => GenericCtorArg li s (Product l r) CTraversal (Record a) where
+  => GenericCtorArg li s (Product l r) CTraversal' (Record a) where
   _GenericCtorArg = _GenericCtorArgProduct
 
 -- Ctor > Arg > Product
-class CLenses li <=
+class CLenses' li <=
   GenericCtorArgProduct li s arg (a :: # Type) | li s arg -> a where
-  _GenericCtorArgProduct :: li s s arg arg -> CTraversal s s (Record a) (Record a)
+  _GenericCtorArgProduct :: li s arg -> CTraversal' s (Record a)
 
 instance genericCtorArgProductImpl ::
-  ( CLenses li
+  ( CLenses' li
   , GenericCtorArgProductType "1" (Product l r) () a
   , GenericCtorArgProductLenses "1" li s (Product l r) () lenses
   , GenericCtorArgProductGet lenses s a
@@ -203,7 +195,7 @@ instance genericCtorArgProductImpl ::
         $ map coalg
         $ get s
     in
-      CTraversal (wander merge)
+      CTraversal' (wander merge)
 
 -- Ctor > Arg > Product > Type
 class GenericCtorArgProductType (no :: Symbol) i (from :: # Type) (to :: # Type)
@@ -223,34 +215,34 @@ instance _GenericCtorArgProductTypeProduct ::
   => GenericCtorArgProductType noL (Product l r) from to
 
 -- Ctor > Arg > Product > Lenses
-class CLenses li <=
+class CLenses' li <=
   GenericCtorArgProductLenses (no :: Symbol) li s i (from :: # Type) (to :: # Type)
   | no li s i from -> to where
   _GenericCtorArgProductLenses
-    :: SProxy no -> li s s i i -> Builder (Record from) (Record to)
+    :: SProxy no -> li s i -> Builder (Record from) (Record to)
 
 instance _GenericCtorArgProductArgument ::
   ( Symbol.Append "_" no _label
-  , CCompose li CIso lo
+  , CCompose' li CIso' lo
   , IsSymbol _label
   , Row.Lacks _label from
-  , Row.Cons _label (lo s s a a) from to
+  , Row.Cons _label (lo s a) from to
   )
   => GenericCtorArgProductLenses no li s (Argument a) from to where
   _GenericCtorArgProductLenses _ _i
     = Builder.insert (SProxy :: SProxy _label)
-      (_i .<<< _Argument)
+      (_i .<<< _Argument')
 
 instance _GenericCtorArgProductProduct ::
   ( Succ noL noR
-  , CCompose li CLens lo
+  , CCompose' li CLens' lo
   , GenericCtorArgProductLenses noR lo s r from to1
   , GenericCtorArgProductLenses noL lo s l to1 to
   )
   => GenericCtorArgProductLenses noL li s (Product l r) from to where
   _GenericCtorArgProductLenses _ _i
-    = _GenericCtorArgProductLenses (SProxy :: SProxy noL) (_i .<<< _ProductFirst)
-    <<< _GenericCtorArgProductLenses (SProxy :: SProxy noR)(_i .<<< _ProductSecond)
+    = _GenericCtorArgProductLenses (SProxy :: SProxy noL) (_i .<<< _Product'First')
+    <<< _GenericCtorArgProductLenses (SProxy :: SProxy noR)(_i .<<< _Product'Second')
 
 -- Ctor > Arg > Product > Get
 class GenericCtorArgProductGet (lenses :: # Type) s (a :: # Type) where
@@ -280,8 +272,8 @@ instance _GenericCtorArgProductGetRLCons ::
   , IsSymbol label
   , Row.Lacks label to1
   , Row.Cons label typ to1 to
-  , Row.Cons label (l s s typ typ) restLenses lenses -- DONE
-  , CPreview l
+  , Row.Cons label (l s typ) restLenses lenses -- DONE
+  , CPreview' l
   )
   => GenericCtorArgProductGetRL (RowList.Cons label typ restRl) lenses s from to
   where
@@ -317,9 +309,9 @@ instance _GenericCtorArgProductSetRLNil ::
 instance _GenericCtorArgProductSetRLCons ::
   ( GenericCtorArgProductSetRL restRl lenses s a
   , IsSymbol label
-  , Row.Cons label (l s s typ typ) restLenses lenses -- DONE
+  , Row.Cons label (l s typ) restLenses lenses -- DONE
   , Row.Cons label typ restA a
-  , CSet l
+  , CSet' l
   )
   => GenericCtorArgProductSetRL (RowList.Cons label typ restRl) lenses s a where
   _GenericCtorArgProductSetRL _ lenses s a =
@@ -333,36 +325,36 @@ instance _GenericCtorArgProductSetRLCons ::
 -----------------
 -- GenericNewtype
 
-class CLenses li <=
+class CLenses' li <=
   GenericNewtype li s i o | li s i -> o where
-  genericNewtype :: li s s i i -> o
+  genericNewtype :: li s i -> o
 
 instance genericNewtypeImpl ::
   ( Newtype i i'
-  , CCompose li CIso li1
+  , CCompose' li CIso' li1
   , GenericTypeSort li1 s i' o
   )
   => GenericNewtype li s i o where
   genericNewtype _i =
-    genericTypeSort (_i .<<< CIso _Newtype :: li1 s s i' i')
+    genericTypeSort (_i .<<< CIso' _Newtype :: li1 s i')
 
 ---------------
 -- GenericIndex
 
-class CLenses li <=
+class CLenses' li <=
   GenericIndex li s i o | li s i -> o where
-  genericIndex :: li s s i i -> o
+  genericIndex :: li s i -> o
 
 instance genericIndexImpl ::
   ( Index i a b
   , Wander p
   , GenericTypeSort li1 s b o
-  , CCompose li CTraversal li1
+  , CCompose' li CTraversal' li1
   )
-  => GenericIndex li s i (a -> { ix :: o, ix_ :: li1 s s b b }) where
+  => GenericIndex li s i (a -> { ix :: o, ix_ :: li1 s b }) where
   genericIndex _i a =
     let
-      _i1 = _i .<<< CTraversal (ix a)
+      _i1 = _i .<<< CTraversal' (ix a)
     in
       { ix: genericTypeSort _i1
       , ix_: _i1
@@ -371,23 +363,23 @@ instance genericIndexImpl ::
 ------------
 -- GenericAt
 
-class CLenses li <=
+class CLenses' li <=
   GenericAt li s i o | li s i -> o where
-  genericAt :: li s s i i -> o
+  genericAt :: li s i -> o
 
 instance genericAtImpl ::
   ( At i a b
-  , CCompose li CLens lat
+  , CCompose' li CLens' lat
   , GenericTypeSort lat s (Maybe b) o1
-  , CCompose li CTraversal lix
+  , CCompose' li CTraversal' lix
   , GenericTypeSort lix s b o2
   )
-  => GenericAt li s i (a -> { at :: o1, ix :: o2, at_ :: lat s s (Maybe b) (Maybe b), ix_ :: lix s s b b})
+  => GenericAt li s i (a -> { at :: o1, ix :: o2, at_ :: lat s (Maybe b), ix_ :: lix s b})
   where
     genericAt _i a =
       let
-        _at = _i .<<< CLens (at a)
-        _ix = _i .<<< CTraversal (ix a)
+        _at = _i .<<< CLens' (at a)
+        _ix = _i .<<< CTraversal' (ix a)
       in
         { at: genericTypeSort _at
         , at_: _at
@@ -398,9 +390,9 @@ instance genericAtImpl ::
 --------------------
 -- GenericLensRecord
 
-class CLenses li <=
+class CLenses' li <=
   GenericLensRecord li s (i :: # Type) (o :: # Type) | li -> o where
-  genericLensRecord :: li s s (Record i) (Record i) -> Record o
+  genericLensRecord :: li s (Record i) -> Record o
 
 instance genericLensRecordImpl ::
   ( RowToList i iRl
@@ -411,22 +403,22 @@ instance genericLensRecordImpl ::
     = Builder.build <@> {}
       $ genericLensRL (RLProxy :: RLProxy iRl) _i
 
-class CLenses li <=
+class CLenses' li <=
   GenericLensRL li s i (iRl :: RowList) (to :: # Type) | li s i iRl -> to where
   genericLensRL
-    :: RLProxy iRl -> li s s (Record i) (Record i) -> Builder {} (Record to)
+    :: RLProxy iRl -> li s (Record i) -> Builder {} (Record to)
 
 instance genericLensRLNil ::
-  CLenses li => GenericLensRL li s i (RowList.Nil) () where
+  CLenses' li => GenericLensRL li s i (RowList.Nil) () where
   genericLensRL _ _ = identity
 
 instance genericLensRLCons ::
-  ( CCompose li CLens li1
+  ( CCompose' li CLens' li1
 
   , Symbol.Append label "_" label_
   , IsSymbol label_
   , Row.Lacks label_ to1
-  , Row.Cons label_ (li1 s s typ typ) to1 to
+  , Row.Cons label_ (li1 s typ) to1 to
 
   , IsSymbol label
   , Row.Cons label typ r i
@@ -439,7 +431,7 @@ instance genericLensRLCons ::
   => GenericLensRL li s i (RowList.Cons label typ restRl) to where
   genericLensRL _ _i =
     let
-      _i' = _i .<<< CLens (prop (SProxy :: SProxy label))
+      _i' = _i .<<< CLens' (prop (SProxy :: SProxy label))
     in
       Builder.insert (SProxy :: SProxy label_) _i'
       <<< Builder.insert (SProxy :: SProxy label)
@@ -449,12 +441,12 @@ instance genericLensRLCons ::
 ------------------
 -- GenericPrismSum
 
-class CLenses li <=
+class CLenses' li <=
   GenericPrismSum li s i (o :: # Type) | li s i -> o where
-  genericPrismSum :: li s s i i -> Record o
+  genericPrismSum :: li s i -> Record o
 
 instance genericPrismSumImpl ::
-  ( CCompose li CIso li1
+  ( CCompose' li CIso' li1
   , GenericPrismSumCtor li1 s iRep () o
   , Generic i iRep
   )
@@ -465,56 +457,56 @@ instance genericPrismSumImpl ::
 
 
 -- Ctor
-class CLenses li <=
+class CLenses' li <=
   GenericPrismSumCtor li s ctor (from :: # Type) (to :: # Type)
   | li s ctor from -> to where
-  genericPrismSumCtor :: li s s ctor ctor -> Builder (Record from) (Record to)
+  genericPrismSumCtor :: li s ctor -> Builder (Record from) (Record to)
 
 instance genericPrismSumCtorConstructor ::
-  ( CCompose li CIso li1
+  ( CCompose' li CIso' li1
   , Symbol.Append "_" label _label
   , GenericPrismSumArg li1 s arg _label from to
   )
   => GenericPrismSumCtor li s (Constructor label arg) from to where
   genericPrismSumCtor _i
-    = genericPrismSumArg (SProxy :: SProxy _label) (_i .<<< _Constructor)
+    = genericPrismSumArg (SProxy :: SProxy _label) (_i .<<< _Constructor')
 
 instance genericPrismSumCtorSum ::
-  ( CCompose li CPrism li1
+  ( CCompose' li CPrism' li1
   , GenericPrismSumCtor li1 s ctorR from to1
   , GenericPrismSumCtor li1 s ctorL to1 to
   )
   => GenericPrismSumCtor li s (Sum ctorL ctorR) from to where
   genericPrismSumCtor _i
-    = genericPrismSumCtor (_i .<<< _SumInl)
-    <<< genericPrismSumCtor (_i .<<< _SumInr)
+    = genericPrismSumCtor (_i .<<< _Sum'Inl')
+    <<< genericPrismSumCtor (_i .<<< _Sum'Inr')
 
 
 -- Ctor > Arg
-class CLenses li <=
+class CLenses' li <=
   GenericPrismSumArg li s arg (_label :: Symbol) (from :: # Type) (to :: # Type)
   | li s arg _label from -> to where
   genericPrismSumArg
-    :: SProxy _label -> li s s arg arg -> Builder (Record from) (Record to)
+    :: SProxy _label -> li s arg -> Builder (Record from) (Record to)
 
 instance genericPrismSumArgNoArguments ::
-  ( CCompose li CIso li1
+  ( CCompose' li CIso' li1
   , Symbol.Append _label "_" _label_
   , IsSymbol _label_
   , Row.Lacks _label_ from
-  , Row.Cons _label_ (li1 s s Unit Unit) from to
+  , Row.Cons _label_ (li1 s Unit) from to
   )
   => GenericPrismSumArg li s NoArguments _label from to where
   genericPrismSumArg _ _i =
-    Builder.insert (SProxy :: SProxy _label_) (_i .<<< _NoArguments)
+    Builder.insert (SProxy :: SProxy _label_) (_i .<<< _NoArguments')
 
 instance genericPrismSumArgArgument ::
-  ( CCompose li CIso li1
+  ( CCompose' li CIso' li1
 
   , Symbol.Append _label "_" _label_
   , IsSymbol _label_
   , Row.Lacks _label_ to1
-  , Row.Cons _label_ (li1 s s a a) to1 to
+  , Row.Cons _label_ (li1 s a) to1 to
 
   , IsSymbol _label
   , Row.Lacks _label from
@@ -524,7 +516,7 @@ instance genericPrismSumArgArgument ::
   => GenericPrismSumArg li s (Argument a) _label from to where
     genericPrismSumArg _label _i =
       let
-        _i' = _i .<<< _Argument
+        _i' = _i .<<< _Argument'
       in
         Builder.insert (SProxy :: SProxy _label_) _i'
         <<< Builder.insert _label (genericTypeSort _i')
@@ -539,7 +531,7 @@ instance genericPrismSumArgProductImpl ::
   , GenericCtorArgProduct li s (Product l r) a
   , IsSymbol _label_
   , Row.Lacks _label_ to1
-  , Row.Cons _label_ (CTraversal s s (Record a) (Record a)) to1 to
+  , Row.Cons _label_ (CTraversal' s (Record a)) to1 to
   )
   => GenericPrismSumArg li s (Product l r) _label from to where
     genericPrismSumArg _label _i
@@ -553,21 +545,21 @@ instance genericPrismSumArgProductImpl ::
                 _i)
 
 -- Ctor > Arg > Product
-class CLenses li <=
+class CLenses' li <=
   GenericPrismSumArgProduct li s arg (no :: Symbol) (from :: # Type) (to :: # Type)
   | li s arg no from -> to
   where
     genericPrismSumArgProduct
       :: Proxy arg -> SProxy no
-      -> li s s arg arg -> Builder (Record from) (Record to)
+      -> li s arg -> Builder (Record from) (Record to)
 
 instance genericPrismSumArgProductArgument ::
-  ( CCompose li CIso li1
+  ( CCompose' li CIso' li1
 
   , Symbol.Append _label "_" _label_
   , IsSymbol _label_
   , Row.Lacks _label_ to1
-  , Row.Cons _label_ (li1 s s a a) to1 to -- TODO
+  , Row.Cons _label_ (li1 s a) to1 to -- TODO
 
   , Symbol.Append "_" no _label
   , GenericTypeSort li1 s a o
@@ -578,7 +570,7 @@ instance genericPrismSumArgProductArgument ::
   => GenericPrismSumArgProduct li s (Argument a) no from to where
   genericPrismSumArgProduct _ _ _i =
     let
-      _i' = _i .<<< _Argument
+      _i' = _i .<<< _Argument'
     in
       Builder.insert (SProxy :: SProxy _label_) _i'
       <<< Builder.insert (SProxy :: SProxy _label) (genericTypeSort _i')
@@ -587,14 +579,14 @@ instance genericPrismSumArgProductProduct ::
   ( GenericPrismSumArgProduct li1 s r noR from to1
   , GenericPrismSumArgProduct li1 s l noL to1 to
   , Succ noL noR
-  , CCompose li CLens li1
+  , CCompose' li CLens' li1
   )
   => GenericPrismSumArgProduct li s (Product l r) noL from to where
   genericPrismSumArgProduct _ _ _i
     = genericPrismSumArgProduct (Proxy :: Proxy l) (SProxy :: SProxy noL)
-        (_i .<<< _ProductFirst)
+        (_i .<<< _Product'First')
     <<< genericPrismSumArgProduct (Proxy :: Proxy r) (SProxy :: SProxy noR)
-        (_i .<<< _ProductSecond)
+        (_i .<<< _Product'Second')
 
 
 ------------------
@@ -623,9 +615,9 @@ instance ttypeFamilyMap     :: TTypeFamily (Map k v)    TAt
 instance ttypeFamilyMaybe   :: TTypeFamily (Maybe a)    TSum
 instance ttypeFamilyNewtype :: TTypeFamily (Identity a) TNewtype
 
-class CLenses li <=
+class CLenses' li <=
   GenericTypeSort li s i o | li s i -> o where
-  genericTypeSort :: li s s i i -> o
+  genericTypeSort :: li s i -> o
 
 instance genericTypeSortImpl ::
   ( TTypeFamily i tt
@@ -635,13 +627,13 @@ instance genericTypeSortImpl ::
   genericTypeSort _i
     = genericTypeDispatch (TTProxy :: TTProxy tt) _i
 
-class CLenses li <=
+class CLenses' li <=
   GenericTypeDispatch (tt :: TType) li s i o | tt li s i -> o where
-  genericTypeDispatch :: TTProxy tt -> li s s i i -> o
+  genericTypeDispatch :: TTProxy tt -> li s i -> o
 
 instance genericTypeDispatchScalar ::
-  CLenses li
-  => GenericTypeDispatch TScalar li s i (li s s i i) where
+  CLenses' li
+  => GenericTypeDispatch TScalar li s i (li s i) where
   genericTypeDispatch _ _i = _i
 
 instance genericTypeDispatchRecord ::
