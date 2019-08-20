@@ -22,14 +22,14 @@ import Selda.Inner (class AggrCols, class Aggregates, class LeftCols, class Oute
 import Selda.Query.Type (Query(..), freshName, isolate, renameAll)
 import Selda.SQL (JoinType(..), Order(..), Param(..), SQL(..), SqlSource(..), sqlFrom)
 import Selda.SqlType (class SqlType)
-import Selda.Table (ColInfo(..), Table(..))
+import Selda.Table (Table(..))
 import Selda.Transform (allCols, colNames, state2sql)
 
 
 -- | Query the given table.
 select :: forall s a. Table a -> Query s (Row s a)
 select (Table {tableName: name, tableCols: cs}) = Query $ do
-  rns <- renameAll $ cs <#> \(ColInfo c) -> c.colExpr
+  rns <- renameAll $ _.colExpr <$> cs
   st <- get
   put $ st { sources = sqlFrom rns (TableName name) : st.sources }
   pure $ Many (map hideRenaming rns)

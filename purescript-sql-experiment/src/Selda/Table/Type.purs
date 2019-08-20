@@ -4,8 +4,8 @@ import Prelude
 
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Maybe (Maybe(..))
-import Data.Tuple.Nested (type (/\), (/\))
+import Data.Maybe (Maybe)
+import Data.Tuple.Nested (type (/\))
 
 import Selda.Exp (UntypedCol)
 import Selda.SQL (SQL)
@@ -31,9 +31,8 @@ newtype Table a = Table
   , tableAttrs :: Array (Array Int /\ ColAttr)
   }
 
-
 -- | A complete description of a database column.
-newtype ColInfo = ColInfo
+type ColInfo =
   { colName  :: ColName
   , colType  :: SqlTypeRep
   , colAttrs :: Array ColAttr
