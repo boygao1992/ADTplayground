@@ -11,11 +11,12 @@ import Prim.Symbol as Symbol
 import Prim.TypeError (class Fail, Beside, Text)
 
 import Control.Apply (lift2)
+import Data.Traversable (class Traversable)
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), NoConstructors, Product(..), Sum(..), from, to)
 import Data.Generic.Rep.Lens.Constraints.Simple (class CCompose', class CLenses', class CPreview', class CSet', CIso'(..), CLens'(..), COptic'(..), CPrism'(..), CTraversal'(..), (..~), (.<<<), (.^?))
 import Data.Identity (Identity)
-import Data.Lens (class Wander, _1, _2, _Left, _Right, iso, wander)
+import Data.Lens (class Wander, _1, _2, _Left, _Right, iso, traversed, wander)
 import Data.Lens.At (class At, at)
 import Data.Lens.Index (class Index, ix)
 import Data.Lens.Iso.Newtype (_Newtype)
@@ -322,6 +323,22 @@ instance _GenericCtorArgProductSetRLCons ::
       )
       a
 
+-------------------
+-- GenericTraversed
+
+class (CLenses' li, Traversable f) <=
+  GenericTraversed li s f i o | li s f i -> o where
+    genericTraversed :: li s (f i) -> o
+
+instance genericTraversedImpl ::
+  ( Traversable f
+  , CCompose' li CTraversal' li1
+  , GenericTypeSort li1 s i o
+  )
+  => GenericTraversed li s f i o where
+  genericTraversed _i =
+    genericTypeSort (_i .<<< CTraversal' traversed :: li1 s i)
+
 -----------------
 -- GenericNewtype
 
@@ -615,6 +632,7 @@ instance ttypeFamilyMap     :: TTypeFamily (Map k v)    TAt
 instance ttypeFamilyMaybe   :: TTypeFamily (Maybe a)    TSum
 instance ttypeFamilyNewtype :: TTypeFamily (Identity a) TNewtype
 
+
 class CLenses' li <=
   GenericTypeSort li s i o | li s i -> o where
   genericTypeSort :: li s i -> o
@@ -660,3 +678,57 @@ instance genericTypeDispatchNewtype ::
   GenericNewtype li s i o
   => GenericTypeDispatch TNewtype li s i o where
     genericTypeDispatch _ _i = genericNewtype _i
+
+---------------------------
+-- TODO GenericTypeSortList
+
+foreign import kind TList
+foreign import data TNil :: TList
+foreign import data TCons :: TType -> TList -> TList
+infixr 6 type TCons as :
+
+data TLProxy (tl :: TList) = TLProxy
+
+class TTypeList t (tl :: TList) | t -> tl
+instance tTypeListInt     :: TTypeList Int          (TScalar : TNil)
+instance tTypeListNumber  :: TTypeList Number       (TScalar : TNil)
+instance tTypeListString  :: TTypeList String       (TScalar : TNil)
+instance tTypeListChar    :: TTypeList Char         (TScalar : TNil)
+instance tTypeListBoolean :: TTypeList Boolean      (TScalar : TNil)
+instance tTypeListRecord  :: TTypeList (Record a)   (TRecord : TNil)
+instance tTypeListArray   :: TTypeList (Array a)    (TIndex : TNil)
+instance tTypeListSet     :: TTypeList (Set v)      (TIndex : TAt : TNil)
+instance tTypeListMap     :: TTypeList (Map k v)    (TIndex : TAt : TNil)
+instance tTypeListMaybe   :: TTypeList (Maybe a)    (TSum : TNil)
+instance tTypeListNewtype :: TTypeList (Identity a) (TNewtype : TNil)
+
+class CLenses' li <=
+  GenericTypeSortList li s i o | li s i -> o
+
+instance genericTypeSortListInit ::
+  ( TTypeList i tl
+  , GenericTypeSortListImpl tl li s i () to
+  )
+  => GenericTypeSortList li s i (Record to)
+
+class CLenses' li <=
+  GenericTypeSortListImpl (tl :: TList) li s i (from :: # Type) (to :: # Type)
+  | tl li s i from -> to where
+  genericTypeSortListImpl
+    :: TLProxy tl -> li s i -> Builder (Record from) (Record to)
+
+instance genericTypeSortListImplTNil ::
+  CLenses' li
+  => GenericTypeSortListImpl TNil li s i from from where
+  genericTypeSortListImpl _ _ = identity
+
+-- instance genericTypeSortListImplTCons ::
+--   ( GenericTypeSortListImpl tlRest li s i from to'
+--   )
+--   => GenericTypeSortListImpl (TCons tt tlRest) 
+
+class CLenses' li <=
+  GenericTypeSortDispatch (tt :: TType) li s i (from :: # Type) (to :: # Type)
+  | tt li s i from -> to where
+    genericTypeSortDispatch
+      :: TTProxy tt -> li s i -> Builder (Record from) (Record to)

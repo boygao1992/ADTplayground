@@ -2,7 +2,7 @@ module Data.Exists3 where
 
 import Prelude
 
-import Data.Newtype
+import Data.Newtype (class Newtype, unwrap)
 import Data.Lens (class Wander)
 import Data.Profunctor (class Profunctor)
 import Data.Profunctor.Choice (class Choice)
