@@ -163,7 +163,6 @@ class Names a where
   -- | Get all column names used in the given expression.
   allNamesIn :: a -> Array ColName
 
--- TODO instances
 instance namesArray :: Names a => Names (Array a) where
   allNamesIn = Array.foldMap allNamesIn
 

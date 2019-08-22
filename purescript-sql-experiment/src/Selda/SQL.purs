@@ -11,7 +11,7 @@ import Data.Newtype (class Newtype)
 import Data.Tuple (snd)
 import Data.Tuple.Nested (type (/\))
 import Selda.Exp (class Names, Exp, SomeCol, allNamesIn)
-import Selda.SqlType (class SqlType, Lit, mkLit)
+import Selda.SqlType (class SqlType, Lit, compLit, mkLit)
 import Selda.Types (TableName)
 
 -- | A source for an SQL query.
@@ -76,11 +76,25 @@ instance showOrder :: Show Order where show = genericShow
 
 -- | A parameter to a prepared SQL statement.
 newtype Param = Param (Exists Lit)
--- TODO instance Eq, Ord, Show
+instance showParam :: Show Param where
+  show p = runParam show p
+instance eqParam :: Eq Param where
+  eq p1 p2 =
+    flippedRunParam p1 \l1 ->
+    flippedRunParam p2 \l2 ->
+      compLit l1 l2 == EQ
+instance ordParam :: Ord Param where
+  compare p1 p2 =
+    flippedRunParam p1 \l1 ->
+    flippedRunParam p2 \l2 ->
+      compLit l1 l2
+
 mkParam :: forall a. Lit a -> Param
 mkParam = Param <<< mkExists
 runParam :: forall r. (forall a. Lit a -> r) -> Param -> r
 runParam f (Param p) = runExists f p
+flippedRunParam :: forall r. Param -> (forall a. Lit a -> r) -> r
+flippedRunParam (Param p) f = runExists f p
 
 -- | Create a parameter from the given value.
 param :: forall a. SqlType a => a -> Param

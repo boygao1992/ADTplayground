@@ -74,3 +74,38 @@ potential directions
 > The key is `Inner` whereas I tried an `ST` style approach which doesn't seem to work.
 > I'm not mathematically convinced that it's safe but nonetheless I can't see any reason it shouldn't be.
 
+- [ ] Selda
+  - [ ] Backend
+  - [x] Query
+    - [x] Type
+  - [x] SQL
+    - [x] Print
+      - [x] Config
+  - [ ] Table
+    - [x] Type
+    - [x] Validation
+    - [x] Compile
+  - [ ] Column
+    - TODO
+  - [ ] Compile
+  - [ ] Debug
+  - [x] Exp
+  - [ ] FieldSelectors
+  - [ ] Frontend
+  - [ ] Generic
+    - TODO use Record instead of HList
+  - [x] Inner
+  - [ ] MakeSelectors
+  - [ ] Migration
+  - [x] Nullable
+  - [ ] Prepared
+  - [x] Selectors
+  - [ ] SqlRow
+    - TODO use Record instead of HList
+  - [ ] SqlType
+    - TODO DateTime, Day, Time
+  - [x] Transform
+  - [x] Types
+  - [x] Unsafe
+  - [ ] Validation
+

@@ -25,7 +25,18 @@ import Selda.Unsafe as Unsafe
 
 -- | Any column type that can be used with the 'min_' and 'max_' functions.
 class SqlType a <= SqlOrd a
--- TODO instances
+instance sqlOrdRowID :: SqlOrd RowID
+else
+instance sqlOrdText :: SqlOrd String
+-- TODO instance sqlOrdDay :: SqlOrd Day
+-- TODO insatnce sqlOrdUTCTime :: SqlOrd DateTime
+-- TODO instance sqlOrdTimeOfDay :: SqlOrd Day
+else
+instance sqlOrdID :: SqlOrd (ID a)
+else
+instance sqlOrdMaybe :: SqlOrd a => SqlOrd (Maybe a)
+else
+instance sqlOrdNum :: (SqlType a, EuclideanRing a) => SqlOrd a
 
 -- | Wrapper for single column tables.
 --   Use this when you need a table with only a single column, with 'table' or

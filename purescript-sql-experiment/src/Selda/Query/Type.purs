@@ -19,7 +19,7 @@ instance showName :: Show Name where
   show (Name 0 n) = show n
   show (Name s n) = show s <> "s_" <> show n
 
-  -- | An SQL query.
+-- | An SQL query.
 newtype Query s a = Query (State GenState a)
 derive newtype instance functorQuery :: Functor (Query s)
 derive newtype instance applyQuery :: Apply (Query s)
