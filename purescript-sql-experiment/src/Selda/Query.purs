@@ -9,7 +9,6 @@ import Data.Array ((:))
 import Data.Array as Array
 import Data.Either (Either(..))
 import Data.Exists1 (runExists)
-import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), isNothing)
 import Data.Newtype (over)
 import Data.Traversable (traverse)
@@ -37,15 +36,14 @@ select (Table {tableName: name, tableCols: cs}) = Query $ do
 -- | Query an ad hoc table of type @a@. Each element in the given list represents
 --   one row in the ad hoc table.
 selectValues
-  :: forall s a rep
-  . Generic a rep
-  => GRelation rep
+  :: forall s a
+  . GRelation a
   => Array a -> Query s (Row s a)
 selectValues = Array.uncons >>> case _ of
   Nothing -> Query $ do
     st <- get
     put $ st { sources = sqlFrom [] EmptyTable : st.sources }
-    pure $ Many $ gNew (Proxy :: Proxy rep)
+    pure $ Many $ gNew (Proxy :: Proxy a)
   Just { head: row, tail: rows } -> Query do
     names <- traverse (const freshName) firstrow
     let rns = (\n -> named n (col n)) <$> names

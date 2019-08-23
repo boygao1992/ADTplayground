@@ -92,8 +92,8 @@ potential directions
   - [x] Exp
   - [ ] FieldSelectors
   - [ ] Frontend
-  - [ ] Generic
-    - TODO use Record instead of HList
+  - [x] Generic
+    - DONE use Record instead of HList
   - [x] Inner
   - [ ] MakeSelectors
   - [ ] Migration

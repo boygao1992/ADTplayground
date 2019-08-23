@@ -1,22 +1,31 @@
 module Selda.Generic where
 
 import Prelude
-import Type.Prelude
+import Type.Prelude (class IsSymbol, Proxy(..), RLProxy(..), RProxy(..), SProxy(..), reflectSymbol)
 
-import Effect.Unsafe
-import Data.Generic.Rep (class Generic, from)
-import Control.Monad.State
-import Effect
-import Data.Maybe
-import Data.Either
-import Data.Variant.Internal
+import Prim.Row as Row
+import Prim.RowList (kind RowList)
+import Prim.RowList as RowList
 
-import Selda.Types
-import Selda.SqlType
-import Selda.SqlRow (class SqlRow)
-import Selda.Table.Type
-import Selda.SQL (Param (..))
-import Selda.Exp (Exp (Col, Lit), UntypedCol (..))
+import Control.Apply (lift2)
+import Data.Either (Either(..))
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Read.Enum (genericReadEnum)
+import Data.Generic.Rep.Show (genericShow)
+import Data.Maybe (Maybe(..))
+import Data.Newtype (class Newtype, unwrap)
+import Data.String.Read (class Read, read)
+import Effect (Effect)
+import Effect.Exception (message, try)
+import Effect.Exception.Unsafe (unsafeThrow, unsafeThrowException)
+import Effect.Unsafe (unsafePerformEffect)
+import Record as Record
+
+import Selda.Exp (UntypedCol, col, lit, untyped)
+import Selda.SQL (Param, mkParam)
+import Selda.SqlType (class SqlType, Lit, defaultValue, mkLit, sqlType)
+import Selda.Table.Type (ColAttr(..), ColInfo)
+import Selda.Types (ColName, fromColName, mkColName)
 
 -- | Any type which has a corresponding relation.
 --   To make a @Relational@ instance for some type, simply derive 'Generic'.
@@ -33,40 +42,115 @@ import Selda.Exp (Exp (Col, Lit), UntypedCol (..))
 -- NOTE missing constraint kind
 
 -- | Extract all insert parameters from a generic value.
--- TODO params :: Relational a => a -> [Either Param Param]
-params :: forall a rep. Generic a rep => GRelation rep => a -> Array (Either Param Param)
-params = unsafePerformEffect <<< gParams <<< from
+params :: forall a. GRelation a => a -> Array (Either Param Param)
+params = unsafePerformEffect <<< gParams
 
 -- | Extract all column names from the given type.
 --   If the type is not a record, the columns will be named @col_1@,
 --   @col_2@, etc.
--- TODO tblCols :: forall a. Relational a => Proxy a -> (Text -> Text) -> [ColInfo]
+tblCols :: forall a. GRelation a => Proxy a -> (String -> String) -> Array ColInfo
+tblCols a fieldMod = gTblCols a (mkColName <<< fieldMod <<< fromColName)
 
 -- | Exception indicating the use of a default value.
 --   If any values throwing this during evaluation of @param xs@ will be
 --   replaced by their default value.
--- data DefaultValueException = DefaultValueException
+data DefaultValueException = DefaultValueException
+derive instance genericDefaultValueException :: Generic DefaultValueException _
+instance showDefaultValueException :: Show DefaultValueException where
+  show = genericShow
+instance readDefaultValueException :: Read DefaultValueException where
+  read = genericReadEnum
 -- instance Exception DefaultValueException
 -- NOTE missing Exception hierarchy
 
-class GRelation rep where
+def :: forall a. SqlType a => a
+def = unsafeThrow $ show $ DefaultValueException
+
+-- NOTE mod: Generic a rep => Newtype a (Record row)
+class GRelation a where
   -- | Generic worker for 'params'.
-  gParams :: rep -> Effect (Array (Either Param Param))
+  gParams :: a -> Effect (Array (Either Param Param))
   -- NOTE Left DefaultValueException -> Left $ Param (defaultValue :: Lit a)
   -- def :: SqlType a => a
   -- def = throw DefaultValueException
 
   -- | Compute all columns needed to represent the given type.
   gTblCols
-    :: Proxy rep
-    -> Maybe ColName
-    -> (Int -> Maybe ColName -> ColName)
-    -> State Int (Array ColInfo)
+    :: Proxy a
+    -> (ColName -> ColName)
+    -> Array ColInfo
 
   -- | Create a new value with all default fields.
-  gNew :: forall sql. Proxy rep -> Array (UntypedCol sql)
+  gNew :: forall sql. Proxy a -> Array (UntypedCol sql)
 
--- TODO GRelation instances
+instance gRelationInit ::
+  ( Newtype a (Record row)
+  , RowList.RowToList row rl
+  , GRelationRL rl row
+  )
+  => GRelation a where
+  gParams a = gParamsRL (RLProxy :: RLProxy rl) (unwrap a)
+  gTblCols _ rename = gTblColsRL (RLProxy :: RLProxy rl) (RProxy :: RProxy row) rename
+  gNew _ = gNewRL (RLProxy :: RLProxy rl) (RProxy :: RProxy row)
+
+class GRelationRL (rl :: RowList) (row :: # Type) where
+  gParamsRL :: RLProxy rl -> Record row -> Effect (Array (Either Param Param))
+  gTblColsRL
+    :: RLProxy rl
+    -> RProxy row
+    -> (ColName -> ColName)
+    -> Array ColInfo
+  gNewRL :: forall sql. RLProxy rl -> RProxy row -> Array (UntypedCol sql)
+
+instance gRelationRLNil ::
+  GRelationRL RowList.Nil row where
+  gParamsRL _ _ = pure []
+  gTblColsRL _ _ _ = []
+  gNewRL _ _ = []
+
+instance gRelationRLCons ::
+  ( GRelationRL restRL row
+  , IsSymbol label
+  , Row.Cons label a restRow row
+  , SqlType a
+  )
+  => GRelationRL (RowList.Cons label a restRL) row where
+  gParamsRL _ r =
+    let
+      x = Record.get (SProxy :: SProxy label) r
+    in
+      lift2 (<>) (gParamsRL (RLProxy :: RLProxy restRL) r) do
+        res <- try $ pure x
+        pure case res of
+          Right x' -> [Right $ mkParam $ mkLit x']
+          Left err -> case read $ message err of
+            Nothing -> unsafeThrowException err
+            Just (_ :: DefaultValueException) ->
+              [Left $ mkParam (defaultValue :: Lit a)]
+
+  gTblColsRL _ row rename =
+    let name = rename $ mkColName $ reflectSymbol (SProxy :: SProxy label)
+    in gTblColsRL (RLProxy :: RLProxy restRL) row rename
+        <> [{ colName: name
+            , colType: sqlType (Proxy :: Proxy a)
+            , colAttrs: gColAttrs (Proxy :: Proxy a)
+            , colFKs: []
+            , colExpr: untyped $ col $ name
+            }]
+
+  gNewRL _ row
+    = [untyped $ lit (defaultValue :: Lit a)]
+    <> gNewRL (RLProxy :: RLProxy restRL) row
+
+class GColAttrs a where
+  gColAttrs :: Proxy a -> Array ColAttr
+
+instance gColAttrsMaybe :: GColAttrs (Maybe a) where
+  gColAttrs _ = [Optional]
+else
+instance gColAttrsNonMaybe :: GColAttrs a where
+  gColAttrs _ = [Required]
+
 
 {- GHC.Generic
 -- NOTE Constructor name NoArguments
