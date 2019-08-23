@@ -32,6 +32,70 @@ composable queries under Lens interface
         - [1/3](https://www.youtube.com/watch?v=RCPsNceeXk4)
         - [2/3](https://www.youtube.com/watch?v=on1ReFZi31w)
         - [3/3](https://www.youtube.com/watch?v=G3aMnU7n0v4)
+  - Parametric Higher Order Abstract Syntax (PHOAS)
+    - [PHOAS For Free | Edward Kmett](https://www.reddit.com/r/haskell/comments/1mo59h/phoas_for_free_by_edward_kmett/)
+      > Just like with `bound` we can build an `indexed` version of this construction that permits us to write **strongly typed EDSLs**. That is how PHOAS is usually presented in Coq after all.
+    - [Write you a Haskell > Higher Order Interpreters > PHOAS](http://dev.stephendiehl.com/fun/evaluation.html#parametric-higher-order-abstract-syntax-phoas)
+- characterize (Free) Profunctor by data structure
+  - [Profunctor Optics: Modular Data Accessors](https://arxiv.org/abs/1703.10857)
+  - [ElvishJerricco/fraxl](https://github.com/ElvishJerricco/fraxl)
+    - [Applicative Sorting](https://elvishjerricco.github.io/2017/03/23/applicative-sorting.html)
+    - [Profunctors, Arrows, & Static Analysis](https://elvishjerricco.github.io/2017/03/10/profunctors-arrows-and-static-analysis.html)
+      > Free PreArrow
+      > ```haskell
+      > data Free p a b where
+      >   Hom :: (a -> b) -> Free p a b
+      >   Comp :: forall x. p x b -> Free p a x -> Free p a b -- NOTE (<<<)
+      > ```
+      - [Notions_of_Computation_as_Monoids]()
+        > Free Weak Arrows
+        > ```haskell
+        > class Profunctor p => WeakArrow p where
+        >   arr :: forall a b. (a -> b) -> p a b
+        >   (>>>) :: forall a x b. p a x -> p x b -> p a b -- NOTE
+        > data Free p a b
+        >   Hom :: (a -> b) -> Free p a b
+        >   Comp :: forall x. p a x -> Free p x b -> Free p a b
+        > ```
+        > Profunctor Tensor
+        > ```haskell
+        > data (p ⊗ q) a b where
+        >   PCom :: forall a b. p a x -> q x b -> (p ⊗ q) a b
+        > instance (Profunctor p, Profunctor q) => Profunctor (p ⊗ q) where
+        >   dimap m1 m2 (PCom p q) = PCom (dimap m1 id p) (dimap id m2 q)
+        > ```
+        - [Profunctor Optics: Modular Data Accessors](https://arxiv.org/abs/1703.10857)
+          > Profunctor generalizes Kleisli arrow `a -> f b`
+          > [Data.Profunctor.Star](https://pursuit.purescript.org/packages/purescript-profunctor/4.1.0/docs/Data.Profunctor.Star)
+          - [The Essence of the Iterator Pattern](https://www.cs.ox.ac.uk/jeremy.gibbons/publications/iterator.pdf)
+            > 3.3 Combining applicative functors
+            > ```haskell
+            > -- NOTE Prod :: m a -> n a -> (m ⊠ n) a
+            > data (m ⊠ n) a = Prod { pfst :: m a, psnd :: n a }
+            > -- NOTE a -> m b       ~ p a b
+            > --      a -> n b       ~ q a b
+            > --      a → (m ⊠ n) b ~ (p ⊗ q) a b
+            > -- (Profunctor p, Profunctor q) => p a b -> q a b -> (p ⊗ q) a b
+            > (⊗) :: (Functor m, Functor n) ⇒ (a → m b) → (a → n b) → (a → (m ⊠ n) b)
+            > (f ⊗ g) x = Prod (f x) (g x)
+            > instance (Applicative m, Applicative n) ⇒ Applicative (m ⊠ n) where
+            >   pure x = Prod (pure x) (pure x)
+            >   mf <*> mx = Prod (pfst mf <*> pfst mx) (psnd mf <*> psnd mx)
+            >
+            > data (m ⊡ n) a = Comp { unComp :: m (n a) }
+            > -- NOTE unified under Profunctor Tensor the same way as above
+            > (⊙) :: (Functor n, Functor m) ⇒ (b → n c) → (a → m b) → (a → (m ⊡ n) c)
+            > f ⊙ g = Comp ◦ fmap f ◦ g
+            > instance (Applicative m, Applicative n) ⇒ Applicative (m ⊡ n) where
+            >   pure x = Comp (pure (pure x))
+            >   (Comp mf ) <*> (Comp mx) = Comp (pure (<*>) <*> mf <*> mx)
+            > ```
+            > The two operators ⊗ and ⊙ allow us to combine idiomatic computations in two different ways; we call them **parallel and sequential composition**, respectively.
+
+    - [Kleisli Functors](https://elvishjerricco.github.io/2016/10/12/kleisli-functors.html)
+    - [Abstracting Async.Concurrently](https://elvishjerricco.github.io/2016/09/17/abstracting-async-concurrently.html)
+    - [More on Applicative Effects in Free Monads](https://elvishjerricco.github.io/2016/04/13/more-on-applicative-effects-in-free-monads.html)
+    - [Applicative Effects in Free Monads](https://elvishjerricco.github.io/2016/04/08/applicative-effects-in-free-monads.html)
 
 potential directions
 - build on top of a SQL eDSL
