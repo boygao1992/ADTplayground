@@ -1,0 +1,21 @@
+{
+  "name": "purescript_effectful_lenses_experiment",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.1.1",
+    "purescript-console": "^4.2.0",
+    "purescript-effect": "^2.0.1",
+    "purescript-profunctor-lenses": "^6.2.0",
+    "purescript-refs": "^4.1.0",
+    "purescript-free": "^5.2.0",
+    "purescript-transformers": "^4.2.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^4.0.0"
+  }
+}
