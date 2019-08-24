@@ -575,7 +575,7 @@ instance genericPrismSumArgProductArgument ::
   , Symbol.Append _label "_" _label_
   , IsSymbol _label_
   , Row.Lacks _label_ to1
-  , Row.Cons _label_ (li1 s a) to1 to -- TODO
+  , Row.Cons _label_ (li1 s a) to1 to
 
   , Symbol.Append "_" no _label
   , GenericTypeSort li1 s a o
@@ -608,20 +608,24 @@ instance genericPrismSumArgProductProduct ::
 ------------------
 -- GenericTypeSort
 
--- kind TType
-data TScalar
-data TNewtype
-data TRecord
-data TSum
-data TIndex
-data TAt
-data TTraversed
+foreign import kind TType
+-- single path
+foreign import data TScalar     :: TType
+foreign import data TNewtype    :: TType
+-- multiple paths
+foreign import data TRecord     :: TType
+foreign import data TSum        :: TType
+foreign import data TIndex      :: TType
+foreign import data TAt         :: TType
+foreign import data TTraversed  :: TType
 
 -- kind TList
-data TCons (tt :: Type) tl
+foreign import data TCons :: TType -> TType -> TType
 infixr 6 type TCons as :
 
-class TTypeFamily t (tl :: Type) | t -> tl
+data TProxy (tt :: TType) = TProxy
+
+class TTypeFamily t (tl :: TType) | t -> tl
 instance ttypeFamilyUnit     :: TTypeFamily Unit         TScalar
 instance ttypeFamilyInt      :: TTypeFamily Int          TScalar
 instance ttypeFamilyNumber   :: TTypeFamily Number       TScalar
@@ -644,13 +648,14 @@ instance genericTypeSortImpl ::
   , GenericTypeSortDispatch tl li s i o
   )
   => GenericTypeSort li s i o where
-  genericTypeSort _i = genericTypeSortDispatch (Proxy :: Proxy tl) _i
+  genericTypeSort _i = genericTypeSortDispatch (TProxy :: TProxy tl) _i
 
 -- GenericTypeSort > GenericTypeSortDispatch
 class CLenses' li <=
-  GenericTypeSortDispatch tl li s i o | tl li s i -> o where
-  genericTypeSortDispatch :: Proxy tl -> li s i -> o
+  GenericTypeSortDispatch (tl :: TType) li s i o | tl li s i -> o where
+  genericTypeSortDispatch :: TProxy tl -> li s i -> o
 
+-- NOTE single path
 instance genericTypeSortDispatchTScalar ::
   CLenses' li
   => GenericTypeSortDispatch TScalar li s i (li s i) where
@@ -660,6 +665,7 @@ instance genericTypeSortDispatchTNewtype ::
   GenericNewtype li s i o
   => GenericTypeSortDispatch TNewtype li s i o where
   genericTypeSortDispatch _ = genericNewtype
+-- NOTE multiple path
 else
 instance genericTypeSortDispatchTList ::
   ( CLenses' li
@@ -675,9 +681,9 @@ instance genericTypeSortDispatchSingle ::
 
 -- GenericTypeSort > GenericTypeSortDispatch > GenericTypeListDispatch
 class CLenses' li <=
-  GenericTypeListDispatch tl li s i (from :: # Type) (to :: # Type)
+  GenericTypeListDispatch (tl :: TType) li s i (from :: # Type) (to :: # Type)
   | tl li s i from -> to where
-  genericTypeListDispatch :: Proxy tl -> li s i -> Builder (Record from) (Record to)
+  genericTypeListDispatch :: TProxy tl -> li s i -> Builder (Record from) (Record to)
 
 instance genericTypeListDispatchCons ::
   ( GenericTypeDispatch a li s i to1 to
@@ -685,8 +691,8 @@ instance genericTypeListDispatchCons ::
   )
   => GenericTypeListDispatch (a : b) li s i from to where
   genericTypeListDispatch _ _i =
-    genericTypeDispatch (Proxy :: Proxy a) _i
-    <<< genericTypeListDispatch (Proxy :: Proxy b) _i
+    genericTypeDispatch (TProxy :: TProxy a) _i
+    <<< genericTypeListDispatch (TProxy :: TProxy b) _i
 else
 instance genericTypeListDispatchSingle ::
   GenericTypeDispatch a li s i from to
@@ -695,9 +701,9 @@ instance genericTypeListDispatchSingle ::
 
 -- GenericTypeSort > GenericTypeSortDispatch > GenericTypeDispatch
 class CLenses' li <=
-  GenericTypeDispatch (tt :: Type) li s i (from :: # Type) (to :: # Type)
+  GenericTypeDispatch (tt :: TType) li s i (from :: # Type) (to :: # Type)
   | tt li s i from -> to where
-  genericTypeDispatch :: Proxy tt -> li s i -> Builder (Record from) (Record to)
+  genericTypeDispatch :: TProxy tt -> li s i -> Builder (Record from) (Record to)
 
 instance genericTypeDispatchRecord ::
   GenericLensRecord li s i from to
