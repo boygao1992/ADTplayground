@@ -16,7 +16,7 @@ import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), NoConstructors, Product(..), Sum(..), from, to)
 import Data.Generic.Rep.Lens.Constraints.Simple (class CCompose', class CLenses', class CPreview', class CSet', CIso'(..), CLens'(..), COptic'(..), CPrism'(..), CTraversal'(..), (..~), (.<<<), (.^?))
 import Data.Identity (Identity)
-import Data.Lens (class Wander, _1, _2, _Left, _Right, iso, traversed, wander)
+import Data.Lens (_1, _2, _Left, _Right, iso, traversed, wander)
 import Data.Lens.At (class At, at)
 import Data.Lens.Index (class Index, ix)
 import Data.Lens.Iso.Newtype (_Newtype)
@@ -327,17 +327,24 @@ instance _GenericCtorArgProductSetRLCons ::
 -- GenericTraversed
 
 class (CLenses' li, Traversable f) <=
-  GenericTraversed li s f i o | li s f i -> o where
-    genericTraversed :: li s (f i) -> o
+  GenericTraversed li s f i (from :: # Type) (to :: # Type) | li s f i from -> to
+  where
+    genericTraversed :: li s (f i) -> Builder (Record from) (Record to)
 
 instance genericTraversedImpl ::
   ( Traversable f
   , CCompose' li CTraversal' li1
   , GenericTypeSort li1 s i o
+  , Row.Lacks "traversed" from
+  , Row.Lacks "traversed_" from
   )
-  => GenericTraversed li s f i o where
-  genericTraversed _i =
-    genericTypeSort (_i .<<< CTraversal' traversed :: li1 s i)
+  => GenericTraversed li s f i from ( traversed :: o, traversed_ :: li1 s i | from)
+  where
+  genericTraversed _i
+    = Builder.insert (SProxy :: SProxy "traversed")
+        (genericTypeSort (_i .<<< CTraversal' traversed :: li1 s i))
+    <<< Builder.insert (SProxy :: SProxy "traversed_")
+        (_i .<<< CTraversal' traversed :: li1 s i)
 
 -----------------
 -- GenericNewtype
@@ -351,82 +358,76 @@ instance genericNewtypeImpl ::
   , CCompose' li CIso' li1
   , GenericTypeSort li1 s i' o
   )
-  => GenericNewtype li s i o where
-  genericNewtype _i =
-    genericTypeSort (_i .<<< CIso' _Newtype :: li1 s i')
+  => GenericNewtype li s i (li1 s i') where
+  genericNewtype _i = _i .<<< CIso' _Newtype
 
 ---------------
 -- GenericIndex
 
 class CLenses' li <=
-  GenericIndex li s i o | li s i -> o where
-  genericIndex :: li s i -> o
+  GenericIndex li s i (from :: # Type) (to :: # Type) | li s i from -> to where
+  genericIndex :: li s i -> Builder (Record from) (Record to)
 
 instance genericIndexImpl ::
   ( Index i a b
-  , Wander p
   , GenericTypeSort li1 s b o
   , CCompose' li CTraversal' li1
+  , Row.Lacks "ix" from
+  , Row.Lacks "ix_" from
   )
-  => GenericIndex li s i (a -> { ix :: o, ix_ :: li1 s b }) where
-  genericIndex _i a =
-    let
-      _i1 = _i .<<< CTraversal' (ix a)
-    in
-      { ix: genericTypeSort _i1
-      , ix_: _i1
-      }
+  => GenericIndex li s i from (ix :: a -> o, ix_ :: a -> li1 s b | from) where
+  genericIndex _i
+    = Builder.insert (SProxy :: SProxy "ix")
+        (\a -> genericTypeSort ( _i .<<< CTraversal' (ix a) :: li1 s b ))
+    <<< Builder.insert (SProxy :: SProxy "ix_")
+        (\a -> _i .<<< CTraversal' (ix a))
 
 ------------
 -- GenericAt
 
 class CLenses' li <=
-  GenericAt li s i o | li s i -> o where
-  genericAt :: li s i -> o
+  GenericAt li s i (from :: # Type) (to :: # Type) | li s i from -> to where
+  genericAt :: li s i -> Builder (Record from) (Record to)
 
 instance genericAtImpl ::
   ( At i a b
   , CCompose' li CLens' lat
   , GenericTypeSort lat s (Maybe b) o1
-  , CCompose' li CTraversal' lix
-  , GenericTypeSort lix s b o2
+  , Row.Lacks "at" from
+  , Row.Lacks "at_" from
   )
-  => GenericAt li s i (a -> { at :: o1, ix :: o2, at_ :: lat s (Maybe b), ix_ :: lix s b})
-  where
-    genericAt _i a =
-      let
-        _at = _i .<<< CLens' (at a)
-        _ix = _i .<<< CTraversal' (ix a)
-      in
-        { at: genericTypeSort _at
-        , at_: _at
-        , ix: genericTypeSort _ix
-        , ix_: _ix
-        }
+  => GenericAt li s i from (at :: a -> o1, at_ :: a -> lat s (Maybe b) | from) where
+    genericAt _i
+      = Builder.insert (SProxy :: SProxy "at")
+          (\a -> genericTypeSort (_i .<<< CLens' (at a) :: lat s (Maybe b)))
+      <<< Builder.insert (SProxy :: SProxy "at_")
+          (\a -> (_i .<<< CLens' (at a) :: lat s (Maybe b)))
 
 --------------------
 -- GenericLensRecord
 
+-- TODO Heterogeneous Mapping/Folding
+
 class CLenses' li <=
-  GenericLensRecord li s (i :: # Type) (o :: # Type) | li -> o where
-  genericLensRecord :: li s (Record i) -> Record o
+  GenericLensRecord li s (i :: # Type) (from :: # Type) (to :: # Type)
+  | li s i from -> to where
+  genericLensRecord :: li s (Record i) -> Builder (Record from) (Record to)
 
 instance genericLensRecordImpl ::
   ( RowToList i iRl
-  , GenericLensRL p s i iRl o
+  , GenericLensRL p s i iRl from to
   )
-  => GenericLensRecord p s i o where
+  => GenericLensRecord p s i from to where
   genericLensRecord _i
-    = Builder.build <@> {}
-      $ genericLensRL (RLProxy :: RLProxy iRl) _i
+    = genericLensRL (RLProxy :: RLProxy iRl) _i
 
 class CLenses' li <=
-  GenericLensRL li s i (iRl :: RowList) (to :: # Type) | li s i iRl -> to where
-  genericLensRL
-    :: RLProxy iRl -> li s (Record i) -> Builder {} (Record to)
+  GenericLensRL li s i (iRl :: RowList) (from :: # Type) (to :: # Type)
+  | li s i iRl from -> to where
+  genericLensRL :: RLProxy iRl -> li s (Record i) -> Builder (Record from) (Record to)
 
 instance genericLensRLNil ::
-  CLenses' li => GenericLensRL li s i (RowList.Nil) () where
+  CLenses' li => GenericLensRL li s i (RowList.Nil) from from where
   genericLensRL _ _ = identity
 
 instance genericLensRLCons ::
@@ -443,9 +444,9 @@ instance genericLensRLCons ::
   , GenericTypeSort li1 s typ o
   , Row.Cons label o restTo to1
 
-  , GenericLensRL li s i restRl restTo
+  , GenericLensRL li s i restRl from restTo
   )
-  => GenericLensRL li s i (RowList.Cons label typ restRl) to where
+  => GenericLensRL li s i (RowList.Cons label typ restRl) from to where
   genericLensRL _ _i =
     let
       _i' = _i .<<< CLens' (prop (SProxy :: SProxy label))
@@ -459,19 +460,17 @@ instance genericLensRLCons ::
 -- GenericPrismSum
 
 class CLenses' li <=
-  GenericPrismSum li s i (o :: # Type) | li s i -> o where
-  genericPrismSum :: li s i -> Record o
+  GenericPrismSum li s i (from :: # Type) (to :: # Type) | li s i from -> to where
+  genericPrismSum :: li s i -> Builder (Record from) (Record to)
 
 instance genericPrismSumImpl ::
   ( CCompose' li CIso' li1
-  , GenericPrismSumCtor li1 s iRep () o
+  , GenericPrismSumCtor li1 s iRep from to
   , Generic i iRep
   )
-  => GenericPrismSum li s i o where
+  => GenericPrismSum li s i from to where
   genericPrismSum _i
-    = Builder.build <@> {}
-      $ genericPrismSumCtor (_i .<<< _Generic')
-
+    = genericPrismSumCtor (_i .<<< _Generic')
 
 -- Ctor
 class CLenses' li <=
@@ -609,126 +608,119 @@ instance genericPrismSumArgProductProduct ::
 ------------------
 -- GenericTypeSort
 
-foreign import kind TType
-foreign import data TScalar  :: TType
-foreign import data TRecord  :: TType
-foreign import data TIndex   :: TType
-foreign import data TAt      :: TType
-foreign import data TSum     :: TType
-foreign import data TNewtype :: TType
+-- kind TType
+data TScalar
+data TNewtype
+data TRecord
+data TSum
+data TIndex
+data TAt
+data TTraversed
 
-data TTProxy (tt :: TType) = TTProxy
+-- kind TList
+data TCons (tt :: Type) tl
+infixr 6 type TCons as :
 
-class TTypeFamily t (tt :: TType) | t -> tt
-instance ttypeFamilyInt     :: TTypeFamily Int          TScalar
-instance ttypeFamilyNumber  :: TTypeFamily Number       TScalar
-instance ttypeFamilyString  :: TTypeFamily String       TScalar
-instance ttypeFamilyChar    :: TTypeFamily Char         TScalar
-instance ttypeFamilyBoolean :: TTypeFamily Boolean      TScalar
-instance ttypeFamilyRecord  :: TTypeFamily (Record a)   TRecord
-instance ttypeFamilyArray   :: TTypeFamily (Array a)    TIndex
-instance ttypeFamilySet     :: TTypeFamily (Set v)      TAt
-instance ttypeFamilyMap     :: TTypeFamily (Map k v)    TAt
-instance ttypeFamilyMaybe   :: TTypeFamily (Maybe a)    TSum
-instance ttypeFamilyNewtype :: TTypeFamily (Identity a) TNewtype
-
+class TTypeFamily t (tl :: Type) | t -> tl
+instance ttypeFamilyUnit     :: TTypeFamily Unit         TScalar
+instance ttypeFamilyInt      :: TTypeFamily Int          TScalar
+instance ttypeFamilyNumber   :: TTypeFamily Number       TScalar
+instance ttypeFamilyString   :: TTypeFamily String       TScalar
+instance ttypeFamilyChar     :: TTypeFamily Char         TScalar
+instance ttypeFamilyBoolean  :: TTypeFamily Boolean      TScalar
+instance ttypeFamilyIdentity :: TTypeFamily (Identity a) TNewtype
+instance ttypeFamilyRecord   :: TTypeFamily (Record a)   TRecord
+instance ttypeFamilyMaybe    :: TTypeFamily (Maybe a)    (TSum : TTraversed)
+instance ttypeFamilyArray    :: TTypeFamily (Array a)    (TIndex : TTraversed)
+instance ttypeFamilySet      :: TTypeFamily (Set v)      (TIndex : TAt : TTraversed)
+instance ttypeFamilyMap      :: TTypeFamily (Map k v)    (TIndex : TAt : TTraversed)
 
 class CLenses' li <=
   GenericTypeSort li s i o | li s i -> o where
   genericTypeSort :: li s i -> o
 
 instance genericTypeSortImpl ::
-  ( TTypeFamily i tt
-  , GenericTypeDispatch tt li s i o
+  ( TTypeFamily i tl
+  , GenericTypeSortDispatch tl li s i o
   )
   => GenericTypeSort li s i o where
-  genericTypeSort _i
-    = genericTypeDispatch (TTProxy :: TTProxy tt) _i
+  genericTypeSort _i = genericTypeSortDispatch (Proxy :: Proxy tl) _i
 
+-- GenericTypeSort > GenericTypeSortDispatch
 class CLenses' li <=
-  GenericTypeDispatch (tt :: TType) li s i o | tt li s i -> o where
-  genericTypeDispatch :: TTProxy tt -> li s i -> o
+  GenericTypeSortDispatch tl li s i o | tl li s i -> o where
+  genericTypeSortDispatch :: Proxy tl -> li s i -> o
 
-instance genericTypeDispatchScalar ::
+instance genericTypeSortDispatchTScalar ::
   CLenses' li
-  => GenericTypeDispatch TScalar li s i (li s i) where
-  genericTypeDispatch _ _i = _i
+  => GenericTypeSortDispatch TScalar li s i (li s i) where
+  genericTypeSortDispatch _ _i = _i
+else
+instance genericTypeSortDispatchTNewtype ::
+  GenericNewtype li s i o
+  => GenericTypeSortDispatch TNewtype li s i o where
+  genericTypeSortDispatch _ = genericNewtype
+else
+instance genericTypeSortDispatchTList ::
+  ( CLenses' li
+  , GenericTypeListDispatch (tt : rest) li s i () o
+  )
+  => GenericTypeSortDispatch (tt : rest) li s i (Record o) where
+  genericTypeSortDispatch tl _i = Builder.build (genericTypeListDispatch tl _i) {}
+else
+instance genericTypeSortDispatchSingle ::
+  GenericTypeDispatch tt li s i () o
+  => GenericTypeSortDispatch tt li s i (Record o) where
+  genericTypeSortDispatch tt _i = Builder.build (genericTypeDispatch tt _i) {}
+
+-- GenericTypeSort > GenericTypeSortDispatch > GenericTypeListDispatch
+class CLenses' li <=
+  GenericTypeListDispatch tl li s i (from :: # Type) (to :: # Type)
+  | tl li s i from -> to where
+  genericTypeListDispatch :: Proxy tl -> li s i -> Builder (Record from) (Record to)
+
+instance genericTypeListDispatchCons ::
+  ( GenericTypeDispatch a li s i to1 to
+  , GenericTypeListDispatch b li s i from to1
+  )
+  => GenericTypeListDispatch (a : b) li s i from to where
+  genericTypeListDispatch _ _i =
+    genericTypeDispatch (Proxy :: Proxy a) _i
+    <<< genericTypeListDispatch (Proxy :: Proxy b) _i
+else
+instance genericTypeListDispatchSingle ::
+  GenericTypeDispatch a li s i from to
+  => GenericTypeListDispatch a li s i from to where
+  genericTypeListDispatch a _i = genericTypeDispatch a _i
+
+-- GenericTypeSort > GenericTypeSortDispatch > GenericTypeDispatch
+class CLenses' li <=
+  GenericTypeDispatch (tt :: Type) li s i (from :: # Type) (to :: # Type)
+  | tt li s i from -> to where
+  genericTypeDispatch :: Proxy tt -> li s i -> Builder (Record from) (Record to)
 
 instance genericTypeDispatchRecord ::
-  GenericLensRecord li s i o
-  => GenericTypeDispatch TRecord li s (Record i) (Record o) where
-    genericTypeDispatch _ _i = genericLensRecord _i
+  GenericLensRecord li s i from to
+  => GenericTypeDispatch TRecord li s (Record i) from to where
+  genericTypeDispatch _ = genericLensRecord
 
 instance genericTypeDispatchIndex ::
-  GenericIndex li s i o
-  => GenericTypeDispatch TIndex li s i o where
-    genericTypeDispatch _ _i = genericIndex _i
+  GenericIndex li s i from to
+  => GenericTypeDispatch TIndex li s i from to where
+  genericTypeDispatch _ = genericIndex
 
 instance genericTypeDispatchAt ::
-  GenericAt li s i o
-  => GenericTypeDispatch TAt li s i o where
-  genericTypeDispatch _ _i = genericAt _i
+  GenericAt li s i from to
+  => GenericTypeDispatch TAt li s i from to where
+  genericTypeDispatch _ = genericAt
 
 instance genericTypeDispatchSum ::
-  GenericPrismSum li s i o
-  => GenericTypeDispatch TSum li s i (Record o) where
-  genericTypeDispatch _ _i = genericPrismSum _i
+  GenericPrismSum li s i from to
+  => GenericTypeDispatch TSum li s i from to where
+  genericTypeDispatch _ = genericPrismSum
 
-instance genericTypeDispatchNewtype ::
-  GenericNewtype li s i o
-  => GenericTypeDispatch TNewtype li s i o where
-    genericTypeDispatch _ _i = genericNewtype _i
+instance genericTypeDispatchTraversed ::
+  GenericTraversed li s f i from to
+  => GenericTypeDispatch TTraversed li s (f i) from to where
+  genericTypeDispatch _ = genericTraversed
 
----------------------------
--- TODO GenericTypeSortList
-
-foreign import kind TList
-foreign import data TNil :: TList
-foreign import data TCons :: TType -> TList -> TList
-infixr 6 type TCons as :
-
-data TLProxy (tl :: TList) = TLProxy
-
-class TTypeList t (tl :: TList) | t -> tl
-instance tTypeListInt     :: TTypeList Int          (TScalar : TNil)
-instance tTypeListNumber  :: TTypeList Number       (TScalar : TNil)
-instance tTypeListString  :: TTypeList String       (TScalar : TNil)
-instance tTypeListChar    :: TTypeList Char         (TScalar : TNil)
-instance tTypeListBoolean :: TTypeList Boolean      (TScalar : TNil)
-instance tTypeListRecord  :: TTypeList (Record a)   (TRecord : TNil)
-instance tTypeListArray   :: TTypeList (Array a)    (TIndex : TNil)
-instance tTypeListSet     :: TTypeList (Set v)      (TIndex : TAt : TNil)
-instance tTypeListMap     :: TTypeList (Map k v)    (TIndex : TAt : TNil)
-instance tTypeListMaybe   :: TTypeList (Maybe a)    (TSum : TNil)
-instance tTypeListNewtype :: TTypeList (Identity a) (TNewtype : TNil)
-
-class CLenses' li <=
-  GenericTypeSortList li s i o | li s i -> o
-
-instance genericTypeSortListInit ::
-  ( TTypeList i tl
-  , GenericTypeSortListImpl tl li s i () to
-  )
-  => GenericTypeSortList li s i (Record to)
-
-class CLenses' li <=
-  GenericTypeSortListImpl (tl :: TList) li s i (from :: # Type) (to :: # Type)
-  | tl li s i from -> to where
-  genericTypeSortListImpl
-    :: TLProxy tl -> li s i -> Builder (Record from) (Record to)
-
-instance genericTypeSortListImplTNil ::
-  CLenses' li
-  => GenericTypeSortListImpl TNil li s i from from where
-  genericTypeSortListImpl _ _ = identity
-
--- instance genericTypeSortListImplTCons ::
---   ( GenericTypeSortListImpl tlRest li s i from to'
---   )
---   => GenericTypeSortListImpl (TCons tt tlRest) 
-
-class CLenses' li <=
-  GenericTypeSortDispatch (tt :: TType) li s i (from :: # Type) (to :: # Type)
-  | tt li s i from -> to where
-    genericTypeSortDispatch
-      :: TTProxy tt -> li s i -> Builder (Record from) (Record to)

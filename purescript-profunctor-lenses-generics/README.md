@@ -15,13 +15,14 @@ supported types
 - Index (Wander p =>)
   - Array (Index (Array a) Int a =>)
 - At (Wander p =>)
+  - Array (At (Array a) Int a =>)
   - Set (At (Set v) v Unit =>)
   - Map (At (Map k v) k v =>)
-
-TODO
-- mapping :: forall s t a b f g. Functor f => Functor g => AnIso s t a b -> Iso (f s) (g t) (f a) (g b)
-- folded :: forall g a b t r. Monoid r => Foldable g => Fold r (g a) b a t
-- traversed :: forall t a b. Traversable t => Traversal (t a) (t b) a b
+- Traversable (Wander p => Traversable t =>)
+  - Maybe
+  - Array
+  - Set
+  - Map
 
 # Extensibility
 
@@ -30,6 +31,7 @@ Any data-type other than the ones mentioned below needs an instance for `Data.Ge
 `kind TType`
 - `data TScalar`
   - will be treated as leaf node and the solver will stop digging deeper
+  - `Unit`
   - `Int`
   - `Number`
   - `String`
@@ -37,11 +39,13 @@ Any data-type other than the ones mentioned below needs an instance for `Data.Ge
   - `Boolean`
 - `data TNewtype`
   - data-type with a Newtype instance
+  - will directly expose its wrapped type (if not desired, use `TSum`)
   - `Identity a`
 - `data TRecord`
   - `Record` only, should not be exposed
+  - TODO Heterogeneous Mapping/Folding
 - `data TSum`
-  - data-type with a Generic instance
+  - data-type with a `Generic` instance
   - `Maybe a`
 - `data TIndex`
   - data-type with a `Data.Lens.Index (class Index)` instance
@@ -49,8 +53,15 @@ Any data-type other than the ones mentioned below needs an instance for `Data.Ge
 - `data TAt`
   - data-type with a `Data.Lens.At (class At)` instance 
     , which is also an instance of `Data.Lens.Index (class Index)`
+  - `Array a`
   - `Set v`
   - `Map k v`
+- `data TTraversed`
+  - data-type with a `Traversable` instance
+  - `Maybe`
+  - `Array`
+  - `Set`
+  - `Map k`
 
 # Naming Strategy
 
@@ -74,9 +85,11 @@ Leaf nodes have an extra `_` suffix
 data A = A
 data B = B
 data C = C
+newtype SimpleNewtype = SimpleNewtype Unit
 derive instance genericA :: Generic A _
 derive instance genericB :: Generic B _
 derive instance genericC :: Generic C _
+derive instance newtypeSimpleNewtype :: Newtype SimpleNewtype _
 
 data TestSum
   = Empty
@@ -85,11 +98,13 @@ data TestSum
   | Three A B C -- Optic' p TestSum { _1 :: A, _2 :: B, _3 :: C }
   | TestRecord { x :: { y :: { z :: Maybe A } } }
   | TestMap (Map String { a :: A })
+  | TestNewtype SimpleNewtype
 derive instance genericTestSum :: Generic TestSum _
 
 instance ttypeFamilyA :: TTypeFamily A TSum
 instance ttypeFamilyB :: TTypeFamily B TSum
 instance ttypeFamilyC :: TTypeFamily C TSum
+instance ttypeFamilySimpleNewtype :: TTypeFamily SimpleNewtype TNewtype
 instance ttypeFamilyTestSum :: TTypeFamily TestSum TSum
 
 class Generic a rep <= ShowGeneric a rep | a -> rep where
@@ -108,6 +123,7 @@ testsum
     <\/> Constructor "Three" (Argument A </\> Argument B </\> Argument C)
     <\/> Constructor "TestRecord" (Argument { x :: { y :: { z :: Maybe A }}})
     <\/> Constructor "TestMap" (Argument (Map String { a :: A}))
+    <\/> Constructor "TestNewtype" (Argument SimpleNewtype)
     )
 testsum = showGenericRep (Proxy :: Proxy TestSum)
 
@@ -115,51 +131,65 @@ testsumLenses ::
   { _Empty_ :: CPrism' TestSum Unit
   , _One :: { _A_ :: CPrism' TestSum Unit }
   , _One_ :: CPrism' TestSum A
-  , _TestMap :: String ->
-      { at ::
+  , _Two ::
+       { _1 :: { _A_ :: CTraversal' TestSum Unit }
+       , _1_ :: CTraversal' TestSum A
+       , _2 :: { _B_ :: CTraversal' TestSum Unit }
+       , _2_ :: CTraversal' TestSum B
+       }
+  , _Two_ :: CTraversal' TestSum { _1 :: A, _2 :: B }
+  , _Three ::
+       { _1 :: { _A_ :: CTraversal' TestSum Unit }
+       , _1_ :: CTraversal' TestSum A
+       , _2 :: { _B_ :: CTraversal' TestSum Unit }
+       , _2_ :: CTraversal' TestSum B
+       , _3 :: { _C_ :: CTraversal' TestSum Unit }
+       , _3_ :: CTraversal' TestSum C
+       }
+  , _Three_ :: CTraversal' TestSum { _1 :: A, _2 :: B, _3 :: C }
+  , _TestRecord ::
+       { x :: { y :: { z :: { _Just :: { _A_ :: CTraversal' TestSum Unit }
+                         , _Just_ :: CTraversal' TestSum A
+                         , _Nothing_ :: CTraversal' TestSum Unit
+                         , traversed :: { _A_ :: CTraversal' TestSum Unit }
+                         , traversed_ :: CTraversal' TestSum A
+                         }
+                   , z_ :: CTraversal' TestSum (Maybe A)
+                   }
+             , y_ :: CTraversal' TestSum { z :: Maybe A }
+             }
+       , x_ :: CTraversal' TestSum { y :: { z :: Maybe A } }
+       }
+  , _TestRecord_ :: CPrism' TestSum { x :: { y :: { z :: Maybe A } } }
+  , _TestMap ::
+      { at :: String ->
           { _Just ::
               { a :: { _A_ :: CTraversal' TestSum Unit }
               , a_ :: CTraversal' TestSum A
               }
           , _Just_ :: CTraversal' TestSum { a :: A }
           , _Nothing_ :: CTraversal' TestSum Unit
+          , traversed ::
+              { a :: { _A_ :: CTraversal' TestSum Unit }
+              , a_ :: CTraversal' TestSum A
+              }
+              , traversed_ :: CTraversal' TestSum { a :: A }
           }
-      , at_ :: CTraversal' TestSum (Maybe { a :: A })
-      , ix ::
+      , at_ :: String -> CTraversal' TestSum (Maybe { a :: A })
+      , ix :: String ->
           { a :: { _A_ :: CTraversal' TestSum Unit }
           , a_ :: CTraversal' TestSum A
           }
-      , ix_ :: CTraversal' TestSum { a :: A }
+      , ix_ :: String -> CTraversal' TestSum { a :: A }
+      , traversed ::
+          { a :: { _A_ :: CTraversal' TestSum Unit }
+          , a_ :: CTraversal' TestSum A
+          }
+      , traversed_ :: CTraversal' TestSum { a :: A }
       }
   , _TestMap_ :: CPrism' TestSum (Map String { a :: A })
-  , _TestRecord ::
-       { x :: { y :: { z :: { _Just :: { _A_ :: CTraversal' TestSum Unit }
-                         , _Just_ :: CTraversal' TestSum A
-                         , _Nothing_ :: CTraversal' TestSum Unit
-                         }
-                   , z_ :: CTraversal' TestSum (Maybe A)
-                   }
-             , y_ :: CTraversal' TestSum { z :: Maybe A }
-             }
-      , x_ :: CTraversal' TestSum { y :: { z :: Maybe A } }
-      }
-  , _TestRecord_ :: CPrism' TestSum { x :: { y :: { z :: Maybe A } } }
-  , _Three ::
-      { _1 :: { _A_ :: CTraversal' TestSum Unit }
-      , _1_ :: CTraversal' TestSum A
-      , _2 :: { _B_ :: CTraversal' TestSum Unit }
-      , _2_ :: CTraversal' TestSum B
-      , _3 :: { _C_ :: CTraversal' TestSum Unit }
-      , _3_ :: CTraversal' TestSum C
-      }
-  , _Three_ :: CTraversal' TestSum { _1 :: A , _2 :: B , _3 :: C }
-  , _Two ::
-      { _1 :: { _A_ :: CTraversal' TestSum Unit }
-      , _1_ :: CTraversal' TestSum A
-      , _2 :: { _B_ :: CTraversal' TestSum Unit }
-      , _2_ :: CTraversal' TestSum B
-      }
-  , _Two_ :: CTraversal' TestSum { _1 :: A , _2 :: B }
+  , _TestNewtype :: CPrism' TestSum Unit
+  , _TestNewtype_ :: CPrism' TestSum SimpleNewtype
   }
 testsumLenses = genericLens (Proxy :: Proxy TestSum)
 
@@ -167,10 +197,10 @@ _TestSumThreeC :: CTraversal' TestSum C
 _TestSumThreeC = testsumLenses._Three._3_
 
 _TestSumTestMapAt :: String -> CTraversal' TestSum (Maybe { a :: A })
-_TestSumTestMapAt key = testsumLenses._TestMap key # _.at_
+_TestSumTestMapAt key = testsumLenses._TestMap.at_ key
 
 _TestSumTestMapIxA :: String -> CTraversal' TestSum A
-_TestSumTestMapIxA key = testsumLenses._TestMap key # _.ix.a_
+_TestSumTestMapIxA key = testsumLenses._TestMap.ix key # _.a_
 
 _TestSumTestRecordXYZJust :: CTraversal' TestSum A
 _TestSumTestRecordXYZJust = testsumLenses._TestRecord.x.y.z._Just_
