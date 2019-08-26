@@ -20,7 +20,9 @@
     "purescript-variant": "^6.0.1",
     "purescript-exceptions": "^4.0.0",
     "purescript-sequences": "^2.1.0",
-    "purescript-read": "^1.0.1"
+    "purescript-read": "^1.0.1",
+    "purescript-heterogeneous": "purescript-heterogenous#^0.4.1",
+    "purescript-foreign-object": "^2.0.3"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
