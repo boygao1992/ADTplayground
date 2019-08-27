@@ -8,6 +8,16 @@ composable queries under Lens interface
   - type-level functions can enforce lenses to be disjoint during the composition step (distinct paths are isomorphic to distinct nominal types)
     - [fclabels | parallel composition of lenses for record](http://fvisser.nl/post/2013/okt/1/fclabels-2.0.html)
   - for relational database access (which can be roughly interpreted as nested records access using GraphQL encoding of relational algebra), they are disjoint paths in a graph traversal
+- Monadic Lenses
+  - [Reflections on Monadic Lenses](https://arxiv.org/abs/1601.02484)
+  - [lens-action](http://hackage.haskell.org/package/lens-action)
+  - [extensible-monadic-lenses](https://www.reddit.com/r/haskell/comments/8gc8p0/extensible_monadic_lenses/)
+    - [response from Edward Kmett on lens laws](https://www.reddit.com/r/haskell/comments/8gc8p0/extensible_monadic_lenses/dybzem6/)
+      - lens-like but not "well behaved"
+    - [Lenses for philosophers](https://julesh.com/2018/08/16/lenses-for-philosophers/)
+      > The lens laws are really the crux of everything I’m saying. From my earlier general and informal definition of lenses, it is possible to justify the (associative) composition law of lenses, but it is not possible to justify the lens laws. The laws are firmly properties of update actions — similar laws also appear in Hoare logic for example. For many other lens-like things the laws are either false, or more likely fail to even type-check. I considered calling the general thing, namely “things that look like lenses and compose like lenses”, something like ‘pre-lenses’ or ‘quasi-lenses’. But I have the opinion that if it walks like a duck and composes like a duck, then you ought to call it a duck.
+      >
+      > The lens laws are undoubtedly important, and not just because they’re true in the case of updates. Very well behaved lenses are equivalent to the much simpler constant-complement lenses, and are also equivalently coalgebras of a comonad. Most of the theoretical work that uses the term ‘lenses’ takes the laws as given. Many bx researchers define ‘lenses’ to be what FGMPS called ‘well behaved lenses’, and consider that something not satisfying the lens laws is no lens at all.
 - eDSL
   - Monadic Bind
     - [Simple and Compositional Reification of Monadic Embedded Languages](https://svenssonjoel.github.io/writing/bb.pdf)
