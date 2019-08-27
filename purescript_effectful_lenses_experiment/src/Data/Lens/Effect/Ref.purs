@@ -5,6 +5,7 @@ import Prelude
 import Control.Monad.Free (Free, liftF)
 import Control.Monad.Reader.Trans (class MonadAsk, class MonadReader, ReaderT(..))
 import Data.Lens (Lens, lens)
+import Data.Lens.Internal.Shop (Shop)
 import Effect (Effect)
 import Effect.Ref (Ref)
 import Effect.Ref as Ref
@@ -38,8 +39,7 @@ data ExpF s a next
 
 type Exp s a = Free (ExpF s a)
 
-newtype LensEnv s a = LensEnv { getter :: s -> a, setter :: s -> a -> s }
-newtype RefProgram s a next = RefProgram (ReaderT (LensEnv s a) (Exp s a) next)
+newtype RefProgram s a next = RefProgram (ReaderT (Shop a a s s) (Exp s a) next)
 
 derive instance functorRefProgram :: Functor (RefProgram s a)
 derive newtype instance applyRefProgram :: Apply (RefProgram s a)
@@ -47,9 +47,9 @@ derive newtype instance applicativeRefProgram :: Applicative (RefProgram s a)
 derive newtype instance bindRefProgram :: Bind (RefProgram s a)
 derive newtype instance monadRefProgram :: Monad (RefProgram s a)
 derive newtype instance monadAskRefProgram ::
-  MonadAsk (LensEnv s a) (RefProgram s a)
+  MonadAsk (Shop a a s s) (RefProgram s a)
 derive newtype instance monadReaderRefProgram ::
-  MonadReader (LensEnv s a) (RefProgram s a)
+  MonadReader (Shop a a s s) (RefProgram s a)
 
 gets :: forall s a. RefProgram s a a
 gets = RefProgram $ ReaderT $ \_ -> liftF $ Gets identity
@@ -72,3 +72,7 @@ program = do
 -- LensEnv s b ~ (s -> b, s -> b -> s)
 -- s -> b = getter <<< wrapGetter
 -- s -> b -> s = \s -> wrapSetter s <<< setter (wrapGetter s)
+
+
+
+
