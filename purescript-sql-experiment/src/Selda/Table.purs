@@ -101,7 +101,7 @@ instance foldingWithIndexCombinedAttrs ::
     (Object (Array ColAttr)) where
   foldingWithIndex _ label acc x = case x of
     Attribute colAttrs
-      -- TODO
+      -- TODO Group :- Attribute
       | [Unique] <- colAttrs
       , [Indexed _] <- colAttrs ->
       Object.update (Just <<< (_ <> colAttrs)) (reflectSymbol label) acc
@@ -126,7 +126,6 @@ instance foldingWithIndexPkAttrs ::
     Attribute [Primary, Required] ->
       Object.update (Just <<< (_ <> [Primary, Required])) (reflectSymbol label) acc
     _ -> acc
-
 
 data Attribute (g :: Type -> Type -> Type) t c
   = Attribute (Array ColAttr)
