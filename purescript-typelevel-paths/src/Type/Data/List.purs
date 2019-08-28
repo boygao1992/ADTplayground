@@ -1,8 +1,14 @@
 module Type.Data.List where
 
-import Type.Data.Boolean as Bool
+import Type.Prelude
+import Prim.TypeError
+
+import Type.Data.Boolean as B
 import Type.Proxy (Proxy)
 import Type.Utils as Type
+
+import Data.Generic.Rep
+import Data.Generic.Rep.Type.Utils
 
 foreign import kind List
 foreign import data Nil :: List
@@ -22,16 +28,45 @@ instance appendBase :: Append Nil ys ys
 instance appendInduction :: Append xs ys zs => Append (x : xs) ys (x : zs)
 
 -- | ContainsPred
-class ContainsPred (list :: List) a (b :: Bool.Boolean) | list a -> b
+class ContainsPred (list :: List) a (b :: B.Boolean) | list a -> b
 
-instance containsPredNil ::
-  ContainsPred Nil a Bool.False
-
+instance containsPredNil :: ContainsPred Nil a B.False
 instance containsPredCons ::
-  ( ContainsPred restList a b0
-  , Type.IsEqualPred typ a b1
-  , Bool.Or b0 b1 b
-  ) => ContainsPred (Cons typ restList) a b
+  ( ContainsPred ts a b0
+  , Type.IsEqualPred t a b1
+  , B.Or b0 b1 b
+  )
+  => ContainsPred (t : ts) a b
+
+-- | ContainsNamePred
+class ContainsNamePred (list :: List) (name :: Symbol) (b :: B.Boolean) | list name -> b
+
+instance containsNamePredNil :: ContainsNamePred Nil name B.False
+instance ocntainsNamePredCons ::
+  ( ContainsNamePred ts name b0
+  , Generic t tRep
+  , GetConstructorName tRep name'
+  , Type.IsEqualPred (SProxy name) (SProxy name') b1
+  , B.Or b0 b1 b
+  )
+  => ContainsNamePred (t : ts) name b
+
+-- | GetByName
+class GetByName (list :: List) (name :: Symbol) o | list name -> o
+instance getByNameNil ::
+  Fail (Beside (Text "list doesn't contain type: ") (Text name))
+  => GetByName Nil name t
+instance getByNameCons ::
+  ( Generic t tRep
+  , GetConstructorName tRep name'
+  , Type.IsEqualPred (SProxy name) (SProxy name') b
+  , GetByNameIf b t ts name o
+  )
+  => GetByName (t : ts) name o
+
+class GetByNameIf (b :: B.Boolean) t (ts :: List) (name :: Symbol) o
+instance getByNameIfTrue :: GetByNameIf B.True t ts name t
+instance getByNameIfFalse :: GetByName ts name o => GetByNameIf B.False t ts name o
 
 -- | Remove
 class Remove typ (i :: List) (o :: List) | typ i -> o

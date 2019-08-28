@@ -3,19 +3,21 @@ module Type.Path where
 import Prelude
 import Type.Prelude (class IsSymbol, Proxy(..))
 
+import Type.Data.Boolean as B
+import Prim.RowList (kind RowList)
+import Prim.RowList as RL
 import Prim.Row as Row
+import Type.Data.Record
 import Type.Data.List (type (:), kind List, LProxy(..))
 import Type.Data.List as List
-import Data.Generic.Rep (class Generic, Argument, Constructor)
+import Data.Generic.Rep.Type.Utils (class GetArgument, class GetConstructorName)
 
-class GetConstructorName rep (name :: Symbol) | rep -> name
-instance getConstructorNameImpl :: GetConstructorName (Constructor label arg) label
-class GetArgument rep arg | rep -> arg
-instance getArgumentImpl :: GetArgument (Constructor label (Argument arg)) arg
+import Data.Tuple.Nested
+import Data.Generic.Rep (class Generic, Argument, Constructor)
 
 data Edge (label :: Symbol)
 data Path (path :: List {- Edge -}) i o = Path
-data Query (paths :: Type {- Record -}) (i :: List) (o :: List) = Query
+data Query (ts :: List {- Type -}) (paths :: Type {- Record -}) = Query
 
 class IsEdge e
 instance isEdgeEdge :: IsEdge (Edge label)
@@ -77,31 +79,69 @@ testPathVerify = pathVerify
   (LProxy :: LProxy (Edge "friend" : Edge "friend" :Edge "name" : List.Nil))
   (Proxy :: Proxy Person) (Proxy :: Proxy String)
 
-class IsPath p <= QueryLiftPath p q | p -> q
+class IsQuery q
+instance isQueryQuery :: IsRecord paths => IsQuery (Query ts paths)
+
+class (IsPath p, IsQuery q) <= QueryLiftPath p q | p -> q
 instance queryLiftPathImpl ::
   ( IsEdgeList es
   , PathVerify es i o
-  , LiftEdgeList es o paths'
-  , List.Singleton i i'
-  , List.Singleton o o'
+  , LiftEdgeList es o paths
   , Generic i iRep
   , GetConstructorName iRep name
   , IsSymbol name
-  , Row.Cons name paths' () paths
+  , Row.Cons name paths () query
+  , List.Singleton i i'
   )
-  => QueryLiftPath (Path es i o) (Query (Record paths) i' o')
+  => QueryLiftPath (Path es i o) (Query i' (Record query))
 
 liftPath :: forall p q. QueryLiftPath p q => Proxy p -> Proxy q
 liftPath _ = Proxy :: Proxy q
 
 testLiftPath :: Proxy
   (Query
-     { "Person" :: { friend :: { friend :: { name :: String } } }
-     }
-     (Person : List.Nil)
-     (String : List.Nil)
+    (Person : List.Nil)
+     { "Person" :: { friend :: { friend :: { name :: String } } } }
   )
 testLiftPath = liftPath (Proxy :: Proxy (Path (Edge "friend" : Edge "friend" : Edge "name" : List.Nil) Person String))
+
+class IsRecord paths <=
+  QueryVerify (ts :: List {- Type -}) (paths :: Type {- Record -})
+
+instance queryVerifyRoot ::
+  ( RL.RowToList pathsRow pathsRL
+  , QueryVerifyRoot ts pathsRL
+  )
+  => QueryVerify ts (Record pathsRow)
+
+class QueryVerifyRoot (ts :: List) (pathsRL :: RowList)
+instance queryVerifyRootNil :: QueryVerifyRoot ts RL.Nil
+instance queryVerifyRootCons ::
+  ( List.GetByName ts label t
+  , QueryVerifyPaths t paths
+  , QueryVerifyRoot ts restPaths
+  )
+  => QueryVerifyRoot ts (RL.Cons label paths restPaths)
+
+class IsRecord paths <=
+  QueryVerifyPaths t paths
+instance queryVerifyPathsRL ::
+  ( RL.RowToList pathsRow pathsRL
+  , Generic t tRep
+  , GetArgument tRep (Record tRow)
+  , QueryVerifyPathsRL tRow pathsRL
+  )
+  => QueryVerifyPaths t (Record pathsRow)
+
+class QueryVerifyPathsRL (tRow :: # Type) (pathsRL :: RowList)
+
+instance queryVerifyPathsRLNil :: QueryVerifyPathsRL t RL.Nil
+instance queryVerifyPathsRLCons ::
+  ( Row.Cons label t' restTRow tRow
+  , QueryVerifyPaths t' paths
+  , QueryVerifyPathsRL tRow restPaths
+  )
+  => QueryVerifyPathsRL tRow (RL.Cons label paths restPaths)
 
 -- TODO QueryBuilder
 
