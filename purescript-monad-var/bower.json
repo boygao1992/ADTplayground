@@ -1,5 +1,5 @@
 {
-  "name": "purescript_effectful_lenses_experiment",
+  "name": "purescript-monad-var",
   "ignore": [
     "**/.*",
     "node_modules",
@@ -10,13 +10,9 @@
     "purescript-prelude": "^4.1.1",
     "purescript-console": "^4.2.0",
     "purescript-effect": "^2.0.1",
-    "purescript-profunctor-lenses": "^6.2.0",
     "purescript-refs": "^4.1.0",
-    "purescript-free": "^5.2.0",
-    "purescript-transformers": "^4.2.0",
-    "purescript-monad-var": "../purescript-monad-var",
-    "purescript-leibniz": "^5.0.0",
-    "purescript-node-fs": "^5.0.1"
+    "purescript-st": "^4.0.0",
+    "purescript-avar": "^3.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"

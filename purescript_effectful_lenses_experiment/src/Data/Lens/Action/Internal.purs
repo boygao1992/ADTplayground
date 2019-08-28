@@ -2,13 +2,13 @@ module Data.Lens.Action.Internal where
 
 import Prelude
 
-import Data.Identity
-import Data.Profunctor
-import Data.Profunctor.Strong
-import Data.Profunctor.Choice
-import Data.Profunctor.Cochoice
-import Data.Newtype
-import Data.Lens
+import Data.Identity (Identity(..))
+import Data.Lens (class Wander, Forget(..), IndexedOptic', Optic')
+import Data.Newtype (class Newtype, unwrap, wrap)
+import Data.Profunctor (class Profunctor)
+import Data.Profunctor.Choice (class Choice)
+import Data.Profunctor.Cochoice (class Cochoice)
+import Data.Profunctor.Strong (class Strong)
 
 type Action m s a = forall r p. Effective m r p => Optic' p s a
 type IndexedAction i m s a = forall r p. Effective m r p => IndexedOptic' p i s a
