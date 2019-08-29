@@ -64,7 +64,7 @@ instance getByNameCons ::
   )
   => GetByName (t : ts) name o
 
-class GetByNameIf (b :: B.Boolean) t (ts :: List) (name :: Symbol) o
+class GetByNameIf (b :: B.Boolean) t (ts :: List) (name :: Symbol) o | b t ts name -> o
 instance getByNameIfTrue :: GetByNameIf B.True t ts name t
 instance getByNameIfFalse :: GetByName ts name o => GetByNameIf B.False t ts name o
 

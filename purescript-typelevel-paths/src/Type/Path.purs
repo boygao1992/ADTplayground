@@ -1,19 +1,60 @@
 module Type.Path where
 
 import Prelude
-import Type.Prelude (class IsSymbol, Proxy(..))
+import Type.Prelude
 
-import Type.Data.Boolean as B
+import Data.Generic.Rep.Type.Utils (class GetArgument, class GetConstructorName)
+import Prim.Row as Row
 import Prim.RowList (kind RowList)
 import Prim.RowList as RL
-import Prim.Row as Row
-import Type.Data.Record
+import Type.Data.Boolean as B
 import Type.Data.List (type (:), kind List, LProxy(..))
 import Type.Data.List as List
-import Data.Generic.Rep.Type.Utils (class GetArgument, class GetConstructorName)
+import Type.Data.Record
 
-import Data.Tuple.Nested
 import Data.Generic.Rep (class Generic, Argument, Constructor)
+import Data.Tuple.Nested
+
+type SampleQuerySpec =
+  Query (Person : Post : Comment : List.Nil)
+  { "Person" :: Let (Var "wenbo") (Filtered { name :: Eq String }
+      { friend :: Let (Var "friend") (Filtered { age :: Gt (Var "wenbo") }
+          { age :: Let (Var "friend's age") Int
+          , post ::
+              { id :: Int
+              , content :: String
+              , comment :: Filtered { date :: Gt (Var "friend's age")}
+                  { content :: String
+                  }
+              }
+          })
+      })
+  }
+data Executable result
+type GeneratedQueryTemplate
+  = String
+  -> Executable
+      { "Person" ::
+          { friend ::
+              { age :: Int
+              , post ::
+                  { id :: Int
+                  , content :: String
+                  , comment :: { content :: String }
+                  }
+              }
+          }
+      }
+
+data Filtered exp paths
+
+data Let var exp
+data Var (label :: Symbol)
+
+data Eq typ
+data Gt typ
+data Lt typ
+data In typ
 
 data Edge (label :: Symbol)
 data Path (path :: List {- Edge -}) i o = Path
@@ -123,8 +164,7 @@ instance queryVerifyRootCons ::
   )
   => QueryVerifyRoot ts (RL.Cons label paths restPaths)
 
-class IsRecord paths <=
-  QueryVerifyPaths t paths
+class QueryVerifyPaths t paths
 instance queryVerifyPathsRL ::
   ( RL.RowToList pathsRow pathsRL
   , Generic t tRep
@@ -132,6 +172,8 @@ instance queryVerifyPathsRL ::
   , QueryVerifyPathsRL tRow pathsRL
   )
   => QueryVerifyPaths t (Record pathsRow)
+else -- TODO classify types of traversal e.g. class IsPaths
+instance queryVerifyPathsBase :: QueryVerifyPaths t t
 
 class QueryVerifyPathsRL (tRow :: # Type) (pathsRL :: RowList)
 
@@ -143,13 +185,52 @@ instance queryVerifyPathsRLCons ::
   )
   => QueryVerifyPathsRL tRow (RL.Cons label paths restPaths)
 
+queryVerify :: forall ts paths. QueryVerify ts paths => LProxy ts -> Proxy paths -> Unit
+queryVerify _ _ = unit
+
+testQueryVerify :: Unit
+testQueryVerify = queryVerify
+  (LProxy :: LProxy (Person : Post : Comment : List.Nil))
+  (Proxy :: Proxy
+            { "Person" ::
+                { friend :: { post :: { comment ::
+                                        { id :: Int
+                                        , content :: String
+                                        }}}
+                , post ::
+                    { id :: Int
+                    , content :: String
+                    }
+                }
+            , "Post" :: { comment :: { from :: { author :: { name :: String }}}}
+            })
+
 -- TODO QueryBuilder
 
 -- TODO GroupPath (paths :: List {- Path -})
 -- (grouped :: List {- SProxy /\ List {- Path -} -})
 
 newtype Person = Person
-  { name :: String
+  { id :: Int
+  , name :: String
+  , age :: Int
   , friend :: Person
+  , post :: Post
   }
 derive instance genericPerson :: Generic Person _
+
+newtype Post = Post
+  { id :: Int
+  , content :: String
+  , author :: Person
+  , comment :: Comment
+  }
+derive instance genericPost :: Generic Post _
+
+newtype Comment = Comment
+  { id :: Int
+  , content :: String
+  , date :: Int
+  , from :: Post
+  }
+derive instance genericComment :: Generic Comment _
