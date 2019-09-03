@@ -17,9 +17,9 @@ import Data.Tuple.Nested
 
 type SampleQuerySpec =
   Query (Person : Post : Comment : List.Nil)
-  { "Person" :: Let (Var "wenbo") (Filtered { name :: Eq String }
-      { friend :: Let (Var "friend") (Filtered { age :: Gt (Var "wenbo") }
-          { age :: Let (Var "friend's age") Int
+  { "Person" :: Let "wenbo" (Filtered { name :: Eq String }
+      { friend :: Let "friend" (Filtered { age :: Gt (Var "wenbo") }
+          { age :: Let "friend's age" Int
           , post ::
               { id :: Int
               , content :: String
@@ -48,7 +48,7 @@ type GeneratedQueryTemplate
 
 data Filtered exp paths
 
-data Let var exp
+data Let (var :: Symbol) exp
 data Var (label :: Symbol)
 
 data Eq typ
