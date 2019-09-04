@@ -46,19 +46,92 @@ type GeneratedQueryTemplate
           }
       }
 
-data Filtered exp paths
+-----------
+-- Constant
 
-data Let (var :: Symbol) exp
+class IsConstant constant
+instance isConstantString :: IsConstant (CString str)
+instance isConstantInt :: IsConstant (CInt int) -- TODO class IsInt
+instance isConstantBool :: IsConstant (CBool bool)
+
+data CString (str :: Symbol)
+data CInt (int :: Symbol)
+data CBool (bool :: B.Boolean)
+
+class IsConstantList (cs :: List {- IsConstant -})
+instance isConstantListNil :: IsConstantList List.Nil
+instance isConstantListCons ::
+  ( IsConstant c
+  , IsConstantList rest
+  )
+  => IsConstantList (List.Cons c rest)
+
+------
+-- Lit
+
+class IsLit lit
+instance isLitVar :: IsLit (Var label)
+else
+instance isLitConstant :: IsConstant constant => IsLit constant
+
 data Var (label :: Symbol)
+-- data Constant constant -- NOTE IsConstant
 
-data Eq typ
-data Gt typ
-data Lt typ
-data In typ
+-------
+-- Pred
+
+class IsPred pred
+instance isPredEq :: IsLit lit => IsPred (Eq lit)
+instance isPredGt :: IsLit lit => IsPred (Gt lit)
+instance isPredLt :: IsLit lit => IsPred (Lt lit)
+instance isPredIn :: IsConstantList cs => IsPred (In cs)
+instance isPredNOT :: IsPred pred => IsPred (NOT pred)
+instance isPredAND :: (IsPred pred1, IsPred pred2) => IsPred (AND pred1 pred2)
+instance isPredOR :: (IsPred pred1, IsPred pred2) => IsPred (OR pred1 pred2)
+
+data Eq lit
+data Gt lit
+data Lt lit
+data In (consts :: List)
+data NOT pred
+data AND pred1 pred2
+data OR pred1 pred2
+
+--------
+-- Field
+
+class IsField field
+instance isFieldNode :: IsField Node
+instance isFieldBranch :: IsPaths pathsRow => IsField (Record pathsRow)
+instance isFieldFiltered :: IsPaths paths => IsField (Filtered conditions (Record paths))
+instance isFieldLet :: IsField field => IsField (Let var field)
+
+data Node
+-- data Branch paths -- NOTE Record
+data Filtered conditions paths
+data Let (var :: Symbol) field
+
+--------
+-- Paths
+
+class IsPaths (pathsRow :: # Type)
+instance isPathsRL ::
+  ( RL.RowToList pathsRow pathsRL
+  , IsPathsRL pathsRL
+  )
+  => IsPaths pathsRow
+
+class IsPathsRL (pathsRL :: RowList)
+instance isPathsRLNil :: IsPathsRL RL.Nil
+instance isPathsRLCons ::
+  ( IsField field
+  , IsPathsRL rest
+  )
+  => IsPathsRL (RL.Cons label field rest)
 
 data Edge (label :: Symbol)
 data Path (path :: List {- Edge -}) i o = Path
-data Query (ts :: List {- Type -}) (paths :: Type {- Record -}) = Query
+data Query (ts :: List {- Type -}) (paths :: Type {- Paths -}) = Query
 
 class IsEdge e
 instance isEdgeEdge :: IsEdge (Edge label)
@@ -147,10 +220,11 @@ testLiftPath :: Proxy
 testLiftPath = liftPath (Proxy :: Proxy (Path (Edge "friend" : Edge "friend" : Edge "name" : List.Nil) Person String))
 
 class IsRecord paths <=
-  QueryVerify (ts :: List {- Type -}) (paths :: Type {- Record -})
+  QueryVerify (ts :: List {- Type -}) (paths :: Type {- Record Field -})
 
 instance queryVerifyRoot ::
-  ( RL.RowToList pathsRow pathsRL
+  ( IsPaths pathsRow
+  , RL.RowToList pathsRow pathsRL
   , QueryVerifyRoot ts pathsRL
   )
   => QueryVerify ts (Record pathsRow)
@@ -164,16 +238,25 @@ instance queryVerifyRootCons ::
   )
   => QueryVerifyRoot ts (RL.Cons label paths restPaths)
 
-class QueryVerifyPaths t paths
-instance queryVerifyPathsRL ::
-  ( RL.RowToList pathsRow pathsRL
+class IsField field <= QueryVerifyPaths t field
+instance queryVerifyPathsBase :: QueryVerifyPaths t Node
+instance queryVerifyPathsBranch ::
+  ( IsPaths pathsRow
+  , RL.RowToList pathsRow pathsRL
   , Generic t tRep
   , GetArgument tRep (Record tRow)
   , QueryVerifyPathsRL tRow pathsRL
   )
   => QueryVerifyPaths t (Record pathsRow)
-else -- TODO classify types of traversal e.g. class IsPaths
-instance queryVerifyPathsBase :: QueryVerifyPaths t t
+instance queryVerifyPathsFiltered ::
+  ( IsPaths pathsRow
+  -- TODO verify conditions
+  , QueryVerifyPaths t (Record pathsRow)
+  )
+  => QueryVerifyPaths t (Filtered conditions (Record pathsRow))
+instance queryVerifyPathsLet ::
+  QueryVerifyPaths t field
+  => QueryVerifyPaths t (Let var field)
 
 class QueryVerifyPathsRL (tRow :: # Type) (pathsRL :: RowList)
 
@@ -192,17 +275,16 @@ testQueryVerify :: Unit
 testQueryVerify = queryVerify
   (LProxy :: LProxy (Person : Post : Comment : List.Nil))
   (Proxy :: Proxy
-            { "Person" ::
-                { friend :: { post :: { comment ::
-                                        { id :: Int
-                                        , content :: String
-                                        }}}
+            { "Person" :: { friend :: { post :: { comment ::
+                                                { id :: Node
+                                                , content :: Node
+                                                }}}
                 , post ::
-                    { id :: Int
-                    , content :: String
+                    { id :: Node
+                    , content :: Node
                     }
                 }
-            , "Post" :: { comment :: { from :: { author :: { name :: String }}}}
+            , "Post" :: { comment :: { from :: { author :: { name :: Node }}}}
             })
 
 -- TODO QueryBuilder

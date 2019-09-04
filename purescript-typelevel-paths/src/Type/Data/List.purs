@@ -88,6 +88,12 @@ instance setImpl ::
   ( Remove typ i o'
   ) => Set typ i (Cons typ o')
 
+-- | Homogeneous
+class Homogeneous (xs :: List) x | xs -> x
+
+instance homogeneousNil :: Homogeneous Nil x
+instance homogeneousCons :: Homogeneous rest x => Homogeneous (Cons x rest) x
+
 -- Test
 set :: forall typ i o. Set typ i o => Proxy typ -> LProxy i -> LProxy o
 set _ _ = LProxy :: LProxy o

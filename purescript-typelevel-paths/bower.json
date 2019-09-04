@@ -13,7 +13,8 @@
     "purescript-leibniz": "^5.0.0",
     "purescript-typelevel-prelude": "^5.0.0",
     "purescript-generics-rep": "^6.1.1",
-    "purescript-ordered-collections": "^1.6.1"
+    "purescript-ordered-collections": "^1.6.1",
+    "purescript-foreign-object": "^2.0.3"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"
