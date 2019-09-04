@@ -15,6 +15,14 @@ import Type.Data.Record
 import Data.Generic.Rep (class Generic, Argument, Constructor)
 import Data.Tuple.Nested
 
+{- NOTE Trampoline
+
+User Language
+
+kind-strict language
+
+-}
+
 type SampleQuerySpec =
   Query (Person : Post : Comment : List.Nil)
   { "Person" :: Let "wenbo" (Filtered { name :: Eq String }
@@ -34,13 +42,14 @@ data Executable result
 type GeneratedQueryTemplate
   = String
   -> Executable
-      { "Person" ::
-          { friend ::
+      { "Person" :: Array
+          { friend :: Array
               { age :: Int
-              , post ::
+              , post :: Array
                   { id :: Int
                   , content :: String
-                  , comment :: { content :: String }
+                  , comment :: Array
+                      { content :: String }
                   }
               }
           }
@@ -275,10 +284,11 @@ testQueryVerify :: Unit
 testQueryVerify = queryVerify
   (LProxy :: LProxy (Person : Post : Comment : List.Nil))
   (Proxy :: Proxy
-            { "Person" :: { friend :: { post :: { comment ::
-                                                { id :: Node
-                                                , content :: Node
-                                                }}}
+            { "Person" ::
+                { friend :: { post :: { comment ::
+                                        { id :: Node
+                                        , content :: Node
+                                        }}}
                 , post ::
                     { id :: Node
                     , content :: Node
