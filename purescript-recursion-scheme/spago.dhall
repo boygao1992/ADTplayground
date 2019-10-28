@@ -5,7 +5,16 @@ You can edit this file as you like.
 { name =
     "my-project"
 , dependencies =
-    [ "console", "effect", "matryoshka", "newtype", "psci-support" ]
+    [ "console"
+    , "effect"
+    , "foreign-object"
+    , "functors"
+    , "matryoshka"
+    , "newtype"
+    , "ordered-collections"
+    , "psci-support"
+    , "transformers"
+    ]
 , packages =
     ./packages.dhall
 , sources =
