@@ -8,6 +8,8 @@ import Control.Monad.Reader (Reader, asks)
 import Data.Either (Either(..))
 import Data.Eq (class Eq1)
 import Data.Foldable (class Foldable, foldMap, foldlDefault, foldrDefault)
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (genericShow)
 import Data.Map (Map)
 import Data.Map as Data.Map
 import Data.Maybe (Maybe(..))
@@ -17,16 +19,18 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Effect (Effect)
 import Effect.Console (log)
 import Foreign.Object (Object)
+import Data.Functor.Mu (Mu)
+import Matryoshka (class Corecursive, class Recursive, embed, project)
 
 ------------
 -- Recursive
 ------------
 
-class Functor f <= Recursive t f | t → f where
-  project :: t → f t
+-- class Functor f <= Recursive t f | t → f where
+--   project :: t → f t
 
-instance recursiveMu :: Functor f => Recursive (Mu f) f where
-  project = un In
+-- instance recursiveMu :: Functor f => Recursive (Mu f) f where
+--   project = un In
 
 instance recursiveList :: Recursive (List x) (ListF x) where
   project :: List x -> ListF x (List x)
@@ -42,11 +46,11 @@ instance recursiveExprTree :: Recursive (ExprTree x) (ExprTreeF x) where
 -- Corecursive
 --------------
 
-class Functor f <= Corecursive t f | t → f where
-  embed :: f t → t
+-- class Functor f <= Corecursive t f | t → f where
+--   embed :: f t → t
 
-instance corecursiveMu :: Functor f => Corecursive (Mu f) f where
-  embed = In
+-- instance corecursiveMu :: Functor f => Corecursive (Mu f) f where
+--   embed = In
 
 instance corecursiveList :: Corecursive (List x) (ListF x) where
   embed :: ListF x (List x) -> List x
@@ -62,9 +66,9 @@ instance corecursiveExprTree :: Corecursive (ExprTree x) (ExprTreeF x) where
 -- Mu
 -----
 
-newtype Mu f = In (f (Mu f))
-derive instance newtypeMu :: Newtype (Mu f) _
-derive instance eqMu :: Eq1 f => Eq (Mu f)
+-- newtype Mu f = In (f (Mu f))
+-- derive instance newtypeMu :: Newtype (Mu f) _
+-- derive instance eqMu :: Eq1 f => Eq (Mu f)
 
 -------------------
 -- Recursion Scheme
@@ -121,6 +125,15 @@ anaM
   → m t
 anaM coalgM = map embed <<< traverse (anaM coalgM) <=< coalgM
 
+zipo ::
+  forall f g t u c.
+  Recursive t f =>
+  Recursive u g =>
+  (f (u -> c) -> g u -> c) ->
+  t -> u -> c
+zipo alg = cata (\x -> alg x <<< project)
+
+
 -------
 -- List
 -------
@@ -138,10 +151,9 @@ derive instance functorListF :: Functor (ListF x)
 
 type Key = String
 data Expr = Expr
-data ExprType = ExprType
 
 evalExpr :: Map Key ExprType -> Expr -> Either String ExprType
-evalExpr _ _ = Right ExprType
+evalExpr _ _ = Left ""
 
 newtype ExprTree x = ExprTree (Mu (ExprTreeF x))
 data ExprTreeF x a
@@ -169,7 +181,6 @@ data Path
   | PathAlt String Path
 
 derive instance eqExpr :: Eq Expr
-derive instance eqExprType :: Eq ExprType
 
 derive instance newtypeExprTree :: Newtype (ExprTree x) _
 derive instance eqExprTree :: Eq x => Eq (ExprTree x)
@@ -237,6 +248,72 @@ evalExprTreeF = map embed <<< case _ of
             Left err -> pure $ EvalFailed err
             Right exprType -> pure $ Evaled exprType
   x -> pure x
+
+--------
+-- UType
+--------
+
+data UType
+  = UArray UType
+  -- | USet UType
+  -- | UMaybe UType
+  -- | URecord (Object UType)
+  -- | UVariant (Object UType)
+  | UBoolean
+  | UCents
+  | UDateTime
+  | UInt
+  | UPair UType UType
+  | UString
+  | UUnit
+  | UAny
+derive instance genericUType :: Generic UType _
+instance showUType :: Show UType where
+  show x = genericShow x
+
+newtype ExprType = ExprType (Mu ExprTypeF)
+derive instance eqExprType :: Eq ExprType
+derive instance genericExprType :: Generic ExprType _
+derive instance newtypeExprType :: Newtype ExprType _
+instance showExprType :: Show ExprType where
+  show x = genericShow x
+
+data ExprTypeF a
+  = ArrayF (Array a)
+  | BooleanF Boolean
+  | IntF Int
+  | PairF { name :: a, value :: a }
+  | StringF String
+derive instance eqExprTypeF :: Eq a => Eq (ExprTypeF a)
+derive instance eq1ExprTypeF :: Eq1 ExprTypeF
+derive instance functorExprTypeF :: Functor ExprTypeF
+instance foldableExprTypeF :: Foldable ExprTypeF where
+  foldl f z x = foldlDefault f z x
+  foldr f z x = foldrDefault f z x
+  foldMap f = case _ of
+    ArrayF xs -> foldMap f xs
+    -- MaybeF ma -> foldMap f ma
+    -- RecordF os -> foldMap f os
+    BooleanF _ -> mempty
+    IntF _ -> mempty
+    PairF x -> f x.name <> f x.value
+    StringF _ -> mempty
+instance traversableExprTypeF :: Traversable ExprTypeF where
+  sequence = traverse identity
+  traverse f = case _ of
+    ArrayF xs -> ArrayF <$> traverse f xs
+    -- MaybeF ma -> MaybeF <$> traverse f ma
+    -- RecordF os -> RecordF <$> traverse f os
+    BooleanF x -> pure (BooleanF x)
+    IntF x -> pure (IntF x)
+    PairF x -> ado
+      name <- f x.name
+      value <- f x.value
+      in PairF { name, value }
+    StringF x -> pure (StringF x)
+derive instance genericExprTypeF :: Generic (ExprTypeF a) _
+instance showExprTypeF :: Show a => Show (ExprTypeF a) where
+  show x = genericShow x
 
 {- catamorphism-fusion law
 h <<< f = g <<< map h

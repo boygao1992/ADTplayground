@@ -9,6 +9,7 @@ You can edit this file as you like.
     , "effect"
     , "foreign-object"
     , "functors"
+    , "generics-rep"
     , "matryoshka"
     , "newtype"
     , "ordered-collections"
