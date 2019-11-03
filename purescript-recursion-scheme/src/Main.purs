@@ -3,24 +3,22 @@ module Main where
 
 import Prelude
 
-import Control.Bind (bindFlipped)
-import Control.Monad.Reader (Reader, asks)
-import Data.Either (Either(..))
 import Data.Eq (class Eq1)
 import Data.Foldable (class Foldable, foldMap, foldlDefault, foldrDefault)
+import Data.Foldable as Data.Foldable
+import Data.FoldableWithIndex (foldlWithIndex)
+import Data.Functor.Mu (Mu)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Map (Map)
-import Data.Map as Data.Map
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, un)
 import Data.Traversable (class Traversable, traverse)
-import Data.Tuple.Nested (type (/\), (/\))
 import Effect (Effect)
 import Effect.Console (log)
 import Foreign.Object (Object)
-import Data.Functor.Mu (Mu)
+import Foreign.Object as Foreign.Object
 import Matryoshka (class Corecursive, class Recursive, embed, project)
+import Matryoshka as Matryoshka
 
 ------------
 -- Recursive
@@ -34,13 +32,24 @@ import Matryoshka (class Corecursive, class Recursive, embed, project)
 
 instance recursiveList :: Recursive (List x) (ListF x) where
   project :: List x -> ListF x (List x)
-  project =    -- ListF x (List x)
+  project x =    -- ListF x (List x)
     map List   -- ListF x (Mu (ListF x))
     <<< project -- Mu (ListF x)
     <<< un List -- List x
+    $ x
+
+instance recursiveUType :: Recursive UType UTypeF where
+  project x = map UType <<< project <<< un UType $ x
+
+instance recursiveExprType :: Recursive ExprType ExprTypeF where
+  project x = map ExprType <<< project <<< un ExprType $ x
+
+{-
 
 instance recursiveExprTree :: Recursive (ExprTree x) (ExprTreeF x) where
-  project = map ExprTree <<< project <<< un ExprTree
+  project x = map ExprTree <<< project <<< un ExprTree $ x
+
+-}
 
 --------------
 -- Corecursive
@@ -54,13 +63,24 @@ instance recursiveExprTree :: Recursive (ExprTree x) (ExprTreeF x) where
 
 instance corecursiveList :: Corecursive (List x) (ListF x) where
   embed :: ListF x (List x) -> List x
-  embed =            -- List x
+  embed x =            -- List x
     List             -- Mu (ListF x)
     <<< embed         -- ListF x (Mu (ListF x))
     <<< map (un List) -- ListF x (List x)
+    $ x
+
+instance corecursiveUType :: Corecursive UType UTypeF where
+  embed x = UType <<< embed <<< map (un UType) $ x
+
+instance corecursiveExprType :: Corecursive ExprType ExprTypeF where
+  embed x = ExprType <<< embed <<< map (un ExprType) $ x
+
+{-
 
 instance corecursiveExprTree :: Corecursive (ExprTree x) (ExprTreeF x) where
-  embed = ExprTree <<< embed <<< map (un ExprTree)
+  embed x = ExprTree <<< embed <<< map (un ExprTree) $ x
+
+-}
 
 -----
 -- Mu
@@ -83,6 +103,7 @@ type CoalgebraM m f a = a -> m (f a)
 cata ∷ forall t f a. Recursive t f => Algebra f a → t → a
 cata alg = alg <<< map (cata alg) <<< project
 
+{-
 cataM'
   :: forall t f m a
   . Recursive t f
@@ -101,6 +122,7 @@ cataM' pre algM = -- m a
     ) -- m (f t)
   <<< pre -- f t
   <<< project -- t
+-}
 
 cataM
   ∷ ∀ t f m a
@@ -127,12 +149,17 @@ anaM coalgM = map embed <<< traverse (anaM coalgM) <=< coalgM
 
 zipo ::
   forall f g t u c.
-  Recursive t f =>
-  Recursive u g =>
-  (f (u -> c) -> g u -> c) ->
-  t -> u -> c
-zipo alg = cata (\x -> alg x <<< project)
-
+  Recursive t f => -- t = Fix f ~ f (f (f ... (f a) ... ))
+  Recursive u g => -- u = Fix g ~ g (g (g ... (g b) ... ))
+  (f (u -> c) -> g u -> c) -> -- f (Fix g -> c) -> g (Fix g) -> c
+  t -> u -> c -- Fix f -> Fix g -> c
+zipo zAlg =
+  (Matryoshka.cata :: (f (u -> c) -> (u -> c)) -> t -> (u -> c)) -- Fix f -> (Fix g -> c)
+    -- f (Fix g -> c) -> (Fix g -> c)
+    \(x :: f (u -> c)) -- f (Fix g -> c)
+    -> -- c
+      zAlg x -- g (Fix g)
+      <<< project -- Fix g
 
 -------
 -- List
@@ -144,6 +171,22 @@ data ListF x a
   | Cons x a
 derive instance newtypeList :: Newtype (List x) _
 derive instance functorListF :: Functor (ListF x)
+
+nil_ :: forall x. List x
+nil_ = embed Nil
+
+cons_ :: forall x. x -> List x -> List x
+cons_ x = embed <<< Cons x
+
+sum :: List Int -> Int
+sum = Matryoshka.cata sumF
+  where
+  sumF :: ListF Int Int -> Int
+  sumF = case _ of
+    Nil -> 0
+    Cons x acc -> x + acc
+
+{-
 
 -----------
 -- ExprTree
@@ -218,20 +261,6 @@ type VarMap = Map Key ExprType
 type EvalExprTreeM = Reader { varStore :: VarStore, buildPath :: Path -> Path }
 type EvalExprTree = ExprTree ExprNode -> EvalExprTreeM (ExprTree ExprNode)
 
-evalExprTree ::
-  ExprTree ExprNode ->
-  EvalExprTreeM (ExprTree ExprNode)
-evalExprTree =
-  cataM'
-    (\x -> case x of
-        Pure _ -> pure x
-        Par _ -> pure x
-        Seq _ -> pure x
-        Keyed _ -> pure x
-        Alt _ _ -> pure x
-    )
-    evalExprTreeF
-
 evalExprTreeF ::
   ExprTreeF ExprNode (ExprTree ExprNode) ->
   EvalExprTreeM (ExprTree ExprNode)
@@ -249,27 +278,105 @@ evalExprTreeF = map embed <<< case _ of
             Right exprType -> pure $ Evaled exprType
   x -> pure x
 
+-}
+
 --------
 -- UType
 --------
 
-data UType
-  = UArray UType
-  -- | USet UType
-  -- | UMaybe UType
-  -- | URecord (Object UType)
-  -- | UVariant (Object UType)
-  | UBoolean
-  | UCents
-  | UDateTime
-  | UInt
-  | UPair UType UType
-  | UString
-  | UUnit
-  | UAny
+utypeCheck :: UType -> ExprType -> Boolean
+utypeCheck = zipo utypeCheckF
+
+utypeCheckF :: UTypeF (ExprType -> Boolean) -> ExprTypeF ExprType -> Boolean
+utypeCheckF = case _, _ of
+  UArray p, ArrayF xs -> Data.Foldable.all p xs
+  UBoolean, BooleanF _ -> true
+  UInt, IntF _ -> true
+  URecord ps, RecordF xs ->
+    foldlWithIndex
+      ( \key acc x -> case Foreign.Object.lookup key ps of
+          Nothing -> false
+          Just p -> acc && p x
+      )
+      true
+      xs
+  UString, StringF _ -> true
+  UAny, _ -> true
+  _, _ -> false
+  where
+  uTypeTotalityProof :: forall a. UTypeF a -> UTypeF a
+  uTypeTotalityProof x = case x of
+    UArray _ -> x
+    UBoolean -> x
+    UInt -> x
+    URecord _ -> x
+    UString -> x
+    UAny -> x
+  exprTypeTotalityProof :: forall a. ExprTypeF a -> ExprTypeF a
+  exprTypeTotalityProof x = case x of
+    ArrayF _ -> x
+    BooleanF _ -> x
+    IntF _ -> x
+    RecordF _ -> x
+    StringF _ -> x
+
+newtype UType = UType (Mu UTypeF)
+derive instance newtypeUType :: Newtype UType _
 derive instance genericUType :: Generic UType _
 instance showUType :: Show UType where
   show x = genericShow x
+derive instance eqUType :: Eq UType
+
+uArray :: UType -> UType
+uArray = embed <<< UArray
+
+uBoolean :: UType
+uBoolean = embed UBoolean
+
+uInt :: UType
+uInt = embed UInt
+
+uRecord :: Object UType -> UType
+uRecord = embed <<< URecord
+
+uString :: UType
+uString = embed UString
+
+uAny :: UType
+uAny = embed UAny
+
+data UTypeF a
+  = UArray a
+  | UBoolean
+  | UInt
+  | URecord (Object a)
+  | UString
+  | UAny
+derive instance genericUTypeF :: Generic (UTypeF a) _
+instance showUTypeF :: Show a => Show (UTypeF a) where
+  show x = genericShow x
+derive instance eqUTypeF :: Eq a => Eq (UTypeF a)
+derive instance eq1UTypeF :: Eq1 UTypeF
+derive instance functorUTypeF :: Functor UTypeF
+instance foldableUTypeF :: Foldable UTypeF where
+  foldl f z x = foldlDefault f z x
+  foldr f z x = foldrDefault f z x
+  foldMap f = case _ of
+    UArray xs -> f xs
+    UBoolean -> mempty
+    UInt -> mempty
+    URecord os -> foldMap f os
+    UString -> mempty
+    UAny -> mempty
+instance traversableUTypeF :: Traversable UTypeF where
+  sequence = traverse identity
+  traverse f = case _ of
+    UArray xs -> UArray <$> f xs
+    UBoolean -> pure UBoolean
+    UInt -> pure UInt
+    URecord os -> URecord <$> traverse f os
+    UString -> pure UString
+    UAny -> pure UAny
 
 newtype ExprType = ExprType (Mu ExprTypeF)
 derive instance eqExprType :: Eq ExprType
@@ -278,11 +385,26 @@ derive instance newtypeExprType :: Newtype ExprType _
 instance showExprType :: Show ExprType where
   show x = genericShow x
 
+array_ :: Array ExprType -> ExprType
+array_ = embed <<< ArrayF
+
+boolean_ :: Boolean -> ExprType
+boolean_ = embed <<< BooleanF
+
+int_ :: Int -> ExprType
+int_ = embed <<< IntF
+
+record_ :: Object ExprType -> ExprType
+record_ = embed <<< RecordF
+
+string_ :: String -> ExprType
+string_ = embed <<< StringF
+
 data ExprTypeF a
   = ArrayF (Array a)
   | BooleanF Boolean
   | IntF Int
-  | PairF { name :: a, value :: a }
+  | RecordF (Object a)
   | StringF String
 derive instance eqExprTypeF :: Eq a => Eq (ExprTypeF a)
 derive instance eq1ExprTypeF :: Eq1 ExprTypeF
@@ -292,24 +414,17 @@ instance foldableExprTypeF :: Foldable ExprTypeF where
   foldr f z x = foldrDefault f z x
   foldMap f = case _ of
     ArrayF xs -> foldMap f xs
-    -- MaybeF ma -> foldMap f ma
-    -- RecordF os -> foldMap f os
     BooleanF _ -> mempty
     IntF _ -> mempty
-    PairF x -> f x.name <> f x.value
+    RecordF os -> foldMap f os
     StringF _ -> mempty
 instance traversableExprTypeF :: Traversable ExprTypeF where
   sequence = traverse identity
   traverse f = case _ of
     ArrayF xs -> ArrayF <$> traverse f xs
-    -- MaybeF ma -> MaybeF <$> traverse f ma
-    -- RecordF os -> RecordF <$> traverse f os
     BooleanF x -> pure (BooleanF x)
     IntF x -> pure (IntF x)
-    PairF x -> ado
-      name <- f x.name
-      value <- f x.value
-      in PairF { name, value }
+    RecordF os -> RecordF <$> traverse f os
     StringF x -> pure (StringF x)
 derive instance genericExprTypeF :: Generic (ExprTypeF a) _
 instance showExprTypeF :: Show a => Show (ExprTypeF a) where

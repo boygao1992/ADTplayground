@@ -8,6 +8,7 @@ You can edit this file as you like.
     [ "console"
     , "effect"
     , "foreign-object"
+    , "free"
     , "functors"
     , "generics-rep"
     , "matryoshka"
