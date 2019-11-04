@@ -301,6 +301,9 @@ utypeCheckF = case _, _ of
       true
       xs
   UString, StringF _ -> true
+  UVariant ps, VariantF key x -> case Foreign.Object.lookup key ps of
+    Nothing -> false
+    Just p -> p x
   UAny, _ -> true
   _, _ -> false
   where
@@ -311,6 +314,7 @@ utypeCheckF = case _, _ of
     UInt -> x
     URecord _ -> x
     UString -> x
+    UVariant _ -> x
     UAny -> x
   exprTypeTotalityProof :: forall a. ExprTypeF a -> ExprTypeF a
   exprTypeTotalityProof x = case x of
@@ -319,6 +323,7 @@ utypeCheckF = case _, _ of
     IntF _ -> x
     RecordF _ -> x
     StringF _ -> x
+    VariantF _ _ -> x
 
 newtype UType = UType (Mu UTypeF)
 derive instance newtypeUType :: Newtype UType _
@@ -351,6 +356,7 @@ data UTypeF a
   | UInt
   | URecord (Object a)
   | UString
+  | UVariant (Object a)
   | UAny
 derive instance genericUTypeF :: Generic (UTypeF a) _
 instance showUTypeF :: Show a => Show (UTypeF a) where
@@ -367,6 +373,7 @@ instance foldableUTypeF :: Foldable UTypeF where
     UInt -> mempty
     URecord os -> foldMap f os
     UString -> mempty
+    UVariant xs -> foldMap f xs
     UAny -> mempty
 instance traversableUTypeF :: Traversable UTypeF where
   sequence = traverse identity
@@ -376,7 +383,12 @@ instance traversableUTypeF :: Traversable UTypeF where
     UInt -> pure UInt
     URecord os -> URecord <$> traverse f os
     UString -> pure UString
+    UVariant xs -> UVariant <$> traverse f xs
     UAny -> pure UAny
+
+-----------
+-- ExprType
+-----------
 
 newtype ExprType = ExprType (Mu ExprTypeF)
 derive instance eqExprType :: Eq ExprType
@@ -400,12 +412,16 @@ record_ = embed <<< RecordF
 string_ :: String -> ExprType
 string_ = embed <<< StringF
 
+inj_ :: String -> ExprType -> ExprType
+inj_ key = embed <<< VariantF key
+
 data ExprTypeF a
   = ArrayF (Array a)
   | BooleanF Boolean
   | IntF Int
   | RecordF (Object a)
   | StringF String
+  | VariantF String a
 derive instance eqExprTypeF :: Eq a => Eq (ExprTypeF a)
 derive instance eq1ExprTypeF :: Eq1 ExprTypeF
 derive instance functorExprTypeF :: Functor ExprTypeF
@@ -418,6 +434,7 @@ instance foldableExprTypeF :: Foldable ExprTypeF where
     IntF _ -> mempty
     RecordF os -> foldMap f os
     StringF _ -> mempty
+    VariantF key x -> f x
 instance traversableExprTypeF :: Traversable ExprTypeF where
   sequence = traverse identity
   traverse f = case _ of
@@ -426,6 +443,7 @@ instance traversableExprTypeF :: Traversable ExprTypeF where
     IntF x -> pure (IntF x)
     RecordF os -> RecordF <$> traverse f os
     StringF x -> pure (StringF x)
+    VariantF key x -> VariantF key <$> f x
 derive instance genericExprTypeF :: Generic (ExprTypeF a) _
 instance showExprTypeF :: Show a => Show (ExprTypeF a) where
   show x = genericShow x
