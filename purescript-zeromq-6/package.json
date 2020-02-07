@@ -1,0 +1,13 @@
+{
+  "name": "purescript-zeromq-6",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "purescript": "0.13.6",
+    "zeromq": "6.0.0-beta.6"
+  },
+  "devDependencies": {
+    "purty": "4.5.2"
+  }
+}
