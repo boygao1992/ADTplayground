@@ -47,9 +47,9 @@ runSubscriber = do
                   <<< map (Node.Buffer.Immutable.toString UTF8)
                   $ xs
             closed <- liftEffect $ ZeroMQ.Internal.closed socket
-            -- if closed then
-            --   pure $ Done unit
-            -- else
-            Loop <<< Just <$> ZeroMQ.Internal.receive socket
+            if closed then
+              pure $ Done unit
+            else
+              Loop <<< Just <$> ZeroMQ.Internal.receive socket
         )
         Nothing
