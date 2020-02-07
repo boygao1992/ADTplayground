@@ -5,9 +5,6 @@ module ZeroMQ.Types
   , Subscriber
   , Push
   , Pull
-  , kind Location
-  , Bound
-  , Connected
   ) where
 
 {- [Class Socket](http://zeromq.github.io/zeromq.js/classes/socket.html)
@@ -23,7 +20,7 @@ module ZeroMQ.Types
   - unbind(address: string): Promise<void>
 
 -}
-foreign import data Socket :: SocketType -> SocketType -> Location -> Type
+foreign import data Socket :: Type
 
 foreign import kind SocketType
 
@@ -34,9 +31,3 @@ foreign import data Subscriber :: SocketType
 foreign import data Push :: SocketType
 
 foreign import data Pull :: SocketType
-
-foreign import kind Location
-
-foreign import data Bound :: Location
-
-foreign import data Connected :: Location

@@ -33,21 +33,3 @@ class Writable (a :: SocketType)
 instance writablePublisher :: Writable Publisher
 
 instance writablePush :: Writable Push
-
-class Bindable (from :: SocketType)
-
-instance bindablePublisher :: Bindable Publisher
-
-instance bindablePull :: Bindable Pull
-
-instance bindablePush :: Bindable Push
-
-class Connectable (from :: SocketType)
-
-instance connectablePublisher :: Connectable Publisher
-
-instance connectableSubscriber :: Connectable Subscriber
-
-instance connectablePull :: Connectable Pull
-
-instance connectablePush :: Connectable Push
