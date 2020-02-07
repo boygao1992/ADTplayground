@@ -7,7 +7,7 @@ module ZeroMQ.Types
   , Pull
   ) where
 
-{- [Class Socket](http://zeromq.github.io/zeromq.js/classes/socket.html)
+{- [Socket](http://zeromq.github.io/zeromq.js/classes/socket.html)
 
 * Property
   - closed: boolean
@@ -20,12 +20,18 @@ module ZeroMQ.Types
   - unbind(address: string): Promise<void>
 
 -}
-foreign import data Socket :: Type
+foreign import data Socket :: SocketType -> Type
 
 foreign import kind SocketType
 
 foreign import data Publisher :: SocketType
 
+{- [(Socket, Readable<M>) <= Subscriber<M>](http://zeromq.github.io/zeromq.js/classes/subscriber.html)
+  M: object[]
+
+* Method
+  - subscribe(...prefixes: Array<Buffer | string>): void
+-}
 foreign import data Subscriber :: SocketType
 
 foreign import data Push :: SocketType
