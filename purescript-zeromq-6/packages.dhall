@@ -123,7 +123,6 @@ let upstream =
 
 let overrides = {=}
 
-let additions =
-      {=}
+let additions = {=}
 
 in  upstream // overrides // additions
