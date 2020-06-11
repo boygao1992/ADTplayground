@@ -16,7 +16,6 @@ module FRP
   , runNow
   -- Interop
   , SinkEvent
-  , pushSink
   , sinkEvent
   ) where
 
@@ -132,14 +131,10 @@ subscribe ::
   Effect { unsubscribe :: Effect Unit }
 subscribe (Subscribe e) = e
 
-newtype SinkEvent a
-  = SinkEvent
-  { event :: Event a
-  , push :: a -> Effect Unit
-  }
-
-pushSink :: forall a. a -> SinkEvent a -> Effect Unit
-pushSink a (SinkEvent { push }) = push a
+type SinkEvent a
+  = { event :: Event a
+    , push :: a -> Effect Unit
+    }
 
 sinkEvent :: forall a. Effect (SinkEvent a)
 sinkEvent = do
@@ -167,7 +162,6 @@ sinkEvent = do
       subscribers <- Effect.Ref.read subscribersRef
       Data.Traversable.traverse_ (_ $ a) subscribers
   pure
-    $ SinkEvent
-        { event: mkEvent subscribeA
-        , push
-        }
+    { event: mkEvent subscribeA
+    , push
+    }
