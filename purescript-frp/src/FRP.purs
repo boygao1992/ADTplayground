@@ -104,17 +104,17 @@ instance functorEvent :: Functor Event where
       in
         subscribe event continueA
 
-instance semigroupEvent :: Semigroup (Event a) where
-  append :: forall a. Event a -> Event a -> Event a
-  append event1 event2 =
+instance altEvent :: Alt Event where
+  alt :: forall a. Event a -> Event a -> Event a
+  alt event1 event2 =
     mkEvent \continue -> do
       e1 <- subscribe event1 continue
       e2 <- subscribe event2 continue
       pure { unsubscribe: e1.unsubscribe *> e2.unsubscribe }
 
-instance monoidEvent :: Monoid (Event a) where
-  mempty :: forall a. Event a
-  mempty = mkEvent never
+instance plusEvent :: Plus Event where
+  empty :: forall a. Event a
+  empty = mkEvent never
     where
     never _ = pure { unsubscribe: pure unit }
 
