@@ -1,6 +1,7 @@
 module FRP
   -- Combinator
   ( accum
+  , filter
   , foldl
   , sample
   , step
@@ -20,6 +21,8 @@ module FRP
   ) where
 
 import Prelude
+import Control.Alternative (class Alt, class Plus)
+import Control.Apply (lift2)
 import Data.Traversable as Data.Traversable
 import Effect (Effect)
 import Effect.Ref as Effect.Ref
@@ -54,23 +57,36 @@ derive newtype instance bindBehavior :: Bind Behavior
 
 derive newtype instance monadBehavior :: Monad Behavior
 
+instance semigroupABehavior :: (Semigroup a) => Semigroup (Behavior a) where
+  append = lift2 append
+
+instance monoidABehavior :: (Monoid a) => Monoid (Behavior a) where
+  mempty = pure mempty
+
 newtype ABehavior event a
   = Sample (forall b. event (a -> b) -> event b)
 
+filter :: forall a. (a -> Boolean) -> Event a -> Event a
+filter predicate event = mkEvent subscribeA
+  where
+  subscribeA :: (a -> Effect Unit) -> Effect { unsubscribe :: Effect Unit }
+  subscribeA continue = subscribe event (guard continue)
+
+  guard :: (a -> Effect Unit) -> a -> Effect Unit
+  guard continue a =
+    when (predicate a)
+      $ continue a
+
 sample :: forall a b. Behavior a -> Event (a -> b) -> Event b
-sample (Behavior behaviorA) eventF =
-  let
-    subscribeB :: (b -> Effect Unit) -> Effect { unsubscribe :: Effect Unit }
-    subscribeB continueB =
-      let
-        continueF :: (a -> b) -> Effect Unit
-        continueF f = do
-          a <- behaviorA
-          (continueB <<< f) a
-      in
-        subscribe eventF continueF
-  in
-    mkEvent subscribeB
+sample (Behavior behaviorA) eventF = mkEvent subscribeB
+  where
+  subscribeB :: (b -> Effect Unit) -> Effect { unsubscribe :: Effect Unit }
+  subscribeB continueB = subscribe eventF (applyF continueB)
+
+  applyF :: (b -> Effect Unit) -> (a -> b) -> Effect Unit
+  applyF continueB f = do
+    a <- behaviorA
+    (continueB <<< f) a
 
 accum :: forall a b. (b -> a -> b) -> b -> Event a -> Now (Behavior b)
 accum f initB eventA =
