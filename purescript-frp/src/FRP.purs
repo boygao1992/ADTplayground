@@ -1,15 +1,18 @@
 module FRP
-  -- Combinator
-  ( accum
-  , filter
+  -- pure Combinator
+  ( sample
+  , sampleBy
+  -- stateful Combinator
+  , accum
   , foldl
-  , sample
   , step
   , switch
   -- Behavior
   , Behavior
+  , pull
   -- Event
   , Event
+  , filter
   , mkEvent
   , subscribe
   -- Now
@@ -47,6 +50,9 @@ runNow (Now effect) = effect
 newtype Behavior a
   = Behavior (Effect a)
 
+pull :: forall a. Behavior a -> Now a
+pull (Behavior effect) = Now effect
+
 derive newtype instance functorBehavior :: Functor Behavior
 
 derive newtype instance applyBehavior :: Apply Behavior
@@ -78,15 +84,18 @@ filter predicate event = mkEvent subscribeA
       $ continue a
 
 sample :: forall a b. Behavior a -> Event (a -> b) -> Event b
-sample (Behavior behaviorA) eventF = mkEvent subscribeB
-  where
-  subscribeB :: (b -> Effect Unit) -> Effect { unsubscribe :: Effect Unit }
-  subscribeB continueB = subscribe eventF (applyF continueB)
+sample = sampleBy (#)
 
-  applyF :: (b -> Effect Unit) -> (a -> b) -> Effect Unit
-  applyF continueB f = do
+sampleBy :: forall a b c. (a -> b -> c) -> Behavior a -> Event b -> Event c
+sampleBy f (Behavior behaviorA) eventB = mkEvent subscribeC
+  where
+  subscribeC :: (c -> Effect Unit) -> Effect { unsubscribe :: Effect Unit }
+  subscribeC continueC = subscribe eventB (applyF continueC)
+
+  applyF :: (c -> Effect Unit) -> b -> Effect Unit
+  applyF continueC b = do
     a <- behaviorA
-    (continueB <<< f) a
+    continueC (f a b)
 
 accum :: forall a b. (b -> a -> b) -> b -> Event a -> Now (Behavior b)
 accum f initB eventA =
