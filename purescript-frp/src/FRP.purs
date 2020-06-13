@@ -13,7 +13,9 @@ module FRP
   -- Event
   , Event
   , filter
+  , filterJust
   , mkEvent
+  , shift
   , subscribe
   -- Now
   , Now
@@ -26,6 +28,7 @@ module FRP
 import Prelude
 import Control.Alternative (class Alt, class Plus)
 import Control.Apply (lift2)
+import Data.Maybe as Data.Maybe
 import Data.Traversable as Data.Traversable
 import Effect (Effect)
 import Effect.Ref as Effect.Ref
@@ -73,15 +76,57 @@ newtype ABehavior event a
   = Sample (forall b. event (a -> b) -> event b)
 
 filter :: forall a. (a -> Boolean) -> Event a -> Event a
-filter predicate event = mkEvent subscribeA
+filter predicate = filterJust <<< map toMaybe
   where
-  subscribeA :: (a -> Effect Unit) -> Effect { unsubscribe :: Effect Unit }
-  subscribeA continue = subscribe event (guard continue)
+  toMaybe :: a -> Data.Maybe.Maybe a
+  toMaybe a
+    | predicate a = Data.Maybe.Just a
+    | otherwise = Data.Maybe.Nothing
 
-  guard :: (a -> Effect Unit) -> a -> Effect Unit
-  guard continue a =
-    when (predicate a)
-      $ continue a
+filterJust :: forall a. Event (Data.Maybe.Maybe a) -> Event a
+filterJust eventMA = mkEvent subscribeA
+  where
+  subscribeA ::
+    (a -> Effect Unit) ->
+    Effect { unsubscribe :: Effect Unit }
+  subscribeA continueA = subscribe eventMA (continueMA continueA)
+
+  continueMA :: (a -> Effect Unit) -> Data.Maybe.Maybe a -> Effect Unit
+  continueMA continueA = case _ of
+    Data.Maybe.Nothing -> pure unit
+    Data.Maybe.Just a -> continueA a
+
+shift :: forall a. Event (Event a) -> Event a
+shift eventE = mkEvent subscribeA
+  where
+  subscribeA ::
+    (a -> Effect Unit) ->
+    Effect { unsubscribe :: Effect Unit }
+  subscribeA continueA = do
+    unsubscribeRef :: Effect.Ref.Ref (Data.Maybe.Maybe (Effect Unit)) <-
+      Effect.Ref.new Data.Maybe.Nothing
+    subscribe eventE (continueE unsubscribeRef continueA)
+
+  continueE ::
+    Effect.Ref.Ref (Data.Maybe.Maybe (Effect Unit)) ->
+    (a -> Effect Unit) ->
+    Event a ->
+    Effect Unit
+  continueE unsubscribeRef continueA eventA = do
+    popUnsubscribe unsubscribeRef
+    subscription <- subscribe eventA continueA
+    pushUnsubscribe subscription unsubscribeRef
+
+  popUnsubscribe ::
+    Effect.Ref.Ref (Data.Maybe.Maybe (Effect Unit)) ->
+    Effect Unit
+  popUnsubscribe = Data.Traversable.sequence_ <=< Effect.Ref.read
+
+  pushUnsubscribe ::
+    { unsubscribe :: Effect Unit } ->
+    Effect.Ref.Ref (Data.Maybe.Maybe (Effect Unit)) ->
+    Effect Unit
+  pushUnsubscribe { unsubscribe } = Effect.Ref.write (Data.Maybe.Just unsubscribe)
 
 sample :: forall a b. Behavior a -> Event (a -> b) -> Event b
 sample = sampleBy (#)
