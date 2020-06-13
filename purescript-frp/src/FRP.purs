@@ -112,7 +112,7 @@ foldl f initB eventA = do
   pure $ sample behaviorB (const identity <$> eventA)
 
 step :: forall a. a -> Event a -> Now (Behavior a)
-step init = accum const init
+step init = accum (const identity) init
 
 switch :: forall a. Behavior a -> Event (Behavior a) -> Now (Behavior a)
 switch init = map join <<< step init
