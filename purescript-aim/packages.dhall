@@ -123,6 +123,19 @@ let upstream =
 
 let overrides = {=}
 
-let additions = {=}
+let additions =
+      { frp =
+          { dependencies =
+              [ "console"
+              , "effect"
+              , "foreign-object"
+              , "psci-support"
+              , "refs"
+              , "test-unit"
+              ]
+          , repo = "https://github.com/boygao1992/purescript-frp.git"
+          , version = "b909bd88e4f9fb5b87b4f0068760d18d27dd8d62"
+          }
+      }
 
 in  upstream // overrides // additions
