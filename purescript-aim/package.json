@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "phaser": "^3.24.1"
+  },
+  "devDependencies": {
+    "parcel": "^1.12.4",
+    "purty": "^6.2.0"
+  }
+}
