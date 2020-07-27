@@ -1,3 +1,5 @@
+"use strict";
+
 var Phaser = require('phaser');
 
 exports._newLine = function newLine({ startX, startY, endX, endY }) {

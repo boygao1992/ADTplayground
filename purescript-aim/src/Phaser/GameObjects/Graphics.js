@@ -1,4 +1,4 @@
-var Phaser = require('phaser');
+"use strict";
 
 exports._clear = function clear(graphics) {
   graphics.clear();

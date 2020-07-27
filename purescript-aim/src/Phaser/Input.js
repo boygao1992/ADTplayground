@@ -1,3 +1,5 @@
+"use strict";
+
 var Phaser = require('phaser');
 
 exports._onPointerMove = function onPointerMove({ inputPlugin, callback }) {

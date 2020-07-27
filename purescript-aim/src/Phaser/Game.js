@@ -1,3 +1,5 @@
+"use strict";
+
 var Phaser = require('phaser');
 
 exports.auto = Phaser.AUTO;

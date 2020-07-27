@@ -1,3 +1,5 @@
+"use strict";
+
 var Phaser = require('phaser');
 
 exports._buildScene = function buildScene({ preload, create }) {
