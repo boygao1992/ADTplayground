@@ -6,9 +6,9 @@ module Phaser.Input
   ) where
 
 import Prelude
+import Data.Function.Uncurried as Data.Function.Uncurried
 import Effect (Effect)
 import Effect.Uncurried as Effect.Uncurried
-import Unsafe.Coerce as Unsafe.Coerce
 
 ---------------------------
 -- Phaser.Input.InputPlugin
@@ -38,5 +38,15 @@ onPointerMove inputPlugin callback =
 -----------------------
 foreign import data Pointer :: Type
 
+foreign import _point ::
+  Data.Function.Uncurried.Fn1
+    Pointer
+    { x :: Number
+    , y :: Number
+    }
+
 point :: Pointer -> { x :: Number, y :: Number }
-point = Unsafe.Coerce.unsafeCoerce
+point pointer =
+  Data.Function.Uncurried.runFn1
+    _point
+    pointer
