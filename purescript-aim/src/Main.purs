@@ -11,6 +11,7 @@ main = do
   Phaser.Game.newGame
     { width: 800.0
     , height: 800.0
-    , scene: [ aimTarget ]
     , type: Phaser.Game.auto
+    , scene: [ aimTarget ]
+    , backgroundColor: 0xffffff
     }

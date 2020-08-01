@@ -1,5 +1,5 @@
 module Phaser.Game
-  ( Config
+  ( GameConfig
   , Renderer
   , auto
   , newGame
@@ -10,11 +10,12 @@ import Effect (Effect)
 import Effect.Uncurried as Effect.Uncurried
 import Phaser.Scene as Phaser.Scene
 
-type Config
-  = { height :: Number
-    , scene :: Array Phaser.Scene.Scene
+type GameConfig
+  = { width :: Number
+    , height :: Number
     , type :: Renderer
-    , width :: Number
+    , scene :: Array Phaser.Scene.Scene
+    , backgroundColor :: Int
     }
 
 foreign import data Renderer :: Type
@@ -23,8 +24,8 @@ foreign import auto :: Renderer
 
 foreign import _newGame ::
   Effect.Uncurried.EffectFn1
-    Config
+    GameConfig
     Unit
 
-newGame :: Config -> Effect Unit
+newGame :: GameConfig -> Effect Unit
 newGame config = Effect.Uncurried.runEffectFn1 _newGame config

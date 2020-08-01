@@ -1,52 +1,52 @@
 module Phaser.Input
   ( InputPlugin
-  , Pointer
-  , point
-  , onPointerMove
+  , toEventEmitter
+  , module Phaser.Input.Pointer
   ) where
 
 import Prelude
-import Data.Function.Uncurried as Data.Function.Uncurried
 import Effect (Effect)
 import Effect.Uncurried as Effect.Uncurried
+import Phaser.Events as Phaser.Events.EventEmitter
+import Phaser.GameObjects.GameObject as Phaser.GameObjects.GameObject
+import Phaser.Input.Pointer (Pointer) as Phaser.Input.Pointer
+import Unsafe.Coerce as Unsafe.Coerce
 
 ---------------------------
 -- Phaser.Input.InputPlugin
 ---------------------------
 foreign import data InputPlugin :: Type
 
-foreign import _onPointerMove ::
+toEventEmitter :: InputPlugin -> Phaser.Events.EventEmitter.EventEmitter
+toEventEmitter = Unsafe.Coerce.unsafeCoerce
+
+foreign import _setHitAreaRectangle ::
   Effect.Uncurried.EffectFn1
     { inputPlugin :: InputPlugin
-    , callback :: Effect.Uncurried.EffectFn1 Pointer Unit
+    , gameObject :: Phaser.GameObjects.GameObject.GameObject
+    , x :: Number
+    , y :: Number
+    , width :: Number
+    , height :: Number
     }
     Unit
 
-onPointerMove ::
+setHitAreaRectangle ::
   InputPlugin ->
-  (Pointer -> Effect Unit) ->
+  Phaser.GameObjects.GameObject.GameObject ->
+  { x :: Number
+  , y :: Number
+  , width :: Number
+  , height :: Number
+  } ->
   Effect Unit
-onPointerMove inputPlugin callback =
+setHitAreaRectangle inputPlugin gameObject { x, y, width, height } =
   Effect.Uncurried.runEffectFn1
-    _onPointerMove
+    _setHitAreaRectangle
     { inputPlugin
-    , callback: Effect.Uncurried.mkEffectFn1 callback
+    , gameObject
+    , x
+    , y
+    , width
+    , height
     }
-
------------------------
--- Phaser.Input.Pointer
------------------------
-foreign import data Pointer :: Type
-
-foreign import _point ::
-  Data.Function.Uncurried.Fn1
-    Pointer
-    { x :: Number
-    , y :: Number
-    }
-
-point :: Pointer -> { x :: Number, y :: Number }
-point pointer =
-  Data.Function.Uncurried.runFn1
-    _point
-    pointer

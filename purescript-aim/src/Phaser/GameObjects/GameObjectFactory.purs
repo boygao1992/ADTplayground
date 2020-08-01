@@ -1,9 +1,11 @@
 module Phaser.GameObjects.GameObjectFactory
   ( GameObjectFactory
   , arc
+  , circle
   , container
   , group
   , line
+  , rectangle
   ) where
 
 import Effect (Effect)
@@ -13,6 +15,7 @@ import Phaser.GameObjects.Container as Phaser.GameObjects.Container
 import Phaser.GameObjects.GameObject as Phaser.GameObjects.GameObject
 import Phaser.GameObjects.Group as Phaser.GameObjects.Group
 import Phaser.GameObjects.Line as Phaser.GameObjects.Line
+import Phaser.GameObjects.Rectangle as Phaser.GameObjects.Rectangle
 
 ---------------------------------------
 -- Phaser.GameObjects.GameObjectFactory
@@ -55,6 +58,37 @@ arc gameObjectFactory { x, y, radius, startAngle, endAngle, anticlockwise, fillC
     , startAngle
     , endAngle
     , anticlockwise
+    , fillColor
+    , fillAlpha
+    }
+
+foreign import _circle ::
+  Effect.Uncurried.EffectFn1
+    { gameObjectFactory :: GameObjectFactory
+    , x :: Number
+    , y :: Number
+    , radius :: Number
+    , fillColor :: Int
+    , fillAlpha :: Number
+    }
+    Phaser.GameObjects.Arc.Arc
+
+circle ::
+  GameObjectFactory ->
+  { x :: Number
+  , y :: Number
+  , radius :: Number
+  , fillColor :: Int
+  , fillAlpha :: Number
+  } ->
+  Effect Phaser.GameObjects.Arc.Arc
+circle gameObjectFactory { x, y, radius, fillColor, fillAlpha } =
+  Effect.Uncurried.runEffectFn1
+    _circle
+    { gameObjectFactory
+    , x
+    , y
+    , radius
     , fillColor
     , fillAlpha
     }
@@ -137,4 +171,38 @@ line gameObjectFactory { position, start, end, strokeColor, strokeAlpha } =
     , y2: end.y
     , strokeColor
     , strokeAlpha
+    }
+
+foreign import _rectangle ::
+  Effect.Uncurried.EffectFn1
+    { gameObjectFactory :: GameObjectFactory
+    , x :: Number
+    , y :: Number
+    , width :: Number
+    , height :: Number
+    , fillColor :: Int
+    , fillAlpha :: Number
+    }
+    Phaser.GameObjects.Rectangle.Rectangle
+
+rectangle ::
+  GameObjectFactory ->
+  { x :: Number
+  , y :: Number
+  , width :: Number
+  , height :: Number
+  , fillColor :: Int
+  , fillAlpha :: Number
+  } ->
+  Effect Phaser.GameObjects.Rectangle.Rectangle
+rectangle gameObjectFactory { x, y, width, height, fillColor, fillAlpha } =
+  Effect.Uncurried.runEffectFn1
+    _rectangle
+    { gameObjectFactory
+    , x
+    , y
+    , width
+    , height
+    , fillColor
+    , fillAlpha
     }

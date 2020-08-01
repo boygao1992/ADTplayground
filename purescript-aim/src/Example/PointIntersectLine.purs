@@ -6,10 +6,12 @@ import Prelude
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import FRP as FRP
+import Phaser.Events as Phaser.Events.EventEmitter
 import Phaser.GameObjects.Graphics as Phaser.GameObjects
 import Phaser.GameObjects.Graphics as Phaser.GameObjects.Graphics
 import Phaser.Geom as Phaser.Geom
 import Phaser.Input as Phaser.Input
+import Phaser.Input.Pointer as Phaser.Input.Pointer
 import Phaser.Scene as Phaser.Scene
 
 scene :: Effect Phaser.Scene.Scene
@@ -35,10 +37,10 @@ scene =
         }
     inputPlugin <- Phaser.Scene.input context
     pointerE <- onPointerMoveE inputPlugin
-    void
-      $ FRP.subscribe pointerE \pointer -> do
-          point <- Phaser.Geom.newPoint $ Phaser.Input.point pointer
-          render graphics line (Just point)
+    _ <-
+      FRP.subscribe pointerE \pointer -> do
+        point <- Phaser.Geom.newPoint $ Phaser.Input.Pointer.point pointer
+        render graphics line (Just point)
     render graphics line Nothing
 
   onPointerMoveE ::
@@ -46,7 +48,7 @@ scene =
     Effect (FRP.Event Phaser.Input.Pointer)
   onPointerMoveE inputPlugin = do
     sink <- FRP.sinkEvent
-    Phaser.Input.onPointerMove inputPlugin \pointer -> do
+    Phaser.Events.EventEmitter.onPointerMove (Phaser.Input.toEventEmitter inputPlugin) \pointer -> do
       sink.push pointer
     pure sink.event
 

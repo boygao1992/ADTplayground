@@ -1,12 +1,19 @@
 module Phaser.GameObjects.GameObject
   ( GameObject
+  , setInteractive_
+  , toEventEmitter
   ) where
 
 import Prelude
 import Effect (Effect)
 import Effect.Uncurried as Effect.Uncurried
+import Phaser.Events as Phaser.Events.EventEmitter
+import Unsafe.Coerce as Unsafe.Coerce
 
 foreign import data GameObject :: Type
+
+toEventEmitter :: GameObject -> Phaser.Events.EventEmitter.EventEmitter
+toEventEmitter = Unsafe.Coerce.unsafeCoerce
 
 foreign import _setInteractive_ ::
   Effect.Uncurried.EffectFn1
@@ -18,45 +25,3 @@ setInteractive_ gameObject =
   Effect.Uncurried.runEffectFn1
     _setInteractive_
     gameObject
-
-foreign import _setInteractive ::
-  -- TODO class Shape
-  forall a.
-  Effect.Uncurried.EffectFn1
-    { gameObject :: GameObject
-    , shape :: a
-    , callback ::
-        Effect.Uncurried.EffectFn1
-          { hitArea :: a
-          , x :: Number
-          , y :: Number
-          , gameObject :: GameObject
-          }
-          Boolean
-    , dropZone :: Boolean
-    }
-    Unit
-
-setInteractive ::
-  -- TODO class Shape
-  forall a.
-  GameObject ->
-  { shape :: a
-  , callback ::
-      { hitArea :: a
-      , x :: Number
-      , y :: Number
-      , gameObject :: GameObject
-      } ->
-      Effect Boolean
-  , dropZone :: Boolean
-  } ->
-  Effect Unit
-setInteractive gameObject { shape, callback, dropZone } =
-  Effect.Uncurried.runEffectFn1
-    _setInteractive
-    { gameObject
-    , shape
-    , callback: Effect.Uncurried.mkEffectFn1 callback
-    , dropZone
-    }

@@ -3,16 +3,22 @@ module Phaser.GameObjects.Shape
   , setAngle
   , setIsFilled
   , setStrokeStyle
+  , toGameObject
   ) where
 
 import Prelude
 import Effect (Effect)
 import Effect.Uncurried as Effect.Uncurried
+import Phaser.GameObjects.GameObject as Phaser.GameObjects.GameObject
+import Unsafe.Coerce as Unsafe.Coerce
 
 ---------------------------
 -- Phaser.GameObjects.Shape
 ---------------------------
 foreign import data Shape :: Type
+
+toGameObject :: Shape -> Phaser.GameObjects.GameObject.GameObject
+toGameObject = Unsafe.Coerce.unsafeCoerce
 
 foreign import _setAngle ::
   Effect.Uncurried.EffectFn1
