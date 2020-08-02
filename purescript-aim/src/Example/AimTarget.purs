@@ -11,7 +11,6 @@ import FRP as FRP
 import Phaser.Class.Events as Phaser.Class.Events
 import Phaser.Class.GameObjects.GameObject as Phaser.Class.GameObjects.GameObject
 import Phaser.Class.GameObjects.Shape as Phaser.Class.GameObjects.Shape
-import Phaser.Events as Phaser.Events
 import Phaser.GameObjects as Phaser.GameObjects
 import Phaser.GameObjects.GameObjectFactory as Phaser.GameObjects.GameObjectFactory
 import Phaser.Input as Phaser.Input
@@ -122,11 +121,13 @@ scene =
           Phaser.Class.GameObjects.Shape.setIsStroked line false
 
   onPointerMoveE ::
-    Phaser.Events.EventEmitter ->
+    forall a.
+    Phaser.Class.Events.EventEmitter a =>
+    a ->
     Effect (FRP.Event Phaser.Input.Pointer)
   onPointerMoveE eventSource = do
     sink <- FRP.sinkEvent
-    Phaser.Events.onPointerMove eventSource \payload -> do
+    Phaser.Class.Events.onPointerMove eventSource \payload -> do
       sink.push payload.pointer
     pure sink.event
 
