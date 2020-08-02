@@ -1,10 +1,12 @@
 ROOT_DIR := $(shell pwd)
+FIND_SRC_FILE_ARGS := \( -name '*.purs' -o -name '*.js' \) -type f
 NODE_MODULES_DIR := node_modules
 OUTPUT ?= output
 SRC_DIR ?= src
 
 BUILD ?= $(ROOT_DIR)/.build
 NODE_MODULES_STAMP := $(NODE_MODULES_DIR)/.stamp
+SRC_SRCS := $(shell find $(SRC_DIR) $(FIND_SRC_FILE_ARGS))
 
 DIST := $(BUILD)/dist
 PURS_DEPS ?= $(BUILD)/.deps
