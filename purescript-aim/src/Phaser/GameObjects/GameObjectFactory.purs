@@ -31,8 +31,6 @@ foreign import _arc ::
     , startAngle :: Number
     , endAngle :: Number
     , anticlockwise :: Boolean
-    , fillColor :: Int
-    , fillAlpha :: Number
     }
     Phaser.GameObjects.Arc.Arc
 
@@ -44,11 +42,9 @@ arc ::
   , startAngle :: Number
   , endAngle :: Number
   , anticlockwise :: Boolean
-  , fillColor :: Int
-  , fillAlpha :: Number
   } ->
   Effect Phaser.GameObjects.Arc.Arc
-arc gameObjectFactory { x, y, radius, startAngle, endAngle, anticlockwise, fillColor, fillAlpha } =
+arc gameObjectFactory { x, y, radius, startAngle, endAngle, anticlockwise } =
   Effect.Uncurried.runEffectFn1
     _arc
     { gameObjectFactory
@@ -58,8 +54,6 @@ arc gameObjectFactory { x, y, radius, startAngle, endAngle, anticlockwise, fillC
     , startAngle
     , endAngle
     , anticlockwise
-    , fillColor
-    , fillAlpha
     }
 
 foreign import _circle ::
@@ -68,8 +62,6 @@ foreign import _circle ::
     , x :: Number
     , y :: Number
     , radius :: Number
-    , fillColor :: Int
-    , fillAlpha :: Number
     }
     Phaser.GameObjects.Arc.Arc
 
@@ -78,19 +70,15 @@ circle ::
   { x :: Number
   , y :: Number
   , radius :: Number
-  , fillColor :: Int
-  , fillAlpha :: Number
   } ->
   Effect Phaser.GameObjects.Arc.Arc
-circle gameObjectFactory { x, y, radius, fillColor, fillAlpha } =
+circle gameObjectFactory { x, y, radius } =
   Effect.Uncurried.runEffectFn1
     _circle
     { gameObjectFactory
     , x
     , y
     , radius
-    , fillColor
-    , fillAlpha
     }
 
 foreign import _container ::
@@ -145,8 +133,6 @@ foreign import _line ::
     , y1 :: Number
     , x2 :: Number
     , y2 :: Number
-    , strokeColor :: Int
-    , strokeAlpha :: Number
     }
     Phaser.GameObjects.Line.Line
 
@@ -155,11 +141,9 @@ line ::
   { position :: { x :: Number, y :: Number }
   , start :: { x :: Number, y :: Number }
   , end :: { x :: Number, y :: Number }
-  , strokeColor :: Int
-  , strokeAlpha :: Number
   } ->
   Effect Phaser.GameObjects.Line.Line
-line gameObjectFactory { position, start, end, strokeColor, strokeAlpha } =
+line gameObjectFactory { position, start, end } =
   Effect.Uncurried.runEffectFn1
     _line
     { gameObjectFactory
@@ -169,8 +153,6 @@ line gameObjectFactory { position, start, end, strokeColor, strokeAlpha } =
     , y1: start.y
     , x2: end.x
     , y2: end.y
-    , strokeColor
-    , strokeAlpha
     }
 
 foreign import _rectangle ::
@@ -180,8 +162,6 @@ foreign import _rectangle ::
     , y :: Number
     , width :: Number
     , height :: Number
-    , fillColor :: Int
-    , fillAlpha :: Number
     }
     Phaser.GameObjects.Rectangle.Rectangle
 
@@ -191,11 +171,9 @@ rectangle ::
   , y :: Number
   , width :: Number
   , height :: Number
-  , fillColor :: Int
-  , fillAlpha :: Number
   } ->
   Effect Phaser.GameObjects.Rectangle.Rectangle
-rectangle gameObjectFactory { x, y, width, height, fillColor, fillAlpha } =
+rectangle gameObjectFactory { x, y, width, height } =
   Effect.Uncurried.runEffectFn1
     _rectangle
     { gameObjectFactory
@@ -203,6 +181,4 @@ rectangle gameObjectFactory { x, y, width, height, fillColor, fillAlpha } =
     , y
     , width
     , height
-    , fillColor
-    , fillAlpha
     }

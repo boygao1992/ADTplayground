@@ -1,6 +1,7 @@
 module Phaser.Events
   ( EventEmitter
   , onPointerMove
+  , onPointerOut
   , onPointerOver
   ) where
 
@@ -17,17 +18,52 @@ foreign import data EventEmitter :: Type
 foreign import _onPointerMove ::
   Effect.Uncurried.EffectFn1
     { eventEmitter :: EventEmitter
-    , callback :: Effect.Uncurried.EffectFn1 Phaser.Input.Pointer.Pointer Unit
+    , callback ::
+        Effect.Uncurried.EffectFn3
+          Phaser.Input.Pointer.Pointer
+          Number
+          Number
+          Unit
     }
     Unit
 
 onPointerMove ::
   EventEmitter ->
-  (Phaser.Input.Pointer.Pointer -> Effect Unit) ->
+  ( { pointer :: Phaser.Input.Pointer.Pointer
+    , localX :: Number
+    , localY :: Number
+    } ->
+    Effect Unit
+  ) ->
   Effect Unit
 onPointerMove eventEmitter callback =
   Effect.Uncurried.runEffectFn1
     _onPointerMove
+    { eventEmitter
+    , callback:
+        Effect.Uncurried.mkEffectFn3 \pointer localX localY ->
+          callback { pointer, localX, localY }
+    }
+
+foreign import _onPointerOut ::
+  Effect.Uncurried.EffectFn1
+    { eventEmitter :: EventEmitter
+    , callback ::
+        Effect.Uncurried.EffectFn1
+          Phaser.Input.Pointer.Pointer
+          Unit
+    }
+    Unit
+
+onPointerOut ::
+  EventEmitter ->
+  ( Phaser.Input.Pointer.Pointer ->
+    Effect Unit
+  ) ->
+  Effect Unit
+onPointerOut eventEmitter callback =
+  Effect.Uncurried.runEffectFn1
+    _onPointerOut
     { eventEmitter
     , callback: Effect.Uncurried.mkEffectFn1 callback
     }

@@ -30,21 +30,36 @@ scene =
     Effect Unit
   create context = do
     gameObjectFactory <- Phaser.Scene.add context
+    addTarget gameObjectFactory
+
+  addTarget ::
+    Phaser.GameObjects.GameObjectFactory ->
+    Effect Unit
+  addTarget gameObjectFactory = do
+    let
+      blue :: Int
+      blue = 0x91aec2
+
+      green :: Int
+      green = 0x94b187
+
+      red :: Int
+      red = 0xc05049
     Data.Foldable.for_ [ 1, 4 ] \idx -> do
       let
         degrees :: Number
         degrees = 30.0 * (Data.Int.toNumber idx)
-      addLine gameObjectFactory { degrees, fillColor: 0x91aec2 }
+      addLine gameObjectFactory { degrees, fillColor: blue }
     Data.Foldable.for_ [ 2, 5 ] \idx -> do
       let
         degrees :: Number
         degrees = 30.0 * (Data.Int.toNumber idx)
-      addLine gameObjectFactory { degrees, fillColor: 0x94b187 }
+      addLine gameObjectFactory { degrees, fillColor: green }
     Data.Foldable.for_ [ 0, 3 ] \idx -> do
       let
         degrees :: Number
         degrees = 30.0 * (Data.Int.toNumber idx)
-      addLine gameObjectFactory { degrees, fillColor: 0xc05049 }
+      addLine gameObjectFactory { degrees, fillColor: red }
     addCircle gameObjectFactory
 
   addCircle ::
@@ -57,8 +72,6 @@ scene =
         { x: 400.0
         , y: 400.0
         , radius: 400.0
-        , fillColor: 0x00ff00
-        , fillAlpha: 1.0
         }
     Phaser.GameObjects.Shape.setStrokeStyle
       (Phaser.GameObjects.Arc.toShape circle)
@@ -85,17 +98,40 @@ scene =
         , y: 400.0
         , width: 800.0
         , height: 2.0
-        , fillColor
-        , fillAlpha: 1.0
         }
+    Phaser.GameObjects.Shape.setFillStyle
+      (Phaser.GameObjects.Rectangle.toShape line)
+      { color: fillColor
+      , alpha: 1.0
+      }
     Phaser.GameObjects.Shape.setAngle
       (Phaser.GameObjects.Rectangle.toShape line)
       { degrees }
     Phaser.GameObjects.GameObject.setInteractive_ (Phaser.GameObjects.Shape.toGameObject (Phaser.GameObjects.Rectangle.toShape line))
     pointerOverE <- onPointerOverE (Phaser.GameObjects.GameObject.toEventEmitter (Phaser.GameObjects.Shape.toGameObject (Phaser.GameObjects.Rectangle.toShape line)))
+    pointerOutE <- onPointerOutE (Phaser.GameObjects.GameObject.toEventEmitter (Phaser.GameObjects.Shape.toGameObject (Phaser.GameObjects.Rectangle.toShape line)))
     void
       $ FRP.subscribe pointerOverE \payload -> do
-          Effect.Console.logShow { x: payload.localX, y: payload.localY }
+          Effect.Console.logShow { degrees, event: "pointerOver", x: payload.localX, y: payload.localY }
+          Phaser.GameObjects.Shape.setStrokeStyle
+            (Phaser.GameObjects.Rectangle.toShape line)
+            { lineWidth: 0.2
+            , color: 0x000000
+            , alpha: 1.0
+            }
+    void
+      $ FRP.subscribe pointerOutE \payload -> do
+          Effect.Console.logShow { degrees, event: "pointerOut" }
+          Phaser.GameObjects.Shape.setIsStroked (Phaser.GameObjects.Rectangle.toShape line) false
+
+  onPointerMoveE ::
+    Phaser.Event.EventEmitter.EventEmitter ->
+    Effect (FRP.Event Phaser.Input.Pointer)
+  onPointerMoveE eventSource = do
+    sink <- FRP.sinkEvent
+    Phaser.Event.EventEmitter.onPointerMove eventSource \payload -> do
+      sink.push payload.pointer
+    pure sink.event
 
   onPointerOverE ::
     Phaser.Event.EventEmitter.EventEmitter ->
@@ -108,6 +144,15 @@ scene =
       )
   onPointerOverE eventSource = do
     sink <- FRP.sinkEvent
-    Phaser.Event.EventEmitter.onPointerOver eventSource \pointer -> do
+    Phaser.Event.EventEmitter.onPointerOver eventSource \payload -> do
+      sink.push payload
+    pure sink.event
+
+  onPointerOutE ::
+    Phaser.Event.EventEmitter.EventEmitter ->
+    Effect (FRP.Event Phaser.Input.Pointer)
+  onPointerOutE eventSource = do
+    sink <- FRP.sinkEvent
+    Phaser.Event.EventEmitter.onPointerOut eventSource \pointer -> do
       sink.push pointer
     pure sink.event

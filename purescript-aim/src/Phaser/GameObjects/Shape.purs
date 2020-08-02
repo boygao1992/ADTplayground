@@ -2,6 +2,8 @@ module Phaser.GameObjects.Shape
   ( Shape
   , setAngle
   , setIsFilled
+  , setIsStroked
+  , setFillStyle
   , setStrokeStyle
   , toGameObject
   ) where
@@ -48,6 +50,43 @@ setIsFilled shape isFilled =
     _setIsFilled
     { shape
     , isFilled
+    }
+
+foreign import _setIsStroked ::
+  Effect.Uncurried.EffectFn1
+    { shape :: Shape
+    , isStroked :: Boolean
+    }
+    Unit
+
+setIsStroked :: Shape -> Boolean -> Effect Unit
+setIsStroked shape isStroked =
+  Effect.Uncurried.runEffectFn1
+    _setIsStroked
+    { shape
+    , isStroked
+    }
+
+foreign import _setFillStyle ::
+  Effect.Uncurried.EffectFn1
+    { shape :: Shape
+    , color :: Int
+    , alpha :: Number
+    }
+    Unit
+
+setFillStyle ::
+  Shape ->
+  { color :: Int
+  , alpha :: Number
+  } ->
+  Effect Unit
+setFillStyle shape { color, alpha } =
+  Effect.Uncurried.runEffectFn1
+    _setFillStyle
+    { shape
+    , color
+    , alpha
     }
 
 foreign import _setStrokeStyle ::
