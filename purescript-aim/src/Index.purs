@@ -1,4 +1,6 @@
-module Main where
+module Index
+  ( main
+  ) where
 
 import Prelude
 import Effect (Effect)

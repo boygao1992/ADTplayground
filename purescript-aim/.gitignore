@@ -1,6 +1,7 @@
 ### Project-specific ###
 # Rules that are not on gitignore.io or that are specific to our project here.
 
+.build
 .parcel-cache
 .spago
 

@@ -75,7 +75,7 @@ scene =
         }
     Phaser.GameObjects.Shape.setStrokeStyle
       (Phaser.GameObjects.Arc.toShape circle)
-      { lineWidth: 2.0
+      { lineWidth: 4.0
       , color: 0xc05049
       , alpha: 1.0
       }
@@ -97,7 +97,7 @@ scene =
         { x: 400.0
         , y: 400.0
         , width: 800.0
-        , height: 2.0
+        , height: 4.0
         }
     Phaser.GameObjects.Shape.setFillStyle
       (Phaser.GameObjects.Rectangle.toShape line)
@@ -115,7 +115,7 @@ scene =
           Effect.Console.logShow { degrees, event: "pointerOver", x: payload.localX, y: payload.localY }
           Phaser.GameObjects.Shape.setStrokeStyle
             (Phaser.GameObjects.Rectangle.toShape line)
-            { lineWidth: 0.2
+            { lineWidth: 1.0
             , color: 0x000000
             , alpha: 1.0
             }
