@@ -6,6 +6,7 @@ module Phaser.GameObjects.GameObjectFactory
   , group
   , line
   , rectangle
+  , renderTexture
   ) where
 
 import Effect (Effect)
@@ -16,6 +17,7 @@ import Phaser.GameObjects.GameObject as Phaser.GameObjects.GameObject
 import Phaser.GameObjects.Group as Phaser.GameObjects.Group
 import Phaser.GameObjects.Line as Phaser.GameObjects.Line
 import Phaser.GameObjects.Rectangle as Phaser.GameObjects.Rectangle
+import Phaser.GameObjects.RenderTexture as Phaser.GameObjects.RenderTexture
 
 ---------------------------------------
 -- Phaser.GameObjects.GameObjectFactory
@@ -176,6 +178,34 @@ rectangle ::
 rectangle gameObjectFactory { x, y, width, height } =
   Effect.Uncurried.runEffectFn1
     _rectangle
+    { gameObjectFactory
+    , x
+    , y
+    , width
+    , height
+    }
+
+foreign import _renderTexture ::
+  Effect.Uncurried.EffectFn1
+    { gameObjectFactory :: GameObjectFactory
+    , x :: Number
+    , y :: Number
+    , width :: Number
+    , height :: Number
+    }
+    Phaser.GameObjects.RenderTexture.RenderTexture
+
+renderTexture ::
+  GameObjectFactory ->
+  { x :: Number
+  , y :: Number
+  , width :: Number
+  , height :: Number
+  } ->
+  Effect Phaser.GameObjects.RenderTexture.RenderTexture
+renderTexture gameObjectFactory { x, y, width, height } =
+  Effect.Uncurried.runEffectFn1
+    _renderTexture
     { gameObjectFactory
     , x
     , y

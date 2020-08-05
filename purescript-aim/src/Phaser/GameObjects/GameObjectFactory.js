@@ -23,3 +23,7 @@ exports._line = function ( { gameObjectFactory, x, y, x1, y1, x2, y2 } ) {
 exports._rectangle = function rectangle( { gameObjectFactory, x, y, width, height } ) {
   return gameObjectFactory.rectangle( x, y, width, height );
 }
+
+exports._renderTexture = function renderTexture( { gameObjectFactory, x, y, width, height } ) {
+  return gameObjectFactory.renderTexture( x, y, width, height );
+}
