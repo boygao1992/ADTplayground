@@ -8,6 +8,7 @@ import Prelude
 import Effect (Effect)
 import Phaser.GameObjects.Arc as Phaser.GameObjects.Arc
 import Phaser.GameObjects.GameObject as Phaser.GameObjects.GameObject
+import Phaser.GameObjects.Graphics as Phaser.GameObjects.Graphics
 import Phaser.GameObjects.Line as Phaser.GameObjects.Line
 import Phaser.GameObjects.Rectangle as Phaser.GameObjects.Rectangle
 import Phaser.GameObjects.Shape as Phaser.GameObjects.Shape
@@ -20,6 +21,9 @@ class GameObject a where
 
 instance gameObjectGameObject :: GameObject Phaser.GameObjects.GameObject.GameObject where
   toGameObject = identity
+
+instance gameObjectGraphics :: GameObject Phaser.GameObjects.Graphics.Graphics where
+  toGameObject = Phaser.GameObjects.Graphics.toGameObject
 
 instance gameObjectShape :: GameObject Phaser.GameObjects.Shape.Shape where
   toGameObject = Phaser.GameObjects.Shape.toGameObject

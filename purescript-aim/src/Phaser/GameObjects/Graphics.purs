@@ -5,17 +5,23 @@ module Phaser.GameObjects.Graphics
   , fillStyle
   , lineStyle
   , strokeLineShape
+  , toGameObject
   ) where
 
 import Prelude
 import Effect (Effect)
 import Effect.Uncurried as Effect.Uncurried
+import Phaser.GameObjects.GameObject as Phaser.GameObjects.GameObject
 import Phaser.Geom as Phaser.Geom
+import Unsafe.Coerce as Unsafe.Coerce
 
 ------------------------------
 -- Phaser.GameObjects.Graphics
 ------------------------------
 foreign import data Graphics :: Type
+
+toGameObject :: Graphics -> Phaser.GameObjects.GameObject.GameObject
+toGameObject = Unsafe.Coerce.unsafeCoerce
 
 foreign import _clear ::
   Effect.Uncurried.EffectFn1
