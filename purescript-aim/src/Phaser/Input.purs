@@ -1,7 +1,6 @@
 module Phaser.Input
   ( InputPlugin
   , toEventEmitter
-  , module Phaser.Input.Pointer
   ) where
 
 import Prelude
@@ -9,7 +8,6 @@ import Effect (Effect)
 import Effect.Uncurried as Effect.Uncurried
 import Phaser.Events as Phaser.Events.EventEmitter
 import Phaser.GameObjects.GameObject as Phaser.GameObjects.GameObject
-import Phaser.Input.Pointer (Pointer) as Phaser.Input.Pointer
 import Unsafe.Coerce as Unsafe.Coerce
 
 ---------------------------

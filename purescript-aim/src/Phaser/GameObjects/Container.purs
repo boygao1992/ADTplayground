@@ -7,6 +7,9 @@ import Effect (Effect)
 import Effect.Uncurried as Effect.Uncurried
 import Phaser.GameObjects.GameObject as Phaser.GameObjects.GameObject
 
+-------------------------------
+-- Phaser.GameObjects.Container
+-------------------------------
 foreign import data Container :: Type
 
 foreign import _add ::

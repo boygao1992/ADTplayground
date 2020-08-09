@@ -45,7 +45,7 @@ scene =
 
   onPointerMoveE ::
     Phaser.Input.InputPlugin ->
-    Effect (FRP.Event Phaser.Input.Pointer)
+    Effect (FRP.Event Phaser.Input.Pointer.Pointer)
   onPointerMoveE inputPlugin = do
     sink <- FRP.sinkEvent
     Phaser.Events.EventEmitter.onPointerMove (Phaser.Input.toEventEmitter inputPlugin) \payload -> do

@@ -10,6 +10,9 @@ import Effect.Uncurried as Effect.Uncurried
 import Phaser.Events as Phaser.Events.EventEmitter
 import Unsafe.Coerce as Unsafe.Coerce
 
+--------------------------------
+-- Phaser.GameObjects.GameObject
+--------------------------------
 foreign import data GameObject :: Type
 
 toEventEmitter :: GameObject -> Phaser.Events.EventEmitter.EventEmitter

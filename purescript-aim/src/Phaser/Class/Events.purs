@@ -1,5 +1,6 @@
 module Phaser.Class.Events
-  ( onPointerMove
+  ( onPointerDown
+  , onPointerMove
   , onPointerOut
   , onPointerOver
   , class EventEmitter
@@ -7,12 +8,14 @@ module Phaser.Class.Events
   ) where
 
 import Prelude
+
 import Effect (Effect)
 import Phaser.Events as Phaser.Events
 import Phaser.GameObjects.GameObject as Phaser.GameObjects.GameObject
 import Phaser.GameObjects.Rectangle as Phaser.GameObjects.Rectangle
 import Phaser.GameObjects.Shape as Phaser.GameObjects.Shape
 import Phaser.Input as Phaser.Input
+import Phaser.Input.Pointer as Phaser.Input.Pointer
 
 -----------------------------
 -- Phaser.Events
@@ -39,11 +42,19 @@ instance eventEmitterRectangle :: EventEmitter Phaser.GameObjects.Rectangle.Rect
 instance eventEmitterInputPlugin :: EventEmitter Phaser.Input.InputPlugin where
   toEventEmitter = Phaser.Input.toEventEmitter
 
+onPointerDown ::
+  forall a.
+  EventEmitter a =>
+  a ->
+  (Phaser.Input.Pointer.Pointer -> Effect Unit) ->
+  Effect Unit
+onPointerDown a callback = Phaser.Events.onPointerDown (toEventEmitter a) callback
+
 onPointerMove ::
   forall a.
   EventEmitter a =>
   a ->
-  ( { pointer :: Phaser.Input.Pointer
+  ( { pointer :: Phaser.Input.Pointer.Pointer
     , localX :: Number
     , localY :: Number
     } ->
@@ -56,9 +67,7 @@ onPointerOut ::
   forall a.
   EventEmitter a =>
   a ->
-  ( Phaser.Input.Pointer ->
-    Effect Unit
-  ) ->
+  (Phaser.Input.Pointer.Pointer -> Effect Unit) ->
   Effect Unit
 onPointerOut a callback = Phaser.Events.onPointerOut (toEventEmitter a) callback
 
@@ -66,7 +75,7 @@ onPointerOver ::
   forall a.
   EventEmitter a =>
   a ->
-  ( { pointer :: Phaser.Input.Pointer
+  ( { pointer :: Phaser.Input.Pointer.Pointer
     , localX :: Number
     , localY :: Number
     } ->

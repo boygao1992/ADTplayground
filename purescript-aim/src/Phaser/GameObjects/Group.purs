@@ -9,6 +9,9 @@ import Effect (Effect)
 import Effect.Uncurried as Effect.Uncurried
 import Phaser.GameObjects.GameObject as Phaser.GameObjects.GameObject
 
+---------------------------
+-- Phaser.GameObjects.Group
+---------------------------
 foreign import data Group :: Type
 
 foreign import _add ::

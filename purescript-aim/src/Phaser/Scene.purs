@@ -10,7 +10,8 @@ module Phaser.Scene
 import Prelude
 import Effect (Effect)
 import Effect.Uncurried as Effect.Uncurried
-import Phaser.GameObjects as Phaser.GameObjects
+import Phaser.GameObjects.GameObjectFactory as Phaser.GameObjects.GameObjectFactory
+import Phaser.GameObjects.Graphics as Phaser.GameObjects.Graphics
 import Phaser.Input as Phaser.Input
 
 ---------------
@@ -42,19 +43,19 @@ buildScene { preload, create } =
 foreign import _add ::
   Effect.Uncurried.EffectFn1
     SceneContext
-    Phaser.GameObjects.GameObjectFactory
+    Phaser.GameObjects.GameObjectFactory.GameObjectFactory
 
-add :: SceneContext -> Effect Phaser.GameObjects.GameObjectFactory
+add :: SceneContext -> Effect Phaser.GameObjects.GameObjectFactory.GameObjectFactory
 add context = Effect.Uncurried.runEffectFn1 _add context
 
 foreign import _graphics ::
   Effect.Uncurried.EffectFn1
-    Phaser.GameObjects.GameObjectFactory
-    Phaser.GameObjects.Graphics
+    Phaser.GameObjects.GameObjectFactory.GameObjectFactory
+    Phaser.GameObjects.Graphics.Graphics
 
 graphics ::
-  Phaser.GameObjects.GameObjectFactory ->
-  Effect Phaser.GameObjects.Graphics
+  Phaser.GameObjects.GameObjectFactory.GameObjectFactory ->
+  Effect Phaser.GameObjects.Graphics.Graphics
 graphics context = Effect.Uncurried.runEffectFn1 _graphics context
 
 foreign import _input ::

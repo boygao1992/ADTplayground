@@ -2,6 +2,10 @@
 
 var Phaser = require( 'phaser' );
 
+exports._onPointerDown = function onPointerDown( { eventEmitter, callback } ) {
+  eventEmitter.on( Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, callback );
+}
+
 exports._onPointerMove = function onPointerMove( { eventEmitter, callback } ) {
   eventEmitter.on( Phaser.Input.Events.GAMEOBJECT_POINTER_MOVE, callback );
 }
