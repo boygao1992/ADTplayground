@@ -3,9 +3,11 @@ module Example.AimTarget
   ) where
 
 import Prelude
+import Data.Array as Data.Array
 import Data.Foldable as Data.Foldable
 import Data.Int as Data.Int
 import Data.Maybe (Maybe(..))
+import Data.Maybe as Data.Maybe
 import Data.Traversable as Data.Traversable
 import Effect (Effect)
 import Effect.Console as Effect.Console
@@ -13,11 +15,8 @@ import FRP as FRP
 import Phaser.Class.Events as Phaser.Class.Events
 import Phaser.Class.GameObjects.GameObject as Phaser.Class.GameObjects.GameObject
 import Phaser.Class.GameObjects.Shape as Phaser.Class.GameObjects.Shape
-import Phaser.GameObjects.Arc as Phaser.GameObjects.Arc
 import Phaser.GameObjects.GameObjectFactory as Phaser.GameObjects.GameObjectFactory
 import Phaser.GameObjects.Graphics as Phaser.GameObjects.Graphics
-import Phaser.GameObjects.RenderTexture as Phaser.GameObjects.RenderTexture
-import Phaser.GameObjects.Shape as Phaser.GameObjects.Shape
 import Phaser.Geom as Phaser.Geom
 import Phaser.Input as Phaser.Input
 import Phaser.Input.Pointer as Phaser.Input.Pointer
@@ -44,26 +43,7 @@ scene =
     Phaser.Input.InputPlugin ->
     Effect Unit
   addTracer gameObjectFactory inputPlugin = do
-    tracer <-
-      Phaser.GameObjects.GameObjectFactory.renderTexture
-        gameObjectFactory
-        { x: 0.0
-        , y: 0.0
-        , width: 800.0
-        , height: 800.0
-        }
-    cursor <-
-      Phaser.GameObjects.GameObjectFactory.circle
-        gameObjectFactory
-        { x: 0.0
-        , y: 0.0
-        , radius: 2.0
-        }
-    Phaser.Class.GameObjects.Shape.setFillStyle
-      cursor
-      { color: 0x000000
-      , alpha: 1.0
-      }
+    tracer <- Phaser.Scene.graphics gameObjectFactory
     pointerDownE <- onPointerDownE inputPlugin
     pointerMoveE <- onPointerMoveE inputPlugin
     (drawingB :: FRP.Behavior Boolean) <-
@@ -90,21 +70,31 @@ scene =
           $ pointerMoveE
     void
       $ FRP.subscribe toClearE \toClear -> do
-          Phaser.GameObjects.RenderTexture.clear tracer
+          Phaser.GameObjects.Graphics.clear tracer
     void
       $ FRP.subscribe toDrawE \pointer -> do
+          -- NOTE getInterpolatedPosition compute points between previous position and current position, so they are all on the same line
           positions <- Phaser.Input.Pointer.getInterpolatedPosition pointer 30
-          Data.Traversable.for_ positions \position -> do
-            Phaser.GameObjects.RenderTexture.draw
-              tracer
-              ( Phaser.GameObjects.Shape.toGameObject
-                  <<< Phaser.GameObjects.Arc.toShape
-                  $ cursor
-              )
-              { x: position.x
-              , y: position.y
-              , alpha: 1.0
+          let
+            intervals ::
+              Array
+                { start :: { x :: Number, y :: Number }
+                , end :: { x :: Number, y :: Number }
+                }
+            intervals =
+              Data.Maybe.fromMaybe [] do
+                shift1 <- Data.Array.tail positions
+                pure $ Data.Array.zipWith ({ start: _, end: _ }) positions shift1
+          -- TODO use Path.splineTo(points)
+          -- TODO Vector2
+          Data.Traversable.for_ intervals \({ start, end }) -> do
+            line <- Phaser.Geom.newLine start end
+            Phaser.GameObjects.Graphics.lineStyle tracer
+              { alpha: 1.0
+              , color: 0x000000
+              , lineWidth: 3.0
               }
+            Phaser.GameObjects.Graphics.strokeLineShape tracer line
 
   renderPoint ::
     Phaser.GameObjects.Graphics.Graphics ->
