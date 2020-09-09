@@ -66,24 +66,21 @@ scene =
       }
     pointerDownE <- onPointerDownE inputPlugin
     pointerMoveE <- onPointerMoveE inputPlugin
-    ({ drawingB, toClearE }) <-
+    (drawingB :: FRP.Behavior Boolean) <-
       FRP.runNow do
-        (drawingB :: FRP.Behavior Boolean) <-
-          FRP.accum
-            (\old _ -> not old)
-            false
-            pointerDownE
-        (toClearE :: FRP.Event Unit) <-
-          map
-            ( map (const unit)
-                <<< FRP.filter identity
-            )
-            <<< FRP.foldl
-                (\old _ -> not old)
-                true
-            $ pointerDownE
-        pure { drawingB, toClearE }
+        FRP.accum
+          (\old _ -> not old)
+          false
+          pointerDownE
     let
+      toClearE :: FRP.Event Unit
+      toClearE =
+        FRP.filterJust
+          $ FRP.sampleBy
+              (\drawing _ -> if drawing then Nothing else Just unit)
+              drawingB
+              pointerDownE
+
       toDrawE :: FRP.Event Phaser.Input.Pointer.Pointer
       toDrawE =
         FRP.filterJust
@@ -96,16 +93,16 @@ scene =
           Phaser.GameObjects.RenderTexture.clear tracer
     void
       $ FRP.subscribe toDrawE \pointer -> do
-          xys <- Phaser.Input.Pointer.getInterpolatedPosition pointer 30
-          Data.Traversable.for_ xys \xy -> do
+          positions <- Phaser.Input.Pointer.getInterpolatedPosition pointer 30
+          Data.Traversable.for_ positions \position -> do
             Phaser.GameObjects.RenderTexture.draw
               tracer
               ( Phaser.GameObjects.Shape.toGameObject
                   <<< Phaser.GameObjects.Arc.toShape
                   $ cursor
               )
-              { x: xy.x
-              , y: xy.y
+              { x: position.x
+              , y: position.y
               , alpha: 1.0
               }
 
@@ -134,16 +131,16 @@ scene =
 
       red :: Int
       red = 0xc05049
-    Data.Foldable.for_ [ 1, 4 ] \idx -> do
-      let
-        degrees :: Number
-        degrees = 30.0 * (Data.Int.toNumber idx)
-      addLine gameObjectFactory { degrees, fillColor: blue }
-    Data.Foldable.for_ [ 2, 5 ] \idx -> do
+    Data.Foldable.for_ [ 1, 5 ] \idx -> do
       let
         degrees :: Number
         degrees = 30.0 * (Data.Int.toNumber idx)
       addLine gameObjectFactory { degrees, fillColor: green }
+    Data.Foldable.for_ [ 2, 4 ] \idx -> do
+      let
+        degrees :: Number
+        degrees = 30.0 * (Data.Int.toNumber idx)
+      addLine gameObjectFactory { degrees, fillColor: blue }
     Data.Foldable.for_ [ 0, 3 ] \idx -> do
       let
         degrees :: Number
