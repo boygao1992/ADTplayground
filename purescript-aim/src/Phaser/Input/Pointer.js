@@ -4,6 +4,10 @@ exports._getInterpolatedPosition = function getInterpolatedPosition ( { pointer,
   return pointer.getInterpolatedPosition( steps );
 }
 
-exports._point = function point( pointer ) {
-  return Object.freeze( { x: pointer.x, y: pointer.y } );
+exports._position = function position( pointer ) {
+  return pointer.position;
+}
+
+exports._prevPosition = function prevPosition( pointer ) {
+  return pointer.prevPosition;
 }

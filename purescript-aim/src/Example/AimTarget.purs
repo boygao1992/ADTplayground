@@ -3,12 +3,9 @@ module Example.AimTarget
   ) where
 
 import Prelude
-import Data.Array as Data.Array
 import Data.Foldable as Data.Foldable
 import Data.Int as Data.Int
 import Data.Maybe (Maybe(..))
-import Data.Maybe as Data.Maybe
-import Data.Traversable as Data.Traversable
 import Effect (Effect)
 import Effect.Console as Effect.Console
 import FRP as FRP
@@ -20,6 +17,7 @@ import Phaser.GameObjects.Graphics as Phaser.GameObjects.Graphics
 import Phaser.Geom as Phaser.Geom
 import Phaser.Input as Phaser.Input
 import Phaser.Input.Pointer as Phaser.Input.Pointer
+import Phaser.Math.Vector2 as Phaser.Math.Vector2
 import Phaser.Scene as Phaser.Scene
 
 scene :: Effect Phaser.Scene.Scene
@@ -56,10 +54,10 @@ scene =
       toClearE :: FRP.Event Unit
       toClearE =
         FRP.filterJust
-          $ FRP.sampleBy
+          <<< FRP.sampleBy
               (\drawing _ -> if drawing then Nothing else Just unit)
               drawingB
-              pointerDownE
+          $ pointerDownE
 
       toDrawE :: FRP.Event Phaser.Input.Pointer.Pointer
       toDrawE =
@@ -73,28 +71,19 @@ scene =
           Phaser.GameObjects.Graphics.clear tracer
     void
       $ FRP.subscribe toDrawE \pointer -> do
-          -- NOTE getInterpolatedPosition compute points between previous position and current position, so they are all on the same line
-          positions <- Phaser.Input.Pointer.getInterpolatedPosition pointer 30
-          let
-            intervals ::
-              Array
-                { start :: { x :: Number, y :: Number }
-                , end :: { x :: Number, y :: Number }
-                }
-            intervals =
-              Data.Maybe.fromMaybe [] do
-                shift1 <- Data.Array.tail positions
-                pure $ Data.Array.zipWith ({ start: _, end: _ }) positions shift1
-          -- TODO use Path.splineTo(points)
-          -- TODO Vector2
-          Data.Traversable.for_ intervals \({ start, end }) -> do
-            line <- Phaser.Geom.newLine start end
-            Phaser.GameObjects.Graphics.lineStyle tracer
-              { alpha: 1.0
-              , color: 0x000000
-              , lineWidth: 3.0
-              }
-            Phaser.GameObjects.Graphics.strokeLineShape tracer line
+          currentPosition <-
+            Phaser.Input.Pointer.position pointer
+              <#> Phaser.Math.Vector2.point
+          prevPosition <-
+            Phaser.Input.Pointer.prevPosition pointer
+              <#> Phaser.Math.Vector2.point
+          line <- Phaser.Geom.newLine prevPosition currentPosition
+          Phaser.GameObjects.Graphics.lineStyle tracer
+            { alpha: 1.0
+            , color: 0x000000
+            , lineWidth: 3.0
+            }
+          Phaser.GameObjects.Graphics.strokeLineShape tracer line
 
   renderPoint ::
     Phaser.GameObjects.Graphics.Graphics ->

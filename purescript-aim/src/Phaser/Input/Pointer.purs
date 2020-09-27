@@ -1,12 +1,13 @@
 module Phaser.Input.Pointer
   ( Pointer
   , getInterpolatedPosition
-  , point
+  , position
+  , prevPosition
   ) where
 
-import Data.Function.Uncurried as Data.Function.Uncurried
 import Effect (Effect)
 import Effect.Uncurried as Effect.Uncurried
+import Phaser.Math.Vector2 as Phaser.Math
 
 -----------------------
 -- Phaser.Input.Pointer
@@ -40,15 +41,24 @@ getInterpolatedPosition pointer steps =
     , steps
     }
 
-foreign import _point ::
-  Data.Function.Uncurried.Fn1
+foreign import _position ::
+  Effect.Uncurried.EffectFn1
     Pointer
-    { x :: Number
-    , y :: Number
-    }
+    Phaser.Math.Vector2
 
-point :: Pointer -> { x :: Number, y :: Number }
-point pointer =
-  Data.Function.Uncurried.runFn1
-    _point
+position :: Pointer -> Effect Phaser.Math.Vector2
+position pointer =
+  Effect.Uncurried.runEffectFn1
+    _position
+    pointer
+
+foreign import _prevPosition ::
+  Effect.Uncurried.EffectFn1
+    Pointer
+    Phaser.Math.Vector2
+
+prevPosition :: Pointer -> Effect Phaser.Math.Vector2
+prevPosition pointer =
+  Effect.Uncurried.runEffectFn1
+    _prevPosition
     pointer

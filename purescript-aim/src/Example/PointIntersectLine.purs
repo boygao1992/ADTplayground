@@ -12,6 +12,7 @@ import Phaser.GameObjects.Graphics as Phaser.GameObjects.Graphics
 import Phaser.Geom as Phaser.Geom
 import Phaser.Input as Phaser.Input
 import Phaser.Input.Pointer as Phaser.Input.Pointer
+import Phaser.Math.Vector2 as Phaser.Math.Vector2
 import Phaser.Scene as Phaser.Scene
 
 scene :: Effect Phaser.Scene.Scene
@@ -39,7 +40,8 @@ scene =
     pointerE <- onPointerMoveE inputPlugin
     _ <-
       FRP.subscribe pointerE \pointer -> do
-        point <- Phaser.Geom.newPoint $ Phaser.Input.Pointer.point pointer
+        currentPosition <- Phaser.Input.Pointer.position pointer
+        point <- Phaser.Geom.newPoint $ Phaser.Math.Vector2.point currentPosition
         render graphics line (Just point)
     render graphics line Nothing
 
