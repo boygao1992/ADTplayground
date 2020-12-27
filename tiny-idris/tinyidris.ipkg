@@ -1,0 +1,11 @@
+package tinyidris
+
+modules =
+  Core.TT
+
+options = "-p contrib"
+
+main = Idris.Main
+sourcedir = "src"
+
+executable = tinyidris
