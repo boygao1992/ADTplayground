@@ -1,5 +1,6 @@
 module Core.TT
 
+import Data.List
 import Decidable.Equality
 
 -- | NOTE Name
@@ -72,6 +73,11 @@ dropVar :
 dropVar (n :: ns) First = ns
 dropVar (m :: ns) (Later p) = m :: dropVar ns p
 
+export
+varExtend : IsVar x idx outer -> IsVar x idx (outer ++ inner)
+varExtend First = First
+varExtend (Later y) = Later (varExtend y)
+
 -- | NOTE Var
 public export
 data Var : List Name -> Type where
@@ -84,13 +90,14 @@ dropFirst ((MkVar First) :: vs) = dropFirst vs
 dropFirst ((MkVar (Later p)) :: vs) = MkVar p :: dropFirst vs
 
 export
-embedVar : Var outer -> Var (outer ++ inner)
-embedVar (MkVar First) = MkVar First
-embedVar (MkVar (Later x)) =
-  let
-    MkVar x' = embedVar (MkVar x)
-  in
-    MkVar (Later x')
+isVar : (n : Name) -> (ns : List Name) -> Maybe (Var ns)
+isVar n [] = Nothing
+isVar n (x :: xs) = case n == x of
+  False => do
+    MkVar p <- isVar n xs
+    pure (MkVar (Later p))
+  True =>
+    pure (MkVar First)
 
 -- | NOTE NVar
 public export
@@ -100,9 +107,9 @@ data NVar : Name -> List Name -> Type where
 export
 weakenNVar :
   {idx : Nat} ->
-  (ns : List Name) ->
+  (outer : List Name) ->
   (0 _ : IsVar name idx inner) ->
-  NVar name (ns ++ inner)
+  NVar name (outer ++ inner)
 weakenNVar [] p = MkNVar p
 weakenNVar (n :: ns) p =
   let
@@ -157,6 +164,7 @@ data Term : List Name -> Type where
   TType : Term ns -- type of types
   Erased : Term ns -- place holder
 
+-- | NOTE Weaken
 public export
 interface Weaken (tm : List Name -> Type) where
   weaken : {n: Name} -> {ns: List Name} -> tm ns -> tm (n :: ns)
@@ -183,6 +191,37 @@ export
 apply : Term ns -> List (Term ns) -> Term ns
 apply fn [] = fn
 apply fn (a :: args) = apply (App fn a) args
+
+-- get the list of arguments applied to a higher-order function
+export
+getFnArgs : Term ns -> (Term ns, List (Term ns))
+getFnArgs tm = go [] tm
+  where
+  go :
+    List (Term ns) ->
+    Term ns ->
+    (Term ns, List (Term ns))
+  go args (App f x) = go (x :: args) f
+  go args tm = (tm, args)
+
+export
+embed : Term outer -> Term (outer ++ inner)
+embed (Local i p) =
+  Local _ (varExtend p)
+embed (Ref nt n) = Ref nt n
+embed (Meta n args) =
+  Meta n
+    (map embed args)
+embed (Bind n b scope) =
+  Bind n
+    (map embed b)
+    (embed {outer = n :: outer} scope)
+embed (App f x) =
+  App
+    (embed f)
+    (embed x)
+embed TType = TType
+embed Erased = Erased
 
 -- insert a list of name into the middle and shift index of the variable accordingly
 export
@@ -235,24 +274,59 @@ export
 Weaken Term where
   weakenNs {inner} middle x = insertNames {outer = []} {inner} middle x
 
+namespace Bounds
+  -- | NOTE Bounds
+  public export
+  data Bounds : List Name -> Type where
+    None : Bounds []
+    Add : (n : Name) {- new -} -> Name {- old -} -> Bounds ns -> Bounds (n :: ns)
+
 export
-embed : Term outer -> Term (outer ++ inner)
-embed (Local i p) =
-  let
-    MkVar p' = embedVar (MkVar p)
-  in
-    Local _ p'
-embed (Ref nt n) = Ref nt n
-embed (Meta n args) =
-  Meta n
-    (map embed args)
-embed (Bind n b scope) =
-  Bind n
-    (map embed b)
-    (embed {outer = n :: outer} scope)
-embed (App f x) =
-  App
-    (embed f)
-    (embed x)
-embed TType = TType
-embed Erased = Erased
+addVars :
+  {later : List Name} ->
+  {bound : List Name} ->
+  {idx : Nat} ->
+  Bounds bound ->
+  (0 _ : IsVar name idx (later ++ vars)) ->
+  NVar name (later ++ (bound ++ vars))
+addVars {later} {bound} {idx} _ p =
+  insertNVarNames {outer = later} {middle = bound} idx p
+
+-- | Initially all references are global references (Ref) but we can turn
+-- | some of them into local references to variables in the scope by
+-- | resolving Lambda bindings.
+-- |
+-- | Implicit
+-- |
+-- | ```idris2
+-- | f :: { old : _ } -> _
+-- | f { old = new } = _
+-- | ```
+-- |
+-- | Explicit
+-- |
+-- | ```idris2
+-- | f :: (old : _) -> _
+-- | f new = _
+-- | ```
+resolveRef :
+  {outer : List Name} ->
+  (done : List Name) ->
+  Bounds bound ->
+  Name ->
+  Maybe (Term (outer ++ (done ++ (bound ++ vars))))
+resolveRef _ None _ = Nothing
+resolveRef {outer} {vars} done (Add {ns} new old bs) n =
+  if n == old then
+    -- Maybe (Term (outer ++ (done ++ (new :: (ns ++ vars)))))
+    rewrite Data.List.appendAssociative outer done (new :: (ns ++ vars)) in
+      -- Maybe (Term ((outer ++ done) ++ (new :: (ns ++ vars))))
+      let
+        MkNVar p = weakenNVar {inner = new :: (ns ++ vars)} (outer ++ done) First
+      in
+        Just (Local _ p)
+  else
+    -- Maybe (Term (outer ++ (done ++ ([new] ++ (ns ++ vars)))))
+    rewrite Data.List.appendAssociative done [new] (ns ++ vars) in
+      -- Maybe (Term (outer ++ ((done ++ [new]) ++ (ns ++ vars))))
+      resolveRef {outer} {vars} (done ++ [new]) bs n
