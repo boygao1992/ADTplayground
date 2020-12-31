@@ -3,6 +3,9 @@ module Core.TT
 import Data.List
 import Decidable.Equality
 
+-- transcendence of universe (n -> n+1) in data-type definition
+-- (TyCon : a -> b -> Type n) : Type (n+1)
+
 -- | NOTE Name
 public export
 data Name : Type where
@@ -228,16 +231,16 @@ export
 insertNVarNames :
   {outer : List Name} ->
   {middle : List Name} ->
-  (idx : Nat) ->
+  {idx : Nat} ->
   (0 _ : IsVar name idx (outer ++ inner)) ->
   NVar name (outer ++ (middle ++ inner))
-insertNVarNames {outer = []} {middle} idx p =
+insertNVarNames {outer = []} {middle} {idx} p =
   weakenNVar middle p
-insertNVarNames {outer = n :: ns} {middle} Z First =
+insertNVarNames {outer = n :: ns} {middle} {idx = Z} First =
   MkNVar (First {n} {ns = ns ++ (middle ++ inner)})
-insertNVarNames {outer = n :: ns} {middle} (S i) (Later p) =
+insertNVarNames {outer = n :: ns} {middle} {idx = S i} (Later p) =
   let
-    MkNVar p' = insertNVarNames {outer = ns} {middle} i p
+    MkNVar p' = insertNVarNames {outer = ns} {middle} p
   in
     MkNVar (Later p')
 
@@ -250,7 +253,7 @@ insertNames :
   Term (outer ++ (middle ++ inner))
 insertNames {outer} middle (Local i p) =
   let
-    MkNVar p' = insertNVarNames {outer} {middle} i p
+    MkNVar p' = insertNVarNames {outer} {middle} p
   in
     Local _ p'
 insertNames {outer} {inner} middle (Ref nt n) =
@@ -280,17 +283,6 @@ namespace Bounds
   data Bounds : List Name -> Type where
     None : Bounds []
     Add : (n : Name) {- new -} -> Name {- old -} -> Bounds ns -> Bounds (n :: ns)
-
-export
-addVars :
-  {later : List Name} ->
-  {bound : List Name} ->
-  {idx : Nat} ->
-  Bounds bound ->
-  (0 _ : IsVar name idx (later ++ vars)) ->
-  NVar name (later ++ (bound ++ vars))
-addVars {later} {bound} {idx} _ p =
-  insertNVarNames {outer = later} {middle = bound} idx p
 
 -- | Initially all references are global references (Ref) but we can turn
 -- | some of them into local references to variables in the scope by
@@ -330,3 +322,247 @@ resolveRef {outer} {vars} done (Add {ns} new old bs) n =
     rewrite Data.List.appendAssociative done [new] (ns ++ vars) in
       -- Maybe (Term (outer ++ ((done ++ [new]) ++ (ns ++ vars))))
       resolveRef {outer} {vars} (done ++ [new]) bs n
+
+mkLocals :
+  {outer : List Name} ->
+  {bound : List Name} ->
+  Bounds bound ->
+  Term (outer ++ vars) ->
+  Term (outer ++ (bound ++ vars))
+mkLocals {outer} {bound} {vars} _ (Local i p) =
+  let
+    MkNVar p' = insertNVarNames {outer} {middle = bound} {inner = vars} p
+  in
+    Local _ p'
+mkLocals {outer} bs (Ref Bound n) =
+  case resolveRef {outer} [] bs n of -- NOTE turn global Ref to Local if bounded
+    Nothing => Ref Bound n
+    Just tm => tm
+mkLocals _ (Ref nt n) = Ref nt n
+mkLocals bs (Meta n args) =
+  Meta n
+    (map (mkLocals bs) args)
+mkLocals bs (Bind n b scope) =
+  Bind n
+    (map (mkLocals bs) b)
+    (mkLocals {outer = n :: outer} bs scope)
+mkLocals bs (App f x) =
+  App
+    (mkLocals bs f)
+    (mkLocals bs x)
+mkLocals _ TType = TType
+mkLocals _ Erased = Erased
+
+export
+refsToLocals :
+  {bound : List Name} ->
+  Bounds bound ->
+  Term vars ->
+  Term (bound ++ vars)
+refsToLocals None tm = tm
+refsToLocals bs tm = mkLocals {outer = []} bs tm
+
+-- Replace any reference to 'old' with a locally bound name 'new'
+export
+refToLocal : Name -> (new : Name) -> Term vars -> Term (new :: vars)
+refToLocal old new tm = refsToLocals (Add new old None) tm
+
+-- Replace any Ref Bound in a type with appropriate local
+export
+resolveNames : {vars : List Name} -> Term vars -> Term vars
+resolveNames {vars} (Ref Bound n) = case isVar n vars of
+  Nothing => Ref Bound n
+  Just (MkVar p) => Local _ p
+resolveNames (Meta n args) =
+  Meta n
+    (map resolveNames args)
+resolveNames (Bind n b scope) =
+  Bind n
+    (map resolveNames b)
+    (resolveNames {vars = n :: vars} scope)
+resolveNames (App f x) =
+  App
+    (resolveNames f)
+    (resolveNames x)
+resolveNames tm = tm
+
+-- Substitute some explicit terms for names in a term, and remove those
+-- names from the scope
+namespace SubstEnv
+  public export
+  data SubstEnv : List Name {- drop -} -> List Name {- vars -} -> Type where
+    Nil : SubstEnv [] vars
+    (::) :
+      Term vars ->
+      SubstEnv ds vars ->
+      SubstEnv (d {- variable name of the Term -} :: ds) vars
+
+  findDrop :
+    {drop : List Name} ->
+    {idx : Nat} ->
+    (0 _ : IsVar name idx (drop ++ vars)) ->
+    SubstEnv drop vars ->
+    Term vars
+  -- when idx >= |drop|, which means the variable is not in drop but in vars
+  -- so it's bound locally
+  findDrop {drop = []} p [] = Local _ p
+  -- when idx < |drop|
+  findDrop {drop = (name :: _)} First (tm :: _) = tm
+  findDrop {drop = (_ :: _)} (Later p) (_ :: env) =
+    findDrop p env
+
+  find :
+    {outer : List Name} ->
+    {drop : List Name} ->
+    {vars : List Name} ->
+    {idx : Nat} ->
+    (0 _ : IsVar name idx (outer ++ (drop ++ vars))) ->
+    SubstEnv drop vars ->
+    Term (outer ++ vars)
+  find {outer = []} p env = findDrop p env
+  find {outer = (name :: _)} First env = Local _ First
+  find {outer = (n :: _)} (Later p) env =
+    weaken {n}
+      (find p env)
+
+  substEnv :
+    {outer : List Name} ->
+    {drop : List Name} ->
+    {vars : List Name} ->
+    SubstEnv drop vars ->
+    Term (outer ++ (drop ++ vars)) ->
+    Term (outer ++ vars)
+  substEnv env (Local _ p) = find p env
+  substEnv _ (Ref nt n) = Ref nt n
+  substEnv env (Meta n args) =
+    Meta n
+      (map (substEnv env) args)
+  substEnv {outer} env (Bind n b scope) =
+    Bind n
+      (map (substEnv env) b)
+      (substEnv {outer = n :: outer} env scope)
+  substEnv env (App f x) =
+    App
+      (substEnv env f)
+      (substEnv env x)
+  substEnv env TType = TType
+  substEnv env Erased = Erased
+
+  export
+  substs :
+    {drop : List Name} ->
+    {vars : List Name} ->
+    SubstEnv drop vars ->
+    Term (drop ++ vars) ->
+    Term (vars)
+  substs env tm = substEnv {outer = []} env tm
+
+  export
+  subst :
+    {name : Name} ->
+    {vars : List Name} ->
+    Term vars ->
+    Term (name :: vars) ->
+    Term vars
+  subst {name} val tm = substs {drop = [name]} [val] tm
+
+-- Replace an explicit name with a term
+export
+substName :
+  {vars : List Name} ->
+  Name ->
+  Term vars ->
+  Term vars ->
+  Term vars
+substName name new old@(Ref _ n) =
+  if name == n then
+    new
+  else
+    old
+substName name new (Meta n args) =
+  Meta n
+    (map (substName name new) args)
+-- ASSUMPTION: When we substitute under binders, the name has always been
+-- resolved to a Local, so no need to check that `name` isn't shadowing
+substName {vars} name new (Bind n b scope) =
+  Bind n
+    (map (substName name new) b)
+    (substName {vars = n :: vars} name (weaken new) scope)
+substName name new (App f x) =
+  App
+    (substName name new f)
+    (substName name new x)
+substName name new old = old
+
+-- proof that two lists of names are of the same length
+public export
+data CompatibleVars : List Name -> List Name -> Type where
+  CompatPre : CompatibleVars xs xs
+  CompatExt : CompatibleVars xs ys -> CompatibleVars (x :: xs) (y :: ys)
+
+export
+areVarsCompatible :
+  (xs : List Name) ->
+  (ys : List Name) ->
+  Maybe (CompatibleVars xs ys)
+areVarsCompatible [] [] = pure CompatPre
+areVarsCompatible (x :: xs) (y :: ys) = do
+  compat <- areVarsCompatible xs ys
+  pure (CompatExt compat)
+areVarsCompatible _ _ = Nothing
+
+renameVar :
+  -- need y and ys at runtime because CompatibleVars doesn't structurally
+  -- align with IsVar so we cannot construct `IsVar _ _ (y :: ys)` without
+  -- y and ys
+  {y : Name} ->
+  {ys : List Name} ->
+  {idx : Nat} ->
+  (0 _ : IsVar name idx (x :: xs)) -> -- base case always non-empty
+  CompatibleVars xs ys -> -- base case possibly empty
+  Var (y :: ys)
+renameVar First p = MkVar First
+renameVar (Later p) CompatPre = weaken (MkVar p)
+renameVar (Later p) (CompatExt compat) = weaken (renameVar p compat)
+
+export
+renameVars :
+  {ys : List Name} ->
+  CompatibleVars xs ys ->
+  Term xs ->
+  Term ys
+renameVars CompatPre tm = tm
+renameVars (CompatExt compat) (Local _ p) =
+  let
+    MkVar p' = renameVar p compat
+  in
+    Local _ p'
+renameVars _ (Ref nt n) = Ref nt n
+renameVars compat (Meta n args) =
+  Meta n
+    (map (renameVars compat) args)
+renameVars compat (Bind n b scope) =
+  Bind n
+    (map (renameVars compat) b)
+    (renameVars (CompatExt compat) scope)
+renameVars compat (App f x) =
+  App
+    (renameVars compat f)
+    (renameVars compat x)
+renameVars _ TType = TType
+renameVars _ Erased = Erased
+
+export
+renameTop :
+  {vars : List Name} ->
+  {old : Name} ->
+  (new : Name) ->
+  Term (old :: vars) ->
+  Term (new :: vars)
+renameTop new tm = renameVars (CompatExt CompatPre) tm
+
+public export
+data SubVars : List Name -> List Name -> Type where
+  SubRefl : SubVars xs xs
+  DropCons : SubVars xs ys -> SubVars xs (y :: ys)
+  KeepCons : SubVars xs ys -> SubVars (x :: xs) (y :: ys)
