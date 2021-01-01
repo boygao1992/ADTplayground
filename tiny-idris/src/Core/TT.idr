@@ -389,6 +389,7 @@ resolveNames tm = tm
 -- Substitute some explicit terms for names in a term, and remove those
 -- names from the scope
 namespace SubstEnv
+  -- | NOTE SubstEnv
   public export
   data SubstEnv : List Name {- drop -} -> List Name {- vars -} -> Type where
     Nil : SubstEnv [] vars
@@ -494,7 +495,8 @@ substName name new (App f x) =
     (substName name new x)
 substName name new old = old
 
--- proof that two lists of names are of the same length
+-- | NOTE CompatibleVars
+-- | proof that two lists of names are of the same length
 public export
 data CompatibleVars : List Name -> List Name -> Type where
   CompatPre : CompatibleVars xs xs
@@ -561,8 +563,168 @@ renameTop :
   Term (new :: vars)
 renameTop new tm = renameVars (CompatExt CompatPre) tm
 
+-- | NOTE SubVars
+-- | proof that a list of names is subset of another
 public export
-data SubVars : List Name -> List Name -> Type where
-  SubRefl : SubVars xs xs
-  DropCons : SubVars xs ys -> SubVars xs (y :: ys)
-  KeepCons : SubVars xs ys -> SubVars (x :: xs) (y :: ys)
+data SubVars : List Name {- subset -} -> List Name {- superset -} -> Type where
+  SubRefl : SubVars ns ns
+  DropCons : SubVars sub sup -> SubVars sub (n :: sup)
+  KeepCons : SubVars sub sup -> SubVars (n :: sub) (n :: sup)
+
+export
+subElem :
+  {idx : Nat} ->
+  SubVars sub sup -> -- base case possibly empty
+  (0 _ : IsVar name idx sup) -> -- base case always non-empty
+  Maybe (Var sub)
+subElem SubRefl var = Just (MkVar var)
+subElem (DropCons _) First = Nothing
+subElem (DropCons subVars) (Later var) = do
+  MkVar var' <- subElem subVars var
+  pure (MkVar var')
+subElem (KeepCons subVars) First = Just (MkVar First)
+subElem (KeepCons subVars) (Later var) = do
+  MkVar var' <- subElem subVars var
+  pure (MkVar (Later var'))
+
+export
+subExtend :
+  (outer : List Name) ->
+  SubVars sub sup ->
+  SubVars (outer ++ sub) (outer ++ sup)
+subExtend [] subVars = subVars
+subExtend (_ :: ns) subVars =
+  KeepCons
+    (subExtend ns subVars)
+
+export
+subInclude :
+  (inner : List Name) ->
+  SubVars sub sup ->
+  SubVars (sub ++ inner) (sup ++ inner)
+subInclude inner SubRefl = SubRefl
+subInclude inner (DropCons subVars) =
+  DropCons
+    (subInclude inner subVars)
+subInclude inner (KeepCons subVars) =
+  KeepCons
+    (subInclude inner subVars)
+
+mutual
+  export
+  shrinkBinder :
+    Binder (Term vars) ->
+    SubVars newVars vars ->
+    Maybe (Binder (Term newVars))
+  shrinkBinder (Lam pi ty) subVars =
+    Just (Lam pi
+      !(shrinkTerm ty subVars)
+    )
+  shrinkBinder (Pi pi ty) subVars =
+    Just (Pi pi
+      !(shrinkTerm ty subVars)
+    )
+  shrinkBinder (PVar ty) subVars =
+    Just (PVar
+      !(shrinkTerm ty subVars)
+    )
+  shrinkBinder (PVTy ty) subVars =
+    Just (PVTy
+      !(shrinkTerm ty subVars)
+    )
+
+  export
+  shrinkVar :
+    Var vars ->
+    SubVars newVars vars ->
+    Maybe (Var newVars)
+  shrinkVar (MkVar x) subVars = subElem subVars x
+
+  export
+  shrinkTerm :
+    Term vars ->
+    SubVars newVars vars ->
+    Maybe (Term newVars)
+  shrinkTerm (Local _ p) subVars = do
+    MkVar p' <- subElem subVars p
+    pure (Local _ p')
+  shrinkTerm (Ref nt n) _ = Just (Ref nt n)
+  shrinkTerm (Meta n args) subVars =
+    Just (Meta n
+      !(traverse (\x => shrinkTerm x subVars) args)
+    )
+  shrinkTerm (Bind n b scope) subVars =
+    Just (Bind n
+      !(shrinkBinder b subVars)
+      !(shrinkTerm scope (KeepCons subVars))
+    )
+  shrinkTerm (App f x) subVars =
+    Just (App
+      !(shrinkTerm f subVars)
+      !(shrinkTerm x subVars)
+    )
+  shrinkTerm TType _ = Just TType
+  shrinkTerm Erased _ = Just Erased
+
+--- Show instances
+
+export
+showSep : String -> List String -> String
+showSep sep [] = ""
+showSep sep [x] = x
+showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
+
+export
+Show Name where
+  show (UN n) = n
+  show (MN n i) = "{" ++ n ++ ":" ++ show i ++ "}"
+
+export
+nameAt :
+  {vars : _} ->
+  (idx : Nat) ->
+  (0 p : IsVar name idx vars) ->
+  Name
+nameAt {vars = (name :: _)} Z First = name
+nameAt {vars = (_ :: _)} (S i) (Later p) = nameAt i p
+
+mutual
+  export
+  {vars : List Name} -> Show (Term vars) where
+    show tm =
+      let (fn, args) = getFnArgs tm
+      in showApp fn args
+
+  showApp :
+    {vars : List Name} ->
+    Term vars ->
+    List (Term vars) ->
+    String
+  showApp (Local idx p) [] =
+    show (nameAt idx p) ++ "[" ++ show idx ++ "]"
+  showApp (Ref _ n) [] = show n
+  showApp (Meta n args) [] =
+    "?" ++ show n ++ "_" ++ show args
+  showApp (Bind x (Lam p ty) sc) [] =
+    "\\" ++ show x ++ " : " ++ show ty ++
+    " => " ++ show sc
+  showApp (Bind x (Pi Explicit ty) sc) [] =
+    "((" ++ show x ++ " : " ++ show ty ++
+    ") -> " ++ show sc ++ ")"
+  showApp (Bind x (Pi Implicit ty) sc) [] =
+    "{" ++ show x ++ " : " ++ show ty ++
+    "} -> " ++ show sc
+  showApp (Bind x (PVar ty) sc) [] =
+    "pat " ++ show x ++ " : " ++ show ty ++
+    " => " ++ show sc
+  showApp (Bind x (PVTy ty) sc) [] =
+    "pty " ++ show x ++ " : " ++ show ty ++
+    " => " ++ show sc
+  showApp (App _ _) [] = "[can't happen]"
+  showApp Erased [] = "[_]"
+  showApp TType [] = "Type"
+  showApp _ [] = "???"
+  showApp f args =
+    "(" ++ assert_total (show f) ++ " " ++
+      assert_total (showSep " " (map show args))
+    ++ ")"
