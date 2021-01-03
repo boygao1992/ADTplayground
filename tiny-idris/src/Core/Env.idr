@@ -157,11 +157,65 @@ revNs (x :: xs) ys =
             -- reverseOnto [] (xs ++ ys) ++ [x] = reverseOnto [] (xs ++ ys) ++ [x]
             Refl
 
+-- Weaken by all the names at once at the end, to save multiple traversals
+-- in big environments
+-- Also reversing the names at the end saves significant time over concatenating
+-- when environments get fairly big.
 getBinderUnder :
   Weaken tm =>
   {idx : Nat} ->
   {vars : List Name} ->
   (ns : List Name) ->
-  (0 _ : IsVar x idx vars) ->
+  (0 _ : IsVar name idx vars) ->
   Env tm vars ->
   Binder (tm (reverseOnto vars ns))
+getBinderUnder {vars = (name :: vs)} ns First (b :: env) =
+  -- reverseOnto: reverseOnto (name :: vs) ns = reverseOnto vs (name :: ns)
+  -- Binder (tm (reverseOnto (name :: vs) ns))
+  rewrite revOnto vs (name :: ns) in -- reverseOnto vs (name :: ns) = reverse (name :: ns) ++ vs
+    -- Binder (tm (reverse (name :: ns) ++ vs))
+    map (weakenNs (reverse (name :: ns))) b
+getBinderUnder {vars = (v :: _)} ns (Later isVar) (_ :: env) =
+  getBinderUnder (v :: ns) isVar env
+
+export
+getBinder :
+  Weaken tm =>
+  {vars : List Name} ->
+  {idx : Nat} ->
+  (0 _ : IsVar name idx vars) ->
+  Env tm vars ->
+  Binder (tm vars)
+getBinder isVar env = getBinderUnder [] isVar env
+
+-- | NOTE IsDefined
+-- | alias of Core.TT.NVar
+public export
+data IsDefined : Name -> List Name -> Type where
+  MkIsDefined :
+    {idx : Nat} ->
+    (0 _ : IsVar name idx vars) ->
+    IsDefined name vars
+
+export
+defined :
+  {vars : List Name} ->
+  (name : Name) ->
+  Env tm vars ->
+  Maybe (IsDefined name vars)
+defined {vars = []} name [] = Nothing
+defined {vars = (v :: vs)} name (_ :: env) =
+  case nameEq v name of
+    Nothing => do
+      MkIsDefined p <- defined name env
+      pure (MkIsDefined (Later p))
+    Just Refl => -- v == name
+      Just (MkIsDefined First)
+
+-- Make a dummy environment, if we genuinely don't care about the values
+-- and types of the contents.
+-- We use this when building and comparing case trees.
+export
+mkEnv : (vs : List Name) -> Env Term vs
+mkEnv [] = []
+mkEnv (n :: ns) = PVar Erased :: mkEnv ns
