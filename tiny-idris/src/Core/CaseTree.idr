@@ -84,3 +84,82 @@ mutual
 export
 Weaken CaseTree where
   weakenNs ns t = insertCaseNames {outer = []} ns t
+
+-- NOTE 4.2.2 definition of patterns
+-- Patterns, which arise from LHS expressions, and are converted to
+-- case trees
+public export
+data Pat : Type where
+  -- NOTE constructor pattern
+  PCon :
+    Name -> (tag : Int) -> (arity : Nat) ->
+    List Pat -> -- arguments TODO size of List == arity?
+    Pat
+  -- NOTE variable
+  PLoc : Name -> Pat
+  -- NOTE invalid
+  PUnmatchable : Term [] -> Pat
+
+export
+Show Pat where
+  show (PCon n t a args) = show n ++ show (t, a) ++ show args
+  show (PLoc n) = "{" ++ show n ++ "}"
+  show _ = "_"
+
+{- NOTE example
+
+data List : Type -> Type where
+  -- (0, 0)
+  Nil : List a
+  -- (1, 2)
+  Cons : a -> List a -> List a
+
+(Cons x1 Nil)
+
+App (App (Ref (DataCon 1 2) "List") (Ref Bound "x1")) (Ref (DataCon 0 0) "List")
+
+PCon "List" 1 2 [PLoc "x1", PCon "List" 0 0 []]
+-}
+export
+mkPat' : List Pat -> Term [] -> Term [] -> Pat
+mkPat' args _ (Ref Bound n) = PLoc n
+mkPat' args _ (Ref (DataCon tag arity) n) = PCon n tag arity args
+mkPat' args orig (App f x) =
+  let
+    parg = mkPat' [] x x
+  in
+    mkPat' (parg :: args) orig f
+mkPat' _ orig _ = PUnmatchable orig
+
+export
+argToPat : Term [] -> Pat
+argToPat tm = mkPat' [] tm tm
+
+export
+mkTerm : (vars : List Name) -> Pat -> Term vars
+mkTerm vars (PCon n tag arity xs) =
+  Core.TT.apply (Ref (DataCon tag arity) n)
+    (map (mkTerm vars) xs)
+mkTerm vars (PLoc n) = case Core.TT.isVar n vars of
+  Nothing => Ref Bound n
+  Just (MkVar isVar) => Local _ isVar
+mkTerm vars (PUnmatchable tm) = Core.TT.embed tm
+
+-- Show instances
+
+mutual
+  export
+  {vars : _} -> Show (CaseTree vars) where
+    show (Case {name} {idx} prf ty alts) =
+      "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of { "
+      ++ showSep " | " (assert_total (map show alts)) ++ " }"
+    show (STerm tm) = show tm
+    show (Unmatched msg) = "Error: " ++ show msg
+    show Impossible = "Impossible"
+
+  export
+  {vars : _} -> Show (CaseAlt vars) where
+    show (ConCase n tag args sc) =
+      show n ++ " " ++ showSep " " (map show args) ++ " => " ++ show sc
+    show (DefaultCase sc) =
+      "_ => " ++ show sc
