@@ -162,6 +162,7 @@ revNs (x :: xs) ys =
 -- Also reversing the names at the end saves significant time over concatenating
 -- when environments get fairly big.
 getBinderUnder :
+  {tm: List Name -> Type} ->
   Weaken tm =>
   {idx : Nat} ->
   {vars : List Name} ->
@@ -174,12 +175,13 @@ getBinderUnder {vars = (name :: vs)} ns First (b :: env) =
   -- Binder (tm (reverseOnto (name :: vs) ns))
   rewrite revOnto vs (name :: ns) in -- reverseOnto vs (name :: ns) = reverse (name :: ns) ++ vs
     -- Binder (tm (reverse (name :: ns) ++ vs))
-    map (weakenNs (reverse (name :: ns))) b
+    map (weakenNs (Data.List.reverse (name :: ns))) b
 getBinderUnder {vars = (v :: _)} ns (Later isVar) (_ :: env) =
   getBinderUnder (v :: ns) isVar env
 
 export
 getBinder :
+  {tm: List Name -> Type} ->
   Weaken tm =>
   {vars : List Name} ->
   {idx : Nat} ->
