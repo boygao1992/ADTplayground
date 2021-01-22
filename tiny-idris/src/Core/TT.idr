@@ -153,8 +153,8 @@ Functor Binder where
 public export
 data Term : List Name -> Type where
   Local :
-    (i : Nat) -> -- de Bruijn index
-    (0 p : IsVar n i ns) -> -- proof that index is valid
+    {idx : Nat} -> -- de Bruijn index
+    (0 p : IsVar n idx ns) -> -- proof that index is valid
     Term ns
   Ref : NameType -> Name -> Term ns -- a reference to a global name
   Meta : Name -> List (Term ns) -> Term ns -- meta variable
@@ -209,8 +209,8 @@ getFnArgs tm = go [] tm
 
 export
 embed : Term outer -> Term (outer ++ inner)
-embed (Local i p) =
-  Local _ (varExtend p)
+embed (Local p) =
+  Local (varExtend p)
 embed (Ref nt n) = Ref nt n
 embed (Meta n args) =
   Meta n
@@ -251,11 +251,11 @@ insertNames :
   (middle : List Name) ->
   Term (outer ++ inner) ->
   Term (outer ++ (middle ++ inner))
-insertNames {outer} middle (Local i p) =
+insertNames {outer} middle (Local p) =
   let
     MkNVar p' = insertNVarNames {outer} {middle} p
   in
-    Local _ p'
+    Local p'
 insertNames {outer} {inner} middle (Ref nt n) =
   Ref {ns = outer ++ (middle ++ inner)} nt n
 insertNames {outer} {inner} middle (Meta n args) =
@@ -316,7 +316,7 @@ resolveRef {outer} {vars} done (Add {ns} new old bs) n =
       let
         MkNVar p = weakenNVar {inner = new :: (ns ++ vars)} (outer ++ done) First
       in
-        Just (Local _ p)
+        Just (Local p)
   else
     -- Maybe (Term (outer ++ (done ++ ([new] ++ (ns ++ vars)))))
     rewrite Data.List.appendAssociative done [new] (ns ++ vars) in
@@ -329,11 +329,11 @@ mkLocals :
   Bounds bound ->
   Term (outer ++ vars) ->
   Term (outer ++ (bound ++ vars))
-mkLocals {outer} {bound} {vars} _ (Local i p) =
+mkLocals {outer} {bound} {vars} _ (Local p) =
   let
     MkNVar p' = insertNVarNames {outer} {middle = bound} {inner = vars} p
   in
-    Local _ p'
+    Local p'
 mkLocals {outer} bs (Ref Bound n) =
   case resolveRef {outer} [] bs n of -- NOTE turn global Ref to Local if bounded
     Nothing => Ref Bound n
@@ -372,7 +372,7 @@ export
 resolveNames : {vars : List Name} -> Term vars -> Term vars
 resolveNames {vars} (Ref Bound n) = case isVar n vars of
   Nothing => Ref Bound n
-  Just (MkVar p) => Local _ p
+  Just (MkVar p) => Local p
 resolveNames (Meta n args) =
   Meta n
     (map resolveNames args)
@@ -406,7 +406,7 @@ namespace SubstEnv
     Term vars
   -- when idx >= |drop|, which means the variable is not in drop but in vars
   -- so it's bound locally
-  findDrop {drop = []} p [] = Local _ p
+  findDrop {drop = []} p [] = Local p
   -- when idx < |drop|
   findDrop {drop = (name :: _)} First (tm :: _) = tm
   findDrop {drop = (_ :: _)} (Later p) (_ :: env) =
@@ -421,7 +421,7 @@ namespace SubstEnv
     SubstEnv drop vars ->
     Term (outer ++ vars)
   find {outer = []} p env = findDrop p env
-  find {outer = (name :: _)} First env = Local _ First
+  find {outer = (name :: _)} First env = Local First
   find {outer = (n :: _)} (Later p) env =
     weaken {n}
       (find p env)
@@ -433,7 +433,7 @@ namespace SubstEnv
     SubstEnv drop vars ->
     Term (outer ++ (drop ++ vars)) ->
     Term (outer ++ vars)
-  substEnv env (Local _ p) = find p env
+  substEnv env (Local p) = find p env
   substEnv _ (Ref nt n) = Ref nt n
   substEnv env (Meta n args) =
     Meta n
@@ -534,11 +534,11 @@ renameVars :
   Term xs ->
   Term ys
 renameVars CompatPre tm = tm
-renameVars (CompatExt compat) (Local _ p) =
+renameVars (CompatExt compat) (Local p) =
   let
     MkVar p' = renameVar p compat
   in
-    Local _ p'
+    Local p'
 renameVars _ (Ref nt n) = Ref nt n
 renameVars compat (Meta n args) =
   Meta n
@@ -645,9 +645,9 @@ mutual
     Term vars ->
     SubVars newVars vars ->
     Maybe (Term newVars)
-  shrinkTerm (Local _ p) subVars = do
+  shrinkTerm (Local p) subVars = do
     MkVar p' <- subElem subVars p
-    pure (Local _ p')
+    pure (Local p')
   shrinkTerm (Ref nt n) _ = Just (Ref nt n)
   shrinkTerm (Meta n args) subVars =
     Just (Meta n
@@ -700,7 +700,7 @@ mutual
     Term vars ->
     List (Term vars) ->
     String
-  showApp (Local idx p) [] =
+  showApp (Local {idx} p) [] =
     show (nameAt idx p) ++ "[" ++ show idx ++ "]"
   showApp (Ref _ n) [] = show n
   showApp (Meta n args) [] =

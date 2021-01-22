@@ -142,7 +142,7 @@ mkTerm vars (PCon n tag arity xs) =
     (map (mkTerm vars) xs)
 mkTerm vars (PLoc n) = case Core.TT.isVar n vars of
   Nothing => Ref Bound n
-  Just (MkVar isVar) => Local _ isVar
+  Just (MkVar isVar) => Local isVar
 mkTerm vars (PUnmatchable tm) = Core.TT.embed tm
 
 -- Show instances
