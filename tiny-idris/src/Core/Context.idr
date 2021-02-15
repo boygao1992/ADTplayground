@@ -68,7 +68,7 @@ initDefs = pure empty
 
 export
 clearDefs : Defs -> Core Defs
-clearDefs d = pure empty
+clearDefs _ = pure empty
 
 -- A phantom type for finding references to the context
 export

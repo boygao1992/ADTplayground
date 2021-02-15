@@ -1,3 +1,11 @@
+-- | NOTE The Implementation of Functional Programming Languages
+-- | 11.3.1 Weak Head Normal Form
+-- |
+-- | Original expression (Term)
+-- |   -- Normal order reductions of top-level redexes ->
+-- | Weak Head normal form (no top-level redexes)
+-- |   -- Normal order reductions of inner redexes ->
+-- | Normal form (no redexes at all)
 module Core.Value
 
 import Core.Core
@@ -26,7 +34,7 @@ mutual
       Term (vars ++ free) ->
       Closure free
 
--- | NOTE NHead
+-- | NOTE NHead, top-level of weak head normal form
 -- The head of a value: things you can apply arguments to
 public export
 data NHead : List Name -> Type where
@@ -45,7 +53,7 @@ data NHead : List Name -> Type where
     List (Closure vars) ->
     NHead vars
 
--- | NOTE NF, normal form
+-- | NOTE NF, weak head normal form (WHNF), no top-level redexes
 -- | NOTE alternative to (Term : List Name -> Type) in (Env tm vars)
 -- Values themselves. 'Closure' is an unevaluated thunk, which means
 -- we can wait until necessary to reduce constructor arguments

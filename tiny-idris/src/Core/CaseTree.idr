@@ -29,7 +29,7 @@ mutual
     -- Absurd context
     Impossible : CaseTree vars
 
-  -- | NOTE CaseAlt
+  -- | NOTE CaseAlt (single-variable pattern lambda)
   -- Case alternatives. Unlike arbitrary patterns, they can be at most
   -- one constructor deep.
   -- Idris2 also needs cases for 'Delay' and primitives.
@@ -40,8 +40,8 @@ mutual
     ConCase :
       Name ->
       (tag : Int) ->
-      (args : List Name) ->
-      CaseTree (args ++ vars) ->
+      (argNs : List Name) ->
+      CaseTree (argNs ++ vars) ->
       CaseAlt vars
     -- match anything
     -- Catch-all case
@@ -71,11 +71,11 @@ mutual
     (ns : List Name) ->
     CaseAlt (outer ++ inner) ->
     CaseAlt (outer ++ (ns ++ inner))
-  insertCaseAltNames {outer} {inner} ns (ConCase x tag args ct) =
-    ConCase x tag args
-      (rewrite Data.List.appendAssociative args outer (ns ++ inner) in
-        insertCaseNames {outer = args ++ outer} {inner} ns
-          (rewrite sym (Data.List.appendAssociative args outer inner) in ct)
+  insertCaseAltNames {outer} {inner} ns (ConCase x tag argNs ct) =
+    ConCase x tag argNs
+      (rewrite Data.List.appendAssociative argNs outer (ns ++ inner) in
+        insertCaseNames {outer = argNs ++ outer} {inner} ns
+          (rewrite sym (Data.List.appendAssociative argNs outer inner) in ct)
       )
   insertCaseAltNames ns (DefaultCase x) =
     DefaultCase
@@ -102,7 +102,7 @@ data Pat : Type where
 
 export
 Show Pat where
-  show (PCon n t a args) = show n ++ show (t, a) ++ show args
+  show (PCon n t a argNs) = show n ++ show (t, a) ++ show argNs
   show (PLoc n) = "{" ++ show n ++ "}"
   show _ = "_"
 
@@ -159,7 +159,7 @@ mutual
 
   export
   {vars : _} -> Show (CaseAlt vars) where
-    show (ConCase n tag args sc) =
-      show n ++ " " ++ showSep " " (map show args) ++ " => " ++ show sc
+    show (ConCase n tag argNs sc) =
+      show n ++ " " ++ showSep " " (map show argNs) ++ " => " ++ show sc
     show (DefaultCase sc) =
       "_ => " ++ show sc
