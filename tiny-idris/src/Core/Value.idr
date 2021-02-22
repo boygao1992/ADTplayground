@@ -28,10 +28,10 @@ mutual
   public export
   data Closure : List Name -> Type where
     MkClosure :
-      {vars : List Name} ->
-      LocalEnv free vars ->
-      Env Term free ->
-      Term (vars ++ free) ->
+      {bound : List Name} ->
+      LocalEnv free bound -> -- named (Closure free)s, bound variables
+      Env Term free -> -- named (Binder (Term _))s, free variables
+      Term (bound ++ free) ->
       Closure free
 
 -- | NOTE NHead, top-level of weak head normal form

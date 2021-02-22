@@ -10,7 +10,18 @@ import Data.List
 -- |   (Type 1 : Type 2)
 -- |
 -- | [] : Env tm []
--- | [ ( _ : Binder (tm []) ) ] : Env tm [x]
+-- | [(a : Binder (tm []))] : Env tm [a]
+-- | [(a : Binder (tm [])), (b : Binder (tm [a]))] : Env tm [a, b]
+-- |
+-- | [tm [], tm [a], tm [a,b], ..., tm [a,b,...,y]] : Env tm [a,b,...,z]
+-- |
+-- | e.g.
+-- | \x : Bool -> \y : f x -> \z : g x y -> ...
+-- |
+-- | [ Lam _ (Ref (TyCon _ 0) "Bool")
+-- | , Lam _ (App (Ref (Func _ 1) "f") (Local 0 _))
+-- | , Lam _ (App (App (Ref (Func _ 2) "g") (Local 0 _)) (Local 1 _))
+-- | ] : Env Term [x, y, z]
 public export
 data Env : (tm : List Name -> Type) -> List Name -> Type where
   Nil : Env tm []

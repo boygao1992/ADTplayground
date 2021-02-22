@@ -112,12 +112,12 @@ getCaseBound (arg :: args) (n :: argNs) localEnv = do
 mutual
   eval :
     {free : List Name} ->
-    {vars : List Name} ->
+    {bound : List Name} ->
     Defs -> -- NOTE global definitions, e.g. data/type constructor, functions, etc.
     Env Term free -> -- NOTE free variables from binders
-    LocalEnv free vars -> -- NOTE bound variables (from lambda binding)
+    LocalEnv free bound -> -- NOTE bound variables (from lambda binding)
     Stack free -> -- NOTE arguments applied to top-level function
-    Term (vars ++ free) -> -- NOTE term to be evaluated
+    Term (bound ++ free) -> -- NOTE term to be evaluated
     Core (NF free)
   eval defs env localEnv stack (Local p) =
     evalLocal defs env localEnv stack p
@@ -136,6 +136,8 @@ mutual
     bNF <- traverse (\tm => eval defs env localEnv stack tm) b
     pure $
       NBind n bNF
+        -- NOTE preserve (Stack free) for (NApp (NRef nt n) stack)
+        -- in eval (Ref _ _)
         (\defs', arg =>
             eval defs' env (arg :: localEnv) stack scope
         )
@@ -148,23 +150,23 @@ mutual
   -- (Idris 2 has Let bindings, which we'd need to check and evaluate here)
   evalLocal :
     {free : List Name} ->
-    {vars : List Name} ->
+    {bound : List Name} ->
     {idx : Nat} ->
     Defs ->
     Env Term free ->
-    LocalEnv free vars -> -- List (Closure free)
+    LocalEnv free bound -> -- List (Closure free)
     Stack free -> -- List (Closure free)
-    (0 _ : IsVar name idx (vars ++ free)) ->
+    (0 _ : IsVar name idx (bound ++ free)) ->
     Core (NF free)
   -- NOTE base case 1: IsVar points to a free variable
-  evalLocal _ {vars = []} env localEnv stack isVar =
+  evalLocal {bound = []} _ env localEnv stack isVar =
     pure $ NApp (NLocal isVar) stack
   -- NOTE base case 2: IsVar locates a bound variable in LocalEnv
-  evalLocal defs {vars = _ :: _} _ ((MkClosure localEnv env tm) :: _) stack First =
+  evalLocal {bound = _ :: _} defs _ ((MkClosure localEnv env tm) :: _) stack First =
     eval defs env localEnv stack tm
   -- NOTE induction step
-  evalLocal defs {vars = _ :: vs} env (_ :: ls) stack (Later isVar) =
-    evalLocal defs {vars = vs} env ls stack isVar
+  evalLocal {bound = _ :: bs} defs env (_ :: ls) stack (Later isVar) =
+    evalLocal {bound = bs} defs env ls stack isVar
 
   evalRef :
     {free : List Name} ->
@@ -308,19 +310,19 @@ evalClosure defs (MkClosure locs env tm) =
 
 export
 nf :
-  {vars : List Name} ->
+  {free : List Name} ->
   Defs ->
-  Env Term vars ->
-  Term vars ->
-  Core (NF vars)
+  Env Term free ->
+  Term free ->
+  Core (NF free)
 nf defs env tm = eval defs env [] [] tm
 
 export
 gnf :
-  {vars : List Name} ->
-  Env Term vars ->
-  Term vars ->
-  Glued vars
+  {free : List Name} ->
+  Env Term free ->
+  Term free ->
+  Glued free
 gnf env tm =
   MkGlue
     (pure tm)
@@ -330,7 +332,7 @@ gnf env tm =
     )
 
 export
-gType : Glued vars
+gType : Glued free
 gType = MkGlue (pure TType) (const (pure NType))
 
 -- | NOTE QVar
@@ -380,24 +382,64 @@ mutual
     NF free ->
     Core (Term (bound ++ free))
   quoteGenNF q defs bounds env (NBind n bNF evalScope) = do
-    var <- genName "qv"
+    var <- genName "qv" -- NOTE introduce a new bound variable
     b <- quoteBinder q defs bounds env bNF
     scope <-
-      quoteGenNF q defs (Add n var bounds) env
+      quoteGenNF q defs
+        (Add n var bounds) -- NOTE add to bound variables
+        env
         !(evalScope defs (toClosure env (Ref Bound var)))
         -- NOTE Ref Bound (MN _) why?
         -- clues:
         -- 1. evalScope/eval (Ref Bound var) = NApp (NRef Bound var) stack
-        -- 2. quoteGenNF (NApp f args) -> quoteHead f
+        --   - evalScope provides stack (args)
+        -- 2. quoteGenNF (NApp f args) -> quoteHead f, quoteArgs args
         -- 3. quoteHead (NRef Bound (MN n i)) -> findName bounds i
         -- 4. if findName bounds i = Just (MkVar p)
         --    then quoteHead (NRef Bound (MN n i)) = Local _ _
+        -- NOTE in summary, initially introduced as a free variable
+        -- and let quoteHead to figure out if it's bound variable
+        -- TODO what if introduced as (Local var) since we know
+        -- it binds to the last slot in (Bounds _)? And let evalLocal
+        -- do the work instead of quoteHead > findName?
+        -- Maybe findName is faster than evalLocal?
     pure (Bind n b scope)
-  quoteGenNF q defs bounds env (NApp f args) = ?quoteGenNF_rhs_2
-  quoteGenNF q defs bounds env (NDCon n tag arity args) = ?quoteGenNF_rhs_3
-  quoteGenNF q defs bounds env (NTCon n tag arity args) = ?quoteGenNF_rhs_4
+  quoteGenNF q defs bounds env (NApp f args) =
+    pure
+      (Core.TT.apply
+        !(quoteHead q defs bounds env f)
+        !(quoteArgs q defs bounds env args)
+      )
+  quoteGenNF q defs bounds env (NDCon n tag arity args) = do
+    pure
+      (Core.TT.apply
+        (Ref (DataCon tag arity) n)
+        !(quoteArgs q defs bounds env args)
+      )
+  quoteGenNF q defs bounds env (NTCon n tag arity args) =
+    pure
+      (Core.TT.apply
+        (Ref (TyCon tag arity) n)
+        !(quoteArgs q defs bounds env args)
+      )
   quoteGenNF _ _ _ _ NType = pure TType
   quoteGenNF _ _ _ _ NErased = pure Erased
+
+  quoteArgs :
+    {bound : List Name} ->
+    {free : List Name} ->
+    Ref QVar Int ->
+    Defs ->
+    Bounds bound ->
+    Env Term free ->
+    List (Closure free) ->
+    Core (List (Term (bound ++ free)))
+  quoteArgs q defs bounds env [] = pure []
+  quoteArgs q defs bounds env (a :: args) =
+    pure
+      ( !(quoteGenNF q defs bounds env !(evalClosure defs a))
+        :: !(quoteArgs q defs bounds env args)
+      )
 
   quoteBinder :
     {bound : List Name} ->
@@ -420,3 +462,74 @@ mutual
   quoteBinder q defs bounds env (PVTy tyNF) = do
     ty <- quoteGenNF q defs bounds env tyNF
     pure (PVTy ty)
+
+  quoteHead :
+    {bound : List Name} ->
+    {free : List Name} ->
+    Ref QVar Int ->
+    Defs ->
+    Bounds bound ->
+    Env Term free ->
+    NHead free ->
+    Core (Term (bound ++ free))
+  quoteHead {bound} _ _ _ _ (NLocal isVar) =
+    let (MkVar isVar') = weakenNs bound (MkVar isVar)
+    in pure (Local isVar')
+  quoteHead q defs bounds env (NRef Bound (MN n i)) =
+    case findName bounds of
+      Nothing => pure (Ref Bound (MN n i))
+      Just (MkVar isVar) => pure (Local (Core.TT.varExtend isVar))
+    where
+    findName : Bounds bound' -> Maybe (Var bound')
+    findName None = Nothing
+    findName (Add new (MN n' i') bs) =
+      -- this uniquely identifies it, given how we
+      -- generated the names, and is a faster test!
+      if i == i'
+      then Just (MkVar First)
+      else do
+        MkVar isVar <- findName bs
+        pure (MkVar (Later isVar))
+    findName (Add _ _ bs) = do
+      MkVar isVar <- findName bs
+      pure (MkVar (Later isVar))
+  quoteHead q defs bounds env (NRef nt n) = pure (Ref nt n)
+  quoteHead q defs bounds env (NMeta x args) =
+    pure (Meta x !(quoteArgs q defs bounds env args))
+
+export
+Quote NF where
+  quoteGen q defs env tm = quoteGenNF q defs None env tm
+
+export
+Quote Term where
+  quoteGen q defs env tm = pure tm
+
+export
+Quote Closure where
+  quoteGen q defs env c = quoteGen q defs env !(evalClosure defs c)
+
+export
+glueBack :
+  {free : List Name} ->
+  Defs ->
+  Env Term free ->
+  NF free ->
+  Glued free
+glueBack defs env nf =
+  MkGlue
+    (do
+      empty <- Core.Context.clearDefs defs
+      quote empty env nf
+    )
+    (\_ => pure nf)
+
+-- | NOTE normalization by evaluation
+export
+normalise :
+  {free : List Name} ->
+  Defs ->
+  Env Term free ->
+  Term free ->
+  Core (Term free)
+normalise defs env tm = quote defs env !(nf defs env tm)
