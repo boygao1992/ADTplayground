@@ -533,3 +533,118 @@ normalise :
   Term free ->
   Core (Term free)
 normalise defs env tm = quote defs env !(nf defs env tm)
+
+public export
+interface Convert (tm : List Name -> Type) where
+  convGen :
+    {vars : List Name} ->
+    Ref QVar Int ->
+    Defs ->
+    Env Term vars ->
+    tm vars ->
+    tm vars ->
+    Core Bool
+
+  convert :
+    {vars : List Name} ->
+    Defs ->
+    Env Term vars ->
+    tm vars ->
+    tm vars ->
+    Core Bool
+  convert defs env tm tm' = do
+    q <- Core.Core.newRef QVar 0
+    convGen q defs env tm tm'
+mutual
+  allConv :
+    {vars : List Name} ->
+    Ref QVar Int ->
+    Defs ->
+    Env Term vars ->
+    List (Closure vars) ->
+    List (Closure vars) ->
+    Core Bool
+  allConv q defs env [] [] = pure True
+  allConv q defs env (x :: xs) (y :: ys) =
+    pure (!(convGen q defs env x y) && !(allConv q defs env xs ys))
+  allConv q defs env _ _ = pure False
+
+  chkConvHead :
+    {vars: List Name} ->
+    Ref QVar Int ->
+    Defs ->
+    Env Term vars ->
+    NHead vars ->
+    NHead vars ->
+    Core Bool
+  chkConvHead q defs env (NLocal {idx = x} _) (NLocal {idx = y} _) = pure (x == y)
+  chkConvHead q defs env (NRef _ x) (NRef _ y) = pure (x == y)
+  chkConvHead q defs env (NMeta x xs) (NMeta y ys) =
+    if x == y
+    then allConv q defs env xs ys
+    else pure False
+  chkConvHead q defs env _ _ = pure False
+
+  convBinders :
+    {vars : List Name} ->
+    Ref QVar Int ->
+    Defs ->
+    Env Term vars ->
+    Binder (NF vars) ->
+    Binder (NF vars) ->
+    Core Bool
+  convBinders q defs env (Lam _ x) (Lam _ y) = convGen q defs env x y
+  convBinders q defs env (Pi _ x) (Pi _ y) = convGen q defs env x y
+  convBinders q defs env _ _ = pure False
+
+  export
+  Convert NF where
+    convGen q defs env (NBind _ bx sx) (NBind _ by sy) = do
+      var <- genName "conv"
+      let c = MkClosure [] env (Ref Bound var)
+      if !(convBinders q defs env bx by)
+        then convGen q defs env !(sx defs c) !(sy defs c)
+        else pure False
+    -- NOTE eta conversion
+    -- f
+    -- \nx -> f nx
+    convGen q defs env tmx@(NBind nx (Lam ix tx) sx) tmy = do
+      empty <- Core.Context.clearDefs defs
+      etay <-
+        nf defs env
+          (Bind nx (Lam ix !(quote defs env tx))
+            (App (Core.TT.weaken !(quote defs env tmy)) -- TODO why weaken?
+              (Local First)
+            )
+          )
+      convGen q defs env tmx etay
+    convGen q defs env tmx tmy@(NBind ny (Lam iy ty) sy) = do
+      empty <- Core.Context.clearDefs defs
+      etax <-
+        nf defs env
+          (Bind ny (Lam iy !(quote defs env ty))
+            (App (Core.TT.weaken !(quote defs env tmx))
+              (Local First)
+            )
+          )
+      convGen q defs env etax tmy
+    convGen q defs env (NApp x xs) (NApp y ys) =
+      pure (!(chkConvHead q defs env x y) && !(allConv q defs env xs ys))
+    convGen q defs env (NDCon nx _ _ xs) (NDCon ny _ _ ys) =
+      pure (nx == ny && !(allConv q defs env xs ys))
+    convGen q defs env (NTCon nx _ _ xs) (NTCon ny _ _ ys) =
+      pure (nx == ny && !(allConv q defs env xs ys))
+    convGen q defs env NType NType = pure True
+    convGen q defs env NErased _ = pure True
+    convGen q defs env _ NErased = pure True
+    convGen q defs env _ _ = pure False
+
+  export
+  Convert Term where
+    convGen q defs env x y =
+      convGen q defs env !(nf defs env x) !(nf defs env y)
+
+  export
+  Convert Closure where
+    convGen q defs env x y =
+      convGen q defs env !(evalClosure defs x) !(evalClosure defs y)
