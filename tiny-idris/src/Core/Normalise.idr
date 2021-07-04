@@ -601,7 +601,7 @@ mutual
   Convert NF where
     convGen q defs env (NBind _ bx sx) (NBind _ by sy) = do
       var <- genName "conv"
-      let c = MkClosure [] env (Ref Bound var)
+      let c = toClosure env (Ref Bound var)
       if !(convBinders q defs env bx by)
         then convGen q defs env !(sx defs c) !(sy defs c)
         else pure False
@@ -648,3 +648,23 @@ mutual
   Convert Closure where
     convGen q defs env x y =
       convGen q defs env !(evalClosure defs x) !(evalClosure defs y)
+
+export
+getValArity :
+  {vars : List Name} ->
+  Defs ->
+  Env Term vars ->
+  NF vars ->
+  Core Nat
+getValArity defs env (NBind _ (Pi _ _) scope) =
+  pure (S !(getValArity defs env !(scope defs (toClosure env Erased))))
+getValArity defs env val = pure 0
+
+export
+getArity :
+  {vars : List Name} ->
+  Defs ->
+  Env Term vars ->
+  Term vars ->
+  Core Nat
+getArity defs env tm = getValArity defs env !(nf defs env tm)

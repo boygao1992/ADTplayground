@@ -1,7 +1,13 @@
 package tinyidris
 
 modules =
-  Core.TT
+ Core.CaseTree,
+ Core.Context,
+ Core.Core,
+ Core.Env,
+ Core.Normalise,
+ Core.TT,
+ Core.Value
 
 options = "-p contrib"
 
