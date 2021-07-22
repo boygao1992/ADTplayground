@@ -11,6 +11,6 @@
   "license": "MIT",
   "dependencies": {
     "papaparse": "^4.6.3",
-    "xlsx": "^0.14.3"
+    "xlsx": "^0.17.0"
   }
 }
