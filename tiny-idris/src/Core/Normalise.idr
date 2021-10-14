@@ -130,7 +130,7 @@ mutual
     in
       evalRef defs env (argClosures ++ stack) Func n
         (NApp (NMeta n argClosures) stack)
-  eval defs env localEnv (arg :: stack) (Bind n (Lam _ _) scope) =
+  eval defs env localEnv (arg :: stack) (Bind _ (Lam _ _) scope) =
     eval defs env (arg :: localEnv) stack scope
   eval defs env localEnv stack (Bind n b scope) = do
     bNF <- traverse (\tm => eval defs env localEnv stack tm) b

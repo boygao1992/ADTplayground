@@ -186,7 +186,7 @@ getBinderUnder {vars = (name :: vs)} ns First (b :: env) =
   -- Binder (tm (reverseOnto (name :: vs) ns))
   rewrite revOnto vs (name :: ns) in -- reverseOnto vs (name :: ns) = reverse (name :: ns) ++ vs
     -- Binder (tm (reverse (name :: ns) ++ vs))
-    map (weakenNs (Data.List.reverse (name :: ns))) b
+    map (weakenNs (Prelude.List.reverse (name :: ns))) b
 getBinderUnder {vars = (v :: _)} ns (Later isVar) (_ :: env) =
   getBinderUnder (v :: ns) isVar env
 

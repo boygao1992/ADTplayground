@@ -33,7 +33,7 @@ data Error : Type where
   UndefinedName : Name -> Error
   CaseCompile : Name -> CaseError -> Error
   GenericMsg : String -> Error
-  FileErr : String -> System.File.FileError -> Error
+  FileErr : String -> System.File.Error.FileError -> Error
 
 export
 Show Error where
@@ -160,7 +160,7 @@ Catchable Core Error where
 
 -- Traversable (specialised)
 traverse' : (a -> Core b) -> List a -> List b -> Core (List b)
-traverse' f [] acc = pure (Data.List.reverse acc)
+traverse' f [] acc = pure (Prelude.List.reverse acc)
 traverse' f (x :: xs) acc = traverse' f xs (!(f x) :: acc)
 
 export
