@@ -3,6 +3,7 @@ module Phaser.GameObjects.GameObjectFactory
   , arc
   , circle
   , container
+  , dom
   , group
   , line
   , rectangle
@@ -13,6 +14,7 @@ import Effect (Effect)
 import Effect.Uncurried as Effect.Uncurried
 import Phaser.GameObjects.Arc as Phaser.GameObjects.Arc
 import Phaser.GameObjects.Container as Phaser.GameObjects.Container
+import Phaser.GameObjects.DOMElement as Phaser.GameObjects.DOMElement
 import Phaser.GameObjects.GameObject as Phaser.GameObjects.GameObject
 import Phaser.GameObjects.Group as Phaser.GameObjects.Group
 import Phaser.GameObjects.Line as Phaser.GameObjects.Line
@@ -106,6 +108,28 @@ container gameObjectFactory { x, y } children =
     , x
     , y
     , children
+    }
+
+foreign import _dom ::
+  Effect.Uncurried.EffectFn1
+    { gameObjectFactory :: GameObjectFactory
+    , x :: Number
+    , y :: Number
+    }
+    Phaser.GameObjects.DOMElement.DOMElement
+
+dom ::
+  GameObjectFactory ->
+  { x :: Number
+  , y :: Number
+  } ->
+  Effect Phaser.GameObjects.DOMElement.DOMElement
+dom gameObjectFactory { x, y } =
+  Effect.Uncurried.runEffectFn1
+    _dom
+    { gameObjectFactory
+    , x
+    , y
     }
 
 foreign import _group ::

@@ -12,6 +12,10 @@ exports._container = function container( { gameObjectFactory, x, y, children } )
   return gameObjectFactory.container( x, y, children );
 }
 
+exports._dom = function dom( { gameObjectFactory, x, y } ) {
+  return gameObjectFactory.dom( x, y );
+}
+
 exports._group = function group( { gameObjectFactory, children } ) {
   return gameObjectFactory.group( children );
 }
