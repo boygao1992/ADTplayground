@@ -15,7 +15,7 @@
     "monet": "^0.8.10",
     "parsimmon": "^1.6.2",
     "ramda": "^0.24.1",
-    "terminal-kit": "^1.13.11"
+    "terminal-kit": "^2.1.8"
   },
   "devDependencies": {
     "flow-bin": "^0.54.1",
