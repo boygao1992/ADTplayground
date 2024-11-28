@@ -6,7 +6,7 @@
   "version": "1.0.0",
   "license": "MIT",
   "dependencies": {
-    "aws-sdk": "^2.138.0",
+    "aws-sdk": "^2.814.0",
     "bluebird": "^3.5.1",
     "cors": "^2.8.4",
     "elasticsearch": "^13.3.1",
