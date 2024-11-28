@@ -9,7 +9,7 @@
     "fluture": "^7.2.2",
     "fs-extra": "^5.0.0",
     "http-aws-es": "^4.0.0",
-    "moment": "^2.20.0",
+    "moment": "^2.29.4",
     "ramda": "^0.25.0",
     "ramda-fantasy": "^0.8.0"
   }
